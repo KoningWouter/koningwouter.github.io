@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Torn User Info Lookup</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Torn User Information</h1>
+            <p class="subtitle">Look up player information from the Torn game</p>
+        </header>
+
+        <div class="search-section">
+            <div class="search-container">
+                <label for="userIdInput" class="search-label">Search by User ID</label>
+                <p class="instruction-text">⚠️ Please search for the Torn user ID, not the username</p>
+                <div class="input-group">
+                    <input 
+                        type="text" 
+                        id="userIdInput" 
+                        placeholder="Enter User ID (e.g., 1234567)"
+                        class="search-input"
+                    >
+                    <button id="searchBtn" class="search-button">Search</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="userInfo" class="user-info hidden"></div>
+
+        <div class="api-endpoints-section">
+            <h2>Available API Endpoints</h2>
+            <div class="endpoints-grid" id="endpointsList"></div>
+        </div>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
+

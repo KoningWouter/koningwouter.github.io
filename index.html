@@ -3,33 +3,166 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Torn User Info Lookup</title>
+    <title>Torn Elite Monitor - Premium Player Intelligence</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <!-- Animated Background Elements -->
+    <div class="animated-background">
+        <div class="stars-layer"></div>
+        <div class="comets-layer"></div>
+        <div class="sparks-layer"></div>
+    </div>
+    
     <div class="container">
         <header>
-            <h1>Torn User Information</h1>
-            <p class="subtitle">Look up player information from the Torn game</p>
+            <div class="logo-container">
+                <div class="logo">⚔️</div>
+                <h1>Torn Elite Monitor</h1>
+            </div>
+            <p class="subtitle">Premium Player Intelligence Dashboard</p>
         </header>
 
-        <div class="search-section">
-            <div class="search-container">
-                <label for="userIdInput" class="search-label">Search by User ID</label>
-                <p class="instruction-text">⚠️ Please search for the Torn user ID, not the username</p>
-                <div class="input-group">
-                    <input 
-                        type="text" 
-                        id="userIdInput" 
-                        placeholder="Enter User ID (e.g., 1234567)"
-                        class="search-input"
-                    >
-                    <button id="searchBtn" class="search-button">Search</button>
+        <!-- Tabs Navigation -->
+        <div class="tabs-container">
+            <div class="tabs-nav">
+                <button class="tab-button active" data-tab="search">
+                    <span class="tab-icon">🔍</span>
+                    <span class="tab-label">Search</span>
+                </button>
+                <button class="tab-button" data-tab="player-info">
+                    <span class="tab-icon">⚔️</span>
+                    <span class="tab-label">Player Info</span>
+                </button>
+                <button class="tab-button" data-tab="faction-map">
+                    <span class="tab-icon">🗺️</span>
+                    <span class="tab-label">Faction Map</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- World Map Section - Always Visible -->
+        <div class="world-map-section">
+            <h2>World Map</h2>
+            <div class="world-map-wrapper">
+                <div id="worldMap" class="world-map-container"></div>
+            </div>
+        </div>
+
+        <!-- Search Tab Content -->
+        <div id="searchTab" class="tab-content active">
+            <div class="search-section">
+                <div class="search-container">
+                    <label for="userIdInput" class="search-label">Search by User ID</label>
+                    <p class="instruction-text">⚠️ Please search for the Torn user ID, not the username</p>
+                    <div class="input-group">
+                        <input 
+                            type="text" 
+                            id="userIdInput" 
+                            placeholder="Enter User ID (e.g., 1234567)"
+                            class="search-input"
+                        >
+                        <button id="searchBtn" class="search-button">Search</button>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div id="userInfo" class="user-info hidden"></div>
+        <!-- Player Info Tab Content -->
+        <div id="playerInfoTab" class="tab-content">
+            <div id="progressBarsSection" class="progress-bars-section hidden">
+            <h2>Live Stats</h2>
+            <p class="refresh-indicator">🔄 Auto-refreshing every 5 seconds</p>
+            
+            <div id="statusCard" class="status-card hidden">
+                <div class="status-header">
+                    <span class="status-icon">📊</span>
+                    <span class="status-label">Current Status</span>
+                </div>
+                <div class="status-content">
+                    <div class="status-state" id="statusState">-</div>
+                    <div class="status-description" id="statusDescription">-</div>
+                    <div id="travelCountdown" class="travel-countdown hidden">
+                        <div class="countdown-icon">🕐</div>
+                        <div class="countdown-label">Time Remaining:</div>
+                        <div class="countdown-time" id="countdownTime">00:00:00</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="progress-bars-container">
+                <div class="progress-bar-card" id="lifeBarCard">
+                    <div class="progress-bar-header">
+                        <span class="progress-bar-icon">❤️</span>
+                        <span class="progress-bar-label">Life</span>
+                        <span class="progress-bar-value" id="lifeValue">- / -</span>
+                    </div>
+                    <div class="progress-bar-wrapper">
+                        <div class="progress-bar-bg">
+                            <div class="progress-bar-fill" id="lifeBar" data-percentage="0">
+                                <div class="progress-bar-shine"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="progress-bar-card" id="energyBarCard">
+                    <div class="progress-bar-header">
+                        <span class="progress-bar-icon">⚡</span>
+                        <span class="progress-bar-label">Energy</span>
+                        <span class="progress-bar-value" id="energyValue">- / -</span>
+                    </div>
+                    <div class="progress-bar-wrapper">
+                        <div class="progress-bar-bg">
+                            <div class="progress-bar-fill" id="energyBar" data-percentage="0">
+                                <div class="progress-bar-shine"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="progress-bar-card" id="nerveBarCard">
+                    <div class="progress-bar-header">
+                        <span class="progress-bar-icon">🧠</span>
+                        <span class="progress-bar-label">Nerve</span>
+                        <span class="progress-bar-value" id="nerveValue">- / -</span>
+                    </div>
+                    <div class="progress-bar-wrapper">
+                        <div class="progress-bar-bg">
+                            <div class="progress-bar-fill" id="nerveBar" data-percentage="0">
+                                <div class="progress-bar-shine"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="progress-bar-card" id="happyBarCard">
+                    <div class="progress-bar-header">
+                        <span class="progress-bar-icon">😊</span>
+                        <span class="progress-bar-label">Happy</span>
+                        <span class="progress-bar-value" id="happyValue">- / -</span>
+                    </div>
+                    <div class="progress-bar-wrapper">
+                        <div class="progress-bar-bg">
+                            <div class="progress-bar-fill" id="happyBar" data-percentage="0">
+                                <div class="progress-bar-shine"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="userInfo" class="user-info hidden"></div>
+        </div>
+
+        <!-- Faction Map Tab Content -->
+        <div id="factionMapTab" class="tab-content">
+            <div class="faction-map-section">
+                <h2>Faction Map</h2>
+                <p class="map-instruction">Faction member locations will be displayed here.</p>
+            </div>
+        </div>
 
         <div class="api-endpoints-section">
             <h2>Available API Endpoints</h2>
@@ -37,6 +170,7 @@
         </div>
     </div>
 
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="config.js"></script>
     <script src="script.js"></script>
 </body>

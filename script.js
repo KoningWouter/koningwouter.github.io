@@ -1882,14 +1882,45 @@ async function fetchAndDisplayTravelDataForMarkers() {
             console.log(`Fetching profile data for user ${userId} (${userName})...`);
             const profileData = await fetchUserProfile(userId);
             
-            // Extract status information from profile.status.description
+            // Extract description from profile.user.description (as specified by user)
+            const userDescription = profileData.profile && profileData.profile.user && profileData.profile.user.description ? profileData.profile.user.description : null;
             const status = profileData.profile && profileData.profile.status ? profileData.profile.status : null;
-            const statusDescription = status && status.description ? status.description : 'No status';
             const statusColor = status ? (status.color || '#c0c0c0') : '#c0c0c0';
             
             console.log('Profile data structure:', profileData);
+            console.log('User description:', userDescription);
             console.log('Status data:', status);
-            console.log('Status description:', statusDescription);
+            
+            // Use profile.user.description as the primary source
+            let description = userDescription || (status && status.description ? status.description : 'No status');
+            let displayDescription = description;
+            
+            // Check if description starts with "Traveling to" and extract destination
+            let destination = null;
+            if (description && description.trim().toLowerCase().startsWith('traveling to')) {
+                // Remove "Traveling to" prefix and trim
+                destination = description.replace(/^Traveling to\s+/i, '').trim();
+                displayDescription = destination; // Display just the destination
+                
+                console.log(`User ${userId} is traveling to: ${destination}`);
+                
+                // Update marker position if we have a valid destination
+                if (worldMap && destination) {
+                    const destinationCoords = getCityCoordinates(destination);
+                    if (destinationCoords) {
+                        // Find the marker for this user
+                        const userMarker = factionMarkers.find(marker => marker.memberId === userId);
+                        if (userMarker) {
+                            console.log(`Moving marker for user ${userId} (${userName}) to ${destination} at coordinates:`, destinationCoords);
+                            userMarker.setLatLng(destinationCoords);
+                        } else {
+                            console.warn(`Marker not found for user ${userId}`);
+                        }
+                    } else {
+                        console.warn(`Coordinates not found for destination: ${destination}`);
+                    }
+                }
+            }
             
             // Display status prominently, with other data collapsed
             html += `<div class="travel-data-item">`;
@@ -1897,10 +1928,10 @@ async function fetchAndDisplayTravelDataForMarkers() {
             html += `<strong style="color: #d4af37;">${userName}</strong> (ID: ${userId})`;
             html += `</div>`;
             
-            // Status display (always visible) - showing only description
+            // Status display (always visible) - showing only description (or destination if traveling)
             html += `<div class="status-display">`;
             html += `<div class="status-label">Status:</div>`;
-            html += `<div class="status-value" style="color: ${statusColor};">${statusDescription}</div>`;
+            html += `<div class="status-value" style="color: ${statusColor};">${displayDescription}</div>`;
             html += `</div>`;
             
             // Collapsible section for all other data

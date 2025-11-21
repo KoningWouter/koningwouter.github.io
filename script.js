@@ -87,6 +87,9 @@ const MAX_MAP_INIT_RETRIES = 10;
 // Global variable for world map update interval
 let worldMapUpdateInterval = null;
 
+// Track last API fetch time for each user to ensure we only call once per minute
+let userLastFetchTime = {};
+
 // Torn travel cities with coordinates (only actual travelable destinations in Torn)
 const tornCities = [
     { name: 'United Kingdom', coords: [51.5074, -0.1278] }, // London
@@ -1446,6 +1449,8 @@ async function loadFactionMembers() {
             factionMarkers = [];
             // Stop updates when clearing markers
             stopWorldMapUpdates();
+            // Reset last fetch times when clearing markers
+            userLastFetchTime = {};
         }
         
         // Handle different response formats (object with IDs as keys, or array)
@@ -1879,14 +1884,30 @@ async function updateMarkerPositions() {
         return;
     }
     
+    const now = Date.now();
+    const oneMinute = 60 * 1000; // 1 minute in milliseconds
+    
     // Update each marker's position based on profile data
     for (const member of usersWithMarkers) {
         try {
             const userId = member.id;
             const userName = member.name || `User ${userId}`;
             
+            // Check if we've fetched this user's data in the last minute
+            const lastFetch = userLastFetchTime[userId] || 0;
+            const timeSinceLastFetch = now - lastFetch;
+            
+            if (timeSinceLastFetch < oneMinute) {
+                // Skip this user, we fetched them recently
+                console.log(`Skipping user ${userId} - last fetched ${Math.round(timeSinceLastFetch / 1000)}s ago`);
+                continue;
+            }
+            
             // Fetch profile data
             const profileData = await fetchUserProfile(userId);
+            
+            // Update last fetch time for this user
+            userLastFetchTime[userId] = now;
             
             // Extract description from profile.user.description
             const userDescription = profileData.profile && profileData.profile.user && profileData.profile.user.description ? profileData.profile.user.description : null;
@@ -1955,12 +1976,12 @@ function startWorldMapUpdates() {
     // Update immediately
     updateMarkerPositions();
     
-    // Then update every 15 seconds
+    // Then update every 1 minute
     worldMapUpdateInterval = setInterval(() => {
         updateMarkerPositions();
-    }, 15000);
+    }, 60000);
     
-    console.log('World map auto-update started (every 15 seconds)');
+    console.log('World map auto-update started (every 1 minute)');
 }
 
 // Stop automatic updates for world map markers

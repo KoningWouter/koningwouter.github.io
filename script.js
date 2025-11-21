@@ -511,7 +511,7 @@ async function handleSearch() {
 }
 
 // Fetch user data from API
-async function fetchUserData(userId, selections = 'basic,profile,bars,travel,faction') {
+async function fetchUserData(userId, selections = 'basic,profile,bars,travel,faction,money') {
     // Check if API key is configured
     if (!window.API_KEY) {
         throw new Error('API key is not configured. Please check config.js');
@@ -536,7 +536,7 @@ async function fetchUserData(userId, selections = 'basic,profile,bars,travel,fac
 
 // Fetch only bars data for quick refresh
 async function fetchBarsData(userId) {
-    return await fetchUserData(userId, 'bars');
+    return await fetchUserData(userId, 'bars,money');
 }
 
 // Fetch status data for quick refresh (includes travel)
@@ -596,6 +596,29 @@ function updateProgressBars(data) {
         updateProgressBar('happy', happy.current, happy.maximum);
     } else {
         console.warn('No happy data found');
+    }
+
+    // Update Money display - show only wallet value
+    const moneyElement = document.getElementById('moneyValue');
+    if (moneyElement) {
+        let walletValue = null;
+        
+        // Check if money object exists and has wallet property
+        if (data.money && typeof data.money === 'object' && data.money.wallet !== undefined) {
+            walletValue = data.money.wallet;
+        }
+        
+        // Format and display wallet value with dollar sign
+        if (walletValue !== null && typeof walletValue === 'number' && !isNaN(walletValue)) {
+            moneyElement.textContent = '$' + walletValue.toLocaleString('en-US', { 
+                minimumFractionDigits: 0, 
+                maximumFractionDigits: 0 
+            });
+            console.log('Wallet updated:', walletValue);
+        } else {
+            moneyElement.textContent = '-';
+            console.warn('Wallet data not found or invalid:', data.money);
+        }
     }
 }
 

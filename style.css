@@ -1674,6 +1674,79 @@ header h1 {
     border-color: rgba(220, 20, 60, 0.3);
 }
 
+.status-display {
+    margin: 16px 0;
+    padding: 16px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 8px;
+    border: 1px solid rgba(212, 175, 55, 0.2);
+}
+
+.status-label {
+    color: #c0c0c0;
+    font-size: 0.9rem;
+    font-weight: 500;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    font-family: 'Playfair Display', serif;
+}
+
+.status-value {
+    font-size: 1.3rem;
+    font-weight: 600;
+    font-family: 'Cinzel', serif;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+    text-shadow: 0 0 10px currentColor;
+}
+
+.status-description-text {
+    color: #c0c0c0;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    font-style: italic;
+    margin-top: 8px;
+}
+
+.profile-details {
+    margin-top: 16px;
+}
+
+.profile-summary {
+    color: #d4af37;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 8px 12px;
+    background: rgba(212, 175, 55, 0.1);
+    border-radius: 6px;
+    border: 1px solid rgba(212, 175, 55, 0.2);
+    transition: all 0.3s;
+    user-select: none;
+    font-family: 'Playfair Display', serif;
+}
+
+.profile-summary:hover {
+    background: rgba(212, 175, 55, 0.15);
+    border-color: rgba(212, 175, 55, 0.3);
+}
+
+.profile-summary::-webkit-details-marker {
+    display: none;
+}
+
+.profile-summary::before {
+    content: '▶ ';
+    display: inline-block;
+    margin-right: 6px;
+    transition: transform 0.3s;
+}
+
+.profile-details[open] .profile-summary::before {
+    transform: rotate(90deg);
+}
+
 .status-card {
     background: 
         linear-gradient(135deg, rgba(20, 20, 20, 0.9) 0%, rgba(10, 10, 10, 0.95) 100%),

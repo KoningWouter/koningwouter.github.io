@@ -1806,7 +1806,50 @@ function getCityCoordinates(cityName) {
     return null;
 }
 
-// Fetch and display travel data for all user markers
+// Fetch user profile data from v2 API endpoint /user/<id>/profile
+async function fetchUserProfile(userId) {
+    // Check if API key is configured
+    if (!window.API_KEY) {
+        throw new Error('API key is not configured. Please check config.js');
+    }
+
+    // Validate userId is numeric
+    if (!userId || (typeof userId !== 'number' && !/^\d+$/.test(String(userId)))) {
+        throw new Error(`Invalid user ID: ${userId}. User ID must be a number.`);
+    }
+
+    // Ensure userId is a number
+    const numericUserId = typeof userId === 'number' ? userId : parseInt(userId, 10);
+    if (isNaN(numericUserId)) {
+        throw new Error(`Invalid user ID: ${userId}. Could not convert to number.`);
+    }
+
+    // Use v2 API endpoint /user/<id>/profile
+    const url = `${API_BASE_URL}/user/${numericUserId}/profile?key=${window.API_KEY}`;
+    console.log('Fetching user profile from URL:', url.replace(window.API_KEY, 'KEY_HIDDEN'));
+    
+    const response = await fetch(url);
+    const data = await response.json();
+    
+    console.log('API response status:', response.status);
+    console.log('API response data:', data);
+
+    if (data.error) {
+        const errorMessage = data.error.error || JSON.stringify(data.error);
+        console.error('API Error:', data.error);
+        
+        // Handle specific "Incorrect ID-entity relation" error more gracefully
+        if (errorMessage.includes('Incorrect ID-entity relation') || errorMessage.includes('ID-entity')) {
+            throw new Error(`Permission denied: API key does not have access to user ${numericUserId}. This may be due to insufficient API key permissions.`);
+        }
+        
+        throw new Error(errorMessage);
+    }
+
+    return data;
+}
+
+// Fetch and display profile data for all user markers
 async function fetchAndDisplayTravelDataForMarkers() {
     const travelDataContent = document.getElementById('travelDataContent');
     if (!travelDataContent) {
@@ -1815,7 +1858,7 @@ async function fetchAndDisplayTravelDataForMarkers() {
     }
     
     // Clear existing content
-    travelDataContent.innerHTML = '<p style="color: #c0c0c0; font-style: italic;">Fetching travel information for users...</p>';
+    travelDataContent.innerHTML = '<p style="color: #c0c0c0; font-style: italic;">Fetching profile information for users...</p>';
     
     // Get all users that have markers (members with location data have markers)
     const usersWithMarkers = factionMembersData.filter(member => {
@@ -1830,22 +1873,42 @@ async function fetchAndDisplayTravelDataForMarkers() {
     
     let html = '';
     
-    // Fetch travel data for each user
+    // Fetch profile data for each user using /user/<id>/profile endpoint
     for (const member of usersWithMarkers) {
         try {
             const userId = member.id;
             const userName = member.name || `User ${userId}`;
             
-            console.log(`Fetching travel data for user ${userId} (${userName})...`);
-            const userData = await fetchUserData(userId, 'travel');
-            const travelData = userData.travel || null;
+            console.log(`Fetching profile data for user ${userId} (${userName})...`);
+            const profileData = await fetchUserProfile(userId);
             
-            // Add to display
+            // Extract status information from profile.status.description
+            const status = profileData.profile && profileData.profile.status ? profileData.profile.status : null;
+            const statusDescription = status && status.description ? status.description : 'No status';
+            const statusColor = status ? (status.color || '#c0c0c0') : '#c0c0c0';
+            
+            console.log('Profile data structure:', profileData);
+            console.log('Status data:', status);
+            console.log('Status description:', statusDescription);
+            
+            // Display status prominently, with other data collapsed
             html += `<div class="travel-data-item">`;
             html += `<div class="travel-data-header">`;
             html += `<strong style="color: #d4af37;">${userName}</strong> (ID: ${userId})`;
             html += `</div>`;
-            html += `<pre class="travel-data-json">${JSON.stringify(travelData, null, 2)}</pre>`;
+            
+            // Status display (always visible) - showing only description
+            html += `<div class="status-display">`;
+            html += `<div class="status-label">Status:</div>`;
+            html += `<div class="status-value" style="color: ${statusColor};">${statusDescription}</div>`;
+            html += `</div>`;
+            
+            // Collapsible section for all other data
+            html += `<details class="profile-details">`;
+            html += `<summary class="profile-summary">Show all profile data</summary>`;
+            html += `<pre class="travel-data-json">${JSON.stringify(profileData, null, 2)}</pre>`;
+            html += `</details>`;
+            
             html += `</div>`;
             
             // Add delay to avoid rate limiting
@@ -1861,12 +1924,12 @@ async function fetchAndDisplayTravelDataForMarkers() {
             html += `<pre class="travel-data-json error">Error: ${error.message}</pre>`;
             html += `</div>`;
             
-            console.error(`Error fetching travel data for user ${userId}:`, error);
+            console.error(`Error fetching profile data for user ${userId}:`, error);
         }
     }
     
     if (html === '') {
-        travelDataContent.innerHTML = '<p style="color: #c0c0c0; font-style: italic;">No travel data available.</p>';
+        travelDataContent.innerHTML = '<p style="color: #c0c0c0; font-style: italic;">No profile data available.</p>';
     } else {
         travelDataContent.innerHTML = html;
     }

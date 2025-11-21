@@ -1689,13 +1689,18 @@ async function loadFactionMembers() {
                             </div>
                         `);
                     
+                    // Store member ID with marker for reference
+                    marker.memberId = memberId;
                     factionMarkers.push(marker);
                     markersAdded++;
                 }
             }
         });
         
-            // Keep map at world view - don't auto-zoom to markers
+        // Fetch travel information for each user marker and display raw output
+        await fetchAndDisplayTravelDataForMarkers();
+        
+        // Keep map at world view - don't auto-zoom to markers
             
             // Now fetch profile data for all members
             console.log('=== Fetching profile data for all members ===');
@@ -1799,6 +1804,72 @@ function getCityCoordinates(cityName) {
     
     // Return null if city not found
     return null;
+}
+
+// Fetch and display travel data for all user markers
+async function fetchAndDisplayTravelDataForMarkers() {
+    const travelDataContent = document.getElementById('travelDataContent');
+    if (!travelDataContent) {
+        console.error('Travel data content element not found');
+        return;
+    }
+    
+    // Clear existing content
+    travelDataContent.innerHTML = '<p style="color: #c0c0c0; font-style: italic;">Fetching travel information for users...</p>';
+    
+    // Get all users that have markers (members with location data have markers)
+    const usersWithMarkers = factionMembersData.filter(member => {
+        // Members with location data have markers on the map
+        return member.location || member.currentLocation || member.destination;
+    });
+    
+    if (usersWithMarkers.length === 0) {
+        travelDataContent.innerHTML = '<p style="color: #c0c0c0; font-style: italic;">No user markers found on the map.</p>';
+        return;
+    }
+    
+    let html = '';
+    
+    // Fetch travel data for each user
+    for (const member of usersWithMarkers) {
+        try {
+            const userId = member.id;
+            const userName = member.name || `User ${userId}`;
+            
+            console.log(`Fetching travel data for user ${userId} (${userName})...`);
+            const userData = await fetchUserData(userId, 'travel');
+            const travelData = userData.travel || null;
+            
+            // Add to display
+            html += `<div class="travel-data-item">`;
+            html += `<div class="travel-data-header">`;
+            html += `<strong style="color: #d4af37;">${userName}</strong> (ID: ${userId})`;
+            html += `</div>`;
+            html += `<pre class="travel-data-json">${JSON.stringify(travelData, null, 2)}</pre>`;
+            html += `</div>`;
+            
+            // Add delay to avoid rate limiting
+            await new Promise(resolve => setTimeout(resolve, 200));
+        } catch (error) {
+            const userId = member.id;
+            const userName = member.name || `User ${userId}`;
+            
+            html += `<div class="travel-data-item">`;
+            html += `<div class="travel-data-header">`;
+            html += `<strong style="color: #d4af37;">${userName}</strong> (ID: ${userId})`;
+            html += `</div>`;
+            html += `<pre class="travel-data-json error">Error: ${error.message}</pre>`;
+            html += `</div>`;
+            
+            console.error(`Error fetching travel data for user ${userId}:`, error);
+        }
+    }
+    
+    if (html === '') {
+        travelDataContent.innerHTML = '<p style="color: #c0c0c0; font-style: italic;">No travel data available.</p>';
+    } else {
+        travelDataContent.innerHTML = html;
+    }
 }
 
 // Display faction members in a table

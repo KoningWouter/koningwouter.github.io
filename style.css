@@ -1609,6 +1609,71 @@ header h1 {
     letter-spacing: 1px;
 }
 
+/* Travel Data Section */
+.travel-data-section {
+    margin-top: 40px;
+    padding: 30px;
+    background: 
+        linear-gradient(135deg, rgba(20, 20, 20, 0.9) 0%, rgba(10, 10, 10, 0.95) 100%),
+        radial-gradient(ellipse at top left, rgba(212, 175, 55, 0.05) 0%, transparent 60%);
+    border-radius: 16px;
+    box-shadow: 
+        0 10px 40px rgba(0, 0, 0, 0.6),
+        0 0 0 1px rgba(212, 175, 55, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.5);
+    border: 2px solid rgba(212, 175, 55, 0.2);
+}
+
+.travel-data-section h2 {
+    color: #d4af37;
+    font-family: 'Cinzel', serif;
+    font-size: 1.8rem;
+    margin-bottom: 24px;
+    text-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+    letter-spacing: 2px;
+}
+
+.travel-data-content {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.travel-data-item {
+    background: rgba(10, 10, 10, 0.6);
+    border-radius: 12px;
+    padding: 20px;
+    border: 1px solid rgba(212, 175, 55, 0.15);
+}
+
+.travel-data-header {
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+    font-size: 1.1rem;
+}
+
+.travel-data-json {
+    background: rgba(0, 0, 0, 0.4);
+    padding: 16px;
+    border-radius: 8px;
+    color: #c0c0c0;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    border: 1px solid rgba(212, 175, 55, 0.1);
+    margin: 0;
+}
+
+.travel-data-json.error {
+    color: #dc143c;
+    border-color: rgba(220, 20, 60, 0.3);
+}
+
 .status-card {
     background: 
         linear-gradient(135deg, rgba(20, 20, 20, 0.9) 0%, rgba(10, 10, 10, 0.95) 100%),
@@ -1959,26 +2024,26 @@ header h1 {
         0 0 30px rgba(220, 20, 60, 0.3);
 }
 
-/* Energy Bar - Royal Blue */
+/* Energy Bar - Green */
 #energyBarCard {
-    border-color: rgba(30, 144, 255, 0.4);
+    border-color: rgba(34, 139, 34, 0.4);
 }
 
 #energyBar {
-    background: linear-gradient(135deg, #1e90ff 0%, #0066cc 50%, #004499 100%);
+    background: linear-gradient(135deg, #22c55e 0%, #16a34a 50%, #15803d 100%);
     box-shadow: 
-        0 0 30px rgba(30, 144, 255, 0.7),
+        0 0 30px rgba(34, 139, 34, 0.7),
         inset 0 2px 8px rgba(255, 255, 255, 0.2),
         inset 0 -2px 8px rgba(0, 0, 0, 0.6);
 }
 
 #energyBarCard:hover {
-    border-color: rgba(30, 144, 255, 0.6);
+    border-color: rgba(34, 139, 34, 0.6);
     box-shadow: 
-        0 15px 50px rgba(30, 144, 255, 0.4),
-        0 0 0 1px rgba(30, 144, 255, 0.4),
+        0 15px 50px rgba(34, 139, 34, 0.4),
+        0 0 0 1px rgba(34, 139, 34, 0.4),
         inset 0 1px 0 rgba(255, 255, 255, 0.1),
-        0 0 30px rgba(30, 144, 255, 0.3);
+        0 0 30px rgba(34, 139, 34, 0.3);
 }
 
 /* Nerve Bar - Gold */

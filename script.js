@@ -1,5 +1,6 @@
 // API configuration
-const API_BASE_URL = 'https://api.torn.com';
+console.log('=== script.js loaded ===');
+const API_BASE_URL = 'https://api.torn.com/v2';
 
 // API endpoints information
 const API_ENDPOINTS = [
@@ -76,54 +77,48 @@ let currentFactionId = null;
 let worldMap = null;
 let tornCityMarkers = [];
 let factionMarkers = [];
+let factionMembersData = [];
 let mapInitRetryCount = 0;
+
+// Test function to verify table works - can be called from console
+window.testFactionTable = function() {
+    console.log('=== TEST: Adding test data to table ===');
+    const membersListContainer = document.getElementById('factionMembersList');
+    const membersTableBody = document.getElementById('factionMembersTableBody');
+    
+    console.log('Container:', membersListContainer);
+    console.log('Table body:', membersTableBody);
+    
+    if (!membersListContainer || !membersTableBody) {
+        console.error('Table elements not found!');
+        return;
+    }
+    
+    // Add test data
+    factionMembersData = [
+        { id: '1', name: 'Test User 1', location: 'Torn City' },
+        { id: '2', name: 'Test User 2', location: 'Mexico' }
+    ];
+    
+    displayFactionMembersList();
+    console.log('Test complete - table should show 2 test users');
+};
 let mapInitInProgress = false;
 const MAX_MAP_INIT_RETRIES = 10;
 
-// Torn travel cities with coordinates
+// Torn travel cities with coordinates (only actual travelable destinations in Torn)
 const tornCities = [
-    { name: 'Torn', coords: [51.5074, -0.1278] },
-    { name: 'United Kingdom', coords: [51.5074, -0.1278] },
-    { name: 'Mexico', coords: [19.4326, -99.1332] },
-    { name: 'Cayman Islands', coords: [19.3133, -81.2546] },
-    { name: 'Canada', coords: [45.5017, -73.5673] },
-    { name: 'Hawaii', coords: [21.3099, -157.8581] },
-    { name: 'United States', coords: [40.7128, -74.0060] },
-    { name: 'Argentina', coords: [-34.6037, -58.3816] },
-    { name: 'Switzerland', coords: [46.2044, 6.1432] },
-    { name: 'Japan', coords: [35.6762, 139.6503] },
-    { name: 'China', coords: [39.9042, 116.4074] },
-    { name: 'UAE', coords: [25.2048, 55.2708] },
-    { name: 'South Africa', coords: [-26.2041, 28.0473] },
-    { name: 'New Zealand', coords: [-36.8485, 174.7633] },
-    { name: 'Iceland', coords: [64.1466, -21.9426] },
-    { name: 'Brazil', coords: [-23.5505, -46.6333] },
-    { name: 'Australia', coords: [-33.8688, 151.2093] },
-    { name: 'Russia', coords: [55.7558, 37.6173] },
-    { name: 'India', coords: [28.6139, 77.2090] },
-    { name: 'France', coords: [48.8566, 2.3522] },
-    { name: 'Germany', coords: [52.5200, 13.4050] },
-    { name: 'Italy', coords: [41.9028, 12.4964] },
-    { name: 'Spain', coords: [40.4168, -3.7038] },
-    { name: 'Netherlands', coords: [52.3676, 4.9041] },
-    { name: 'Belgium', coords: [50.8503, 4.3517] },
-    { name: 'Sweden', coords: [59.3293, 18.0686] },
-    { name: 'Norway', coords: [59.9139, 10.7522] },
-    { name: 'Denmark', coords: [55.6761, 12.5683] },
-    { name: 'Finland', coords: [60.1699, 24.9384] },
-    { name: 'Poland', coords: [52.2297, 21.0122] },
-    { name: 'Turkey', coords: [41.0082, 28.9784] },
-    { name: 'Egypt', coords: [30.0444, 31.2357] },
-    { name: 'Saudi Arabia', coords: [24.7136, 46.6753] },
-    { name: 'Singapore', coords: [1.3521, 103.8198] },
-    { name: 'Thailand', coords: [13.7563, 100.5018] },
-    { name: 'South Korea', coords: [37.5665, 126.9780] },
-    { name: 'Philippines', coords: [14.5995, 120.9842] },
-    { name: 'Indonesia', coords: [-6.2088, 106.8456] },
-    { name: 'Malaysia', coords: [3.1390, 101.6869] },
-    { name: 'Vietnam', coords: [10.8231, 106.6297] },
-    { name: 'Taiwan', coords: [25.0330, 121.5654] },
-    { name: 'Hong Kong', coords: [22.3193, 114.1694] }
+    { name: 'United Kingdom', coords: [51.5074, -0.1278] }, // London
+    { name: 'Mexico', coords: [31.6904, -106.4244] }, // Ciudad Juárez
+    { name: 'Cayman Islands', coords: [19.3133, -81.2546] }, // George Town
+    { name: 'Canada', coords: [43.6532, -79.3832] }, // Toronto
+    { name: 'Hawaii', coords: [21.3099, -157.8581] }, // Honolulu
+    { name: 'Switzerland', coords: [47.3769, 8.5417] }, // Zurich
+    { name: 'Argentina', coords: [-34.6037, -58.3816] }, // Buenos Aires
+    { name: 'Japan', coords: [35.6762, 139.6503] }, // Tokyo
+    { name: 'China', coords: [39.9042, 116.4074] }, // Beijing
+    { name: 'UAE', coords: [25.2048, 55.2708] }, // Dubai
+    { name: 'South Africa', coords: [-26.2041, 28.0473] } // Johannesburg
 ];
 
 // Initialize the page
@@ -332,79 +327,207 @@ function displayEndpoints() {
 
 // Setup search functionality
 function setupSearch() {
+    console.log('=== setupSearch() called ===');
     const searchBtn = document.getElementById('searchBtn');
     const userIdInput = document.getElementById('userIdInput');
 
-    searchBtn.addEventListener('click', handleSearch);
+    console.log('Search button element:', searchBtn);
+    console.log('User ID input element:', userIdInput);
+
+    if (!searchBtn) {
+        console.error('Search button not found!');
+        return;
+    }
+
+    if (!userIdInput) {
+        console.error('User ID input not found!');
+        return;
+    }
+
+    searchBtn.addEventListener('click', () => {
+        console.log('Search button clicked!');
+        handleSearch();
+    });
+    
     userIdInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
+            console.log('Enter key pressed in input!');
             handleSearch();
         }
     });
+    
+    console.log('Search event listeners attached');
 }
 
 // Handle search
 async function handleSearch() {
+    console.log('=== handleSearch() called ===');
     const userIdInput = document.getElementById('userIdInput');
-    const userId = userIdInput.value.trim();
+    const userId = userIdInput ? userIdInput.value.trim() : '';
     const userInfoDiv = document.getElementById('userInfo');
 
+    console.log('User ID entered:', userId);
+
     if (!userId) {
+        console.log('No user ID entered');
         showError('Please enter a user ID');
         return;
     }
 
     if (!/^\d+$/.test(userId)) {
+        console.log('Invalid user ID format');
         showError('User ID must be a number');
         return;
     }
+
+    console.log('Starting search for user ID:', userId);
 
     // Show loading state
     userInfoDiv.classList.remove('hidden');
     userInfoDiv.innerHTML = '<div class="loading">Loading user information...</div>';
 
     try {
+        console.log('About to fetch user data...');
         const userData = await fetchUserData(userId);
+        console.log('=== USER DATA RECEIVED ===');
+        console.log('Full userData object:', userData);
+        console.log('userData keys:', Object.keys(userData));
+        console.log('userData.bars:', userData.bars);
+        console.log('userData.life:', userData.life);
+        console.log('userData.energy:', userData.energy);
+        console.log('userData.nerve:', userData.nerve);
+        console.log('userData.happy:', userData.happy);
+        console.log('userData.faction:', userData.faction);
+        console.log('userData.profile:', userData.profile);
         currentUserId = userId;
         
         // Store faction ID if available
+        console.log('=== CHECKING FACTION ===');
+        console.log('User data faction property:', userData.faction);
+        console.log('Faction type:', typeof userData.faction);
+        console.log('Full faction object:', JSON.stringify(userData.faction));
+        
         if (userData.faction) {
-            if (typeof userData.faction === 'object' && userData.faction.faction_id) {
-                currentFactionId = userData.faction.faction_id;
+            if (typeof userData.faction === 'object' && userData.faction !== null) {
+                console.log('Faction is an object, checking for faction_id...');
+                console.log('Faction object keys:', Object.keys(userData.faction));
+                if (userData.faction.faction_id) {
+                    currentFactionId = userData.faction.faction_id;
+                    console.log('✓ Faction ID extracted from object:', currentFactionId);
+                } else if (userData.faction.id) {
+                    currentFactionId = userData.faction.id;
+                    console.log('✓ Faction ID extracted from id property:', currentFactionId);
+                } else {
+                    console.log('✗ Faction object exists but no faction_id or id found');
+                    console.log('Faction object:', userData.faction);
+                }
             } else if (typeof userData.faction === 'number') {
                 currentFactionId = userData.faction;
+                console.log('✓ Faction ID is a number:', currentFactionId);
+            } else if (typeof userData.faction === 'string') {
+                currentFactionId = parseInt(userData.faction);
+                console.log('✓ Faction ID is a string, converted to number:', currentFactionId);
+            } else {
+                console.log('✗ Faction property exists but format is unexpected:', typeof userData.faction, userData.faction);
+            }
+        } else {
+            currentFactionId = null;
+            console.log('✗ No faction property in user data');
+        }
+        
+        console.log('Final currentFactionId:', currentFactionId);
+        
+        // Fetch faction details if we have a faction ID but no name
+        if (currentFactionId && (!userData.faction || typeof userData.faction !== 'object' || !userData.faction.faction_name)) {
+            console.log('Fetching faction details for display...');
+            try {
+                const factionDetails = await fetchFactionData(currentFactionId, 'basic');
+                console.log('Faction details received:', factionDetails);
+                if (factionDetails.name) {
+                    // Add faction name to userData for display
+                    if (!userData.faction || typeof userData.faction !== 'object') {
+                        userData.faction = {};
+                    }
+                    userData.faction.faction_name = factionDetails.name;
+                    userData.faction.name = factionDetails.name;
+                    console.log('Added faction name to userData:', factionDetails.name);
+                }
+            } catch (error) {
+                console.error('Error fetching faction details:', error);
+                // Continue anyway, we'll display what we have
             }
         }
         
+        console.log('Calling displayUserInfo...');
         displayUserInfo(userData);
+        console.log('Calling updateProgressBars...');
         updateProgressBars(userData);
+        console.log('Calling updateStatus...');
         updateStatus(userData);
+        console.log('Calling startAutoRefresh...');
         startAutoRefresh();
+        console.log('All display functions called');
+        
+        // Load faction members if user has a faction
+        console.log('=== CHECKING FOR FACTION ===');
+        console.log('currentFactionId:', currentFactionId);
+        console.log('currentFactionId type:', typeof currentFactionId);
+        console.log('currentFactionId truthy?', !!currentFactionId);
+        
+        if (currentFactionId) {
+            console.log('✓ Faction ID found, calling loadFactionMembers() NOW');
+            console.log('About to invoke loadFactionMembers function...');
+            try {
+                loadFactionMembers();
+                console.log('loadFactionMembers() call completed (async)');
+            } catch (error) {
+                console.error('ERROR calling loadFactionMembers():', error);
+            }
+        } else {
+            console.log('✗ No faction ID, hiding members list');
+            // Hide members list if no faction
+            const membersList = document.getElementById('factionMembersList');
+            if (membersList) {
+                membersList.classList.add('hidden');
+            }
+        }
         
         // Switch to Player Info tab after successful search
+        console.log('Search completed successfully, switching to Player Info tab');
         const playerInfoTabButton = document.querySelector('[data-tab="player-info"]');
         if (playerInfoTabButton) {
             playerInfoTabButton.click();
         }
+        console.log('=== handleSearch() COMPLETED ===');
     } catch (error) {
+        console.error('=== ERROR in handleSearch() ===');
+        console.error('Error:', error);
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
         showError(error.message || 'Failed to fetch user information. Please check the user ID and try again.');
         stopAutoRefresh();
+        console.log('=== handleSearch() ENDED WITH ERROR ===');
     }
 }
 
 // Fetch user data from API
-async function fetchUserData(userId, selections = 'basic,profile,personalstats,battlestats,education,workstats,icons,cooldowns,money,notifications,perks,bars,networth,display,travel') {
+async function fetchUserData(userId, selections = 'basic,profile,bars,travel,faction') {
     // Check if API key is configured
     if (!window.API_KEY) {
         throw new Error('API key is not configured. Please check config.js');
     }
 
     const url = `${API_BASE_URL}/user/${userId}?selections=${selections}&key=${window.API_KEY}`;
+    console.log('Fetching user data from URL:', url.replace(window.API_KEY, 'KEY_HIDDEN'));
     
     const response = await fetch(url);
     const data = await response.json();
+    
+    console.log('API response status:', response.status);
+    console.log('API response data:', data);
 
     if (data.error) {
+        console.error('API Error:', data.error);
         throw new Error(data.error.error || 'API Error: ' + JSON.stringify(data.error));
     }
 
@@ -423,27 +546,56 @@ async function fetchStatusData(userId) {
 
 // Update progress bars
 function updateProgressBars(data) {
+    console.log('=== updateProgressBars called ===');
+    console.log('Data received:', data);
+    console.log('data.bars:', data.bars);
+    console.log('data.life:', data.life);
+    console.log('data.energy:', data.energy);
+    console.log('data.nerve:', data.nerve);
+    console.log('data.happy:', data.happy);
+    
     const progressSection = document.getElementById('progressBarsSection');
     progressSection.classList.remove('hidden');
 
+    // In API v2, bars data might be under data.bars instead of directly on data
+    const bars = data.bars || {};
+    const life = data.life || bars.life;
+    const energy = data.energy || bars.energy;
+    const nerve = data.nerve || bars.nerve;
+    const happy = data.happy || bars.happy;
+    
+    console.log('Extracted bars:', { life, energy, nerve, happy });
+
     // Update Life bar
-    if (data.life) {
-        updateProgressBar('life', data.life.current, data.life.maximum);
+    if (life) {
+        console.log('Updating life bar:', life);
+        updateProgressBar('life', life.current, life.maximum);
+    } else {
+        console.warn('No life data found');
     }
 
     // Update Energy bar
-    if (data.energy) {
-        updateProgressBar('energy', data.energy.current, data.energy.maximum);
+    if (energy) {
+        console.log('Updating energy bar:', energy);
+        updateProgressBar('energy', energy.current, energy.maximum);
+    } else {
+        console.warn('No energy data found');
     }
 
     // Update Nerve bar
-    if (data.nerve) {
-        updateProgressBar('nerve', data.nerve.current, data.nerve.maximum);
+    if (nerve) {
+        console.log('Updating nerve bar:', nerve);
+        updateProgressBar('nerve', nerve.current, nerve.maximum);
+    } else {
+        console.warn('No nerve data found');
     }
 
     // Update Happy bar
-    if (data.happy) {
-        updateProgressBar('happy', data.happy.current, data.happy.maximum);
+    if (happy) {
+        console.log('Updating happy bar:', happy);
+        updateProgressBar('happy', happy.current, happy.maximum);
+    } else {
+        console.warn('No happy data found');
     }
 }
 
@@ -698,7 +850,39 @@ function displayUserInfo(data) {
         html += createInfoItem('Gender', data.gender);
     }
     if (data.faction) {
-        html += createInfoItem('Faction', typeof data.faction === 'object' ? data.faction.faction_name || 'N/A' : data.faction);
+        // Display faction information
+        if (data.faction) {
+            if (typeof data.faction === 'object' && data.faction !== null) {
+                // Build faction info string
+                let factionInfo = '';
+                if (data.faction.faction_name) {
+                    factionInfo = data.faction.faction_name;
+                } else if (data.faction.name) {
+                    factionInfo = data.faction.name;
+                } else {
+                    factionInfo = 'Unknown Faction';
+                }
+                
+                // Add faction ID if available
+                const factionId = data.faction.faction_id || data.faction.id;
+                if (factionId) {
+                    factionInfo += ` (ID: ${factionId})`;
+                }
+                
+                // Add position if available
+                if (data.faction.position) {
+                    factionInfo += ` - ${data.faction.position}`;
+                }
+                
+                html += createInfoItem('Faction', factionInfo);
+            } else if (typeof data.faction === 'number') {
+                html += createInfoItem('Faction', `Faction ID: ${data.faction}`);
+            } else {
+                html += createInfoItem('Faction', String(data.faction));
+            }
+        } else {
+            html += createInfoItem('Faction', 'None');
+        }
     }
     if (data.company) {
         html += createInfoItem('Company', typeof data.company === 'object' ? data.company.company_name || 'N/A' : data.company);
@@ -807,11 +991,16 @@ async function fetchFactionData(factionId, selections = 'basic,members') {
     }
 
     const url = `${API_BASE_URL}/faction/${factionId}?selections=${selections}&key=${window.API_KEY}`;
+    console.log('Fetching faction data from URL:', url.replace(window.API_KEY, 'KEY_HIDDEN'));
     
     const response = await fetch(url);
     const data = await response.json();
+    
+    console.log('Faction API response status:', response.status);
+    console.log('Faction API response data:', data);
 
     if (data.error) {
+        console.error('Faction API Error:', data.error);
         throw new Error(data.error.error || 'API Error: ' + JSON.stringify(data.error));
     }
 
@@ -822,7 +1011,15 @@ async function fetchFactionData(factionId, selections = 'basic,members') {
 async function fetchUserLocation(userId) {
     try {
         const userData = await fetchUserData(userId, 'travel');
-        return userData.travel || null;
+        const travelData = userData.travel || null;
+        console.log(`Travel data for user ${userId}:`, travelData);
+        if (travelData) {
+            console.log(`  - destination: ${travelData.destination}`);
+            console.log(`  - departing: ${travelData.departing}`);
+            console.log(`  - time_left: ${travelData.time_left}`);
+            console.log(`  - timestamp: ${travelData.timestamp}`);
+        }
+        return travelData;
     } catch (error) {
         console.error(`Error fetching location for user ${userId}:`, error);
         return null;
@@ -946,198 +1143,462 @@ function addTornCityMarkers() {
 
 // Load faction members and display on map
 async function loadFactionMembers() {
+    console.log('=== loadFactionMembers() CALLED ===');
+    console.log('currentFactionId:', currentFactionId);
+    
     const mapLoading = document.getElementById('mapLoading');
     const mapError = document.getElementById('mapError');
     
     // Always hide loading after a short delay to show the map
-    setTimeout(() => {
-        if (mapLoading) mapLoading.classList.add('hidden');
-    }, 1000);
+    if (mapLoading) {
+        setTimeout(() => {
+            mapLoading.classList.add('hidden');
+        }, 1000);
+    }
     
     // Check if we have a faction ID
     if (!currentFactionId) {
+        console.log('No currentFactionId, returning early');
         if (mapError) {
             mapError.classList.remove('hidden');
             mapError.textContent = 'No faction found. Please search for a user who is in a faction.';
+        }
+        // Hide members list if no faction
+        const membersList = document.getElementById('factionMembersList');
+        const membersTableBody = document.getElementById('factionMembersTableBody');
+        if (membersList) {
+            membersList.classList.add('hidden');
+        }
+        if (membersTableBody) {
+            membersTableBody.innerHTML = '';
         }
         // Map is still visible, just no markers
         return;
     }
     
-    if (!worldMap) {
-        console.error('Map not initialized');
-        if (mapLoading) mapLoading.classList.add('hidden');
-        if (mapError) {
-            mapError.classList.remove('hidden');
-            mapError.textContent = 'Error: Map failed to initialize.';
-        }
-        return;
+    // Show loading state for members list
+    const membersList = document.getElementById('factionMembersList');
+    const membersTableBody = document.getElementById('factionMembersTableBody');
+    console.log('Members list element:', membersList);
+    console.log('Members table body element:', membersTableBody);
+    
+    if (membersList && membersTableBody) {
+        console.log('Showing loading state in table');
+        membersList.classList.remove('hidden');
+        membersTableBody.innerHTML = '<tr><td colspan="5" style="color: #c0c0c0; text-align: center; padding: 20px;">Loading faction members...</td></tr>';
+    } else {
+        console.error('Could not find members list or table body elements!');
     }
     
     try {
-        // Fetch faction members
-        const factionData = await fetchFactionData(currentFactionId, 'members');
+        console.log('=== Starting to fetch faction members ===');
+        console.log('Loading faction members for faction ID:', currentFactionId);
+        
+        // Fetch faction members - try with both 'members' and 'basic,members' selections
+        const factionData = await fetchFactionData(currentFactionId, 'basic,members');
+        console.log('Faction data received:', factionData);
+        console.log('Faction data keys:', Object.keys(factionData));
+        console.log('Members property exists:', 'members' in factionData);
+        console.log('Members value:', factionData.members);
         
         if (!factionData.members) {
+            console.error('No members property in faction data:', factionData);
+            console.error('Available keys:', Object.keys(factionData));
             throw new Error('No members found in faction data');
         }
         
-        // Clear existing markers
-        factionMarkers.forEach(marker => worldMap.removeLayer(marker));
-        factionMarkers = [];
+        // Clear existing markers if map is initialized
+        if (worldMap) {
+            factionMarkers.forEach(marker => worldMap.removeLayer(marker));
+            factionMarkers = [];
+        }
         
-        // Get all member IDs
-        const memberIds = Object.keys(factionData.members);
+        // Handle different response formats (object with IDs as keys, or array)
+        let membersToProcess = [];
         
-        if (memberIds.length === 0) {
+        console.log('Faction members data type:', typeof factionData.members, 'Is array:', Array.isArray(factionData.members));
+        console.log('Faction members sample:', factionData.members);
+        
+        if (Array.isArray(factionData.members)) {
+            // If members is an array
+            membersToProcess = factionData.members.map((member, index) => ({
+                id: member.id || member.user_id || index.toString(),
+                data: member
+            }));
+        } else if (typeof factionData.members === 'object' && factionData.members !== null) {
+            // If members is an object with IDs as keys
+            const memberIds = Object.keys(factionData.members);
+            console.log('Member IDs found:', memberIds.length, 'Sample IDs:', memberIds.slice(0, 5));
+            console.log('Sample member data:', memberIds.length > 0 ? factionData.members[memberIds[0]] : 'none');
+            
+            if (memberIds.length === 0) {
+                console.warn('Members object is empty!');
+            }
+            
+            membersToProcess = memberIds.map(memberId => {
+                const memberData = factionData.members[memberId];
+                console.log(`Processing member ID ${memberId}, data:`, memberData, 'type:', typeof memberData);
+                return {
+                    id: memberId,
+                    data: memberData
+                };
+            });
+        } else {
+            console.error('Unexpected members format:', typeof factionData.members, factionData.members);
+            throw new Error('Unexpected members data format: ' + typeof factionData.members);
+        }
+        
+        console.log('Members to process:', membersToProcess.length);
+        if (membersToProcess.length > 0) {
+            console.log('First member sample:', membersToProcess[0]);
+        }
+        
+        if (membersToProcess.length === 0) {
+            console.error('No members to process!');
             throw new Error('No members found in faction');
         }
         
-        // Fetch locations for all members in parallel (with rate limiting)
-        const locationPromises = [];
-        const batchSize = 5; // Process 5 members at a time to avoid rate limits
+        console.log('Processing', membersToProcess.length, 'members...');
         
-        for (let i = 0; i < memberIds.length; i += batchSize) {
-            const batch = memberIds.slice(i, i + batchSize);
-            const batchPromises = batch.map(async (memberId) => {
-                // Add small delay between batches
-                if (i > 0) {
-                    await new Promise(resolve => setTimeout(resolve, 200));
+        // Store member data for display
+        factionMembersData = [];
+        
+        membersToProcess.forEach(({ id, data: memberData }) => {
+            console.log('Processing member:', id, memberData, 'Type:', typeof memberData);
+            
+            // Handle different API response formats
+            let memberName = `Member ${id}`;
+            let memberStatus = 'Unknown';
+            
+            // Torn API might return member data as just a user ID (number) or as an object
+            if (typeof memberData === 'object' && memberData !== null) {
+                // If it's an object, try to extract name from various possible fields
+                memberName = memberData.name || 
+                            memberData.player_name || 
+                            memberData.username || 
+                            memberData.player_id || 
+                            (memberData.id ? `User ${memberData.id}` : null) ||
+                            memberName;
+                if (memberData.status) {
+                    memberStatus = typeof memberData.status === 'object' 
+                        ? (memberData.status.state || memberData.status.description || memberData.status || 'Unknown')
+                        : memberData.status;
                 }
-                const location = await fetchUserLocation(memberId);
-                return { memberId, memberData: factionData.members[memberId], location };
+            } else if (typeof memberData === 'string') {
+                memberName = memberData;
+            } else if (typeof memberData === 'number') {
+                // If memberData is just a number (user ID), use it as the name for now
+                // We'll try to fetch the actual name later if needed
+                memberName = `User ${memberData}`;
+            }
+            
+            // Use the member ID as name if we still don't have a proper name
+            if (memberName === `Member ${id}` && id) {
+                memberName = `User ${id}`;
+            }
+            
+            // Store member data for list display
+            factionMembersData.push({
+                id: id,
+                name: memberName,
+                status: memberStatus,
+                location: 'Torn City', // Default location
+                profile: null // Will be fetched later
             });
-            locationPromises.push(...batchPromises);
+        });
+        
+        console.log('Faction members data after processing:', factionMembersData);
+        console.log('Number of members in factionMembersData:', factionMembersData.length);
+        
+        // Display faction members list immediately (even with placeholder names)
+        // FORCE DISPLAY - call it unconditionally
+        console.log('=== FORCING DISPLAY CALL ===');
+        console.log('About to call displayFactionMembersList()');
+        console.log('factionMembersData exists:', !!factionMembersData);
+        console.log('factionMembersData.length:', factionMembersData ? factionMembersData.length : 'N/A');
+        
+        // Call display function - MUST HAPPEN
+        displayFactionMembersList();
+        console.log('displayFactionMembersList() was called');
+        
+        if (factionMembersData.length === 0) {
+            console.warn('WARNING: No members in factionMembersData but display was called anyway');
         }
         
-        const memberLocations = await Promise.all(locationPromises);
+        // Check if we need to fetch user names (if members only have IDs)
+        const needsNameFetch = factionMembersData.some(m => {
+            const name = m.name || '';
+            return name.startsWith('User ') || name.startsWith('Member ');
+        });
         
-        // Add markers for members with valid locations
+        if (needsNameFetch && factionMembersData.length > 0) {
+            console.log('Some members need name fetching, fetching user data...');
+            // Fetch user names in batches
+            const nameBatchSize = 3; // Smaller batch for name fetching
+            for (let i = 0; i < factionMembersData.length; i += nameBatchSize) {
+                const batch = factionMembersData.slice(i, i + nameBatchSize);
+                const namePromises = batch.map(async (member) => {
+                    const name = member.name || '';
+                    if (name.startsWith('User ') || name.startsWith('Member ')) {
+                        try {
+                            // Add delay between batches
+                            if (i > 0) {
+                                await new Promise(resolve => setTimeout(resolve, 300));
+                            }
+                            const userData = await fetchUserData(member.id, 'basic');
+                            const userName = userData.name || userData.player_name || member.name;
+                            member.name = userName;
+                            console.log(`Fetched name for ${member.id}: ${userName}`);
+                        } catch (error) {
+                            console.error(`Error fetching name for user ${member.id}:`, error);
+                            // Keep the placeholder name
+                        }
+                    }
+                });
+                await Promise.all(namePromises);
+            }
+            console.log('Finished fetching user names, updating display...');
+            // Update display after fetching names
+            displayFactionMembersList();
+        }
+        
+        // Fetch locations for all members in parallel (with rate limiting) for map markers and table
+        // Always fetch locations, not just when map is initialized
+        try {
+            const locationPromises = [];
+            const batchSize = 5; // Process 5 members at a time to avoid rate limits
+            
+            for (let i = 0; i < membersToProcess.length; i += batchSize) {
+                const batch = membersToProcess.slice(i, i + batchSize);
+                const batchPromises = batch.map(async ({ id: memberId, data: memberData }) => {
+                    try {
+                        // Add small delay between batches
+                        if (i > 0) {
+                            await new Promise(resolve => setTimeout(resolve, 200));
+                        }
+                        const location = await fetchUserLocation(memberId);
+                        return { memberId, memberData, location };
+                    } catch (error) {
+                        console.error(`Error fetching location for member ${memberId}:`, error);
+                        return { memberId, memberData, location: null };
+                    }
+                });
+                locationPromises.push(...batchPromises);
+            }
+            
+            const memberLocations = await Promise.all(locationPromises);
+        
+        // Update member data with locations and add map markers
         let markersAdded = 0;
         memberLocations.forEach(({ memberId, memberData, location }) => {
+            console.log(`Processing travel data for member ${memberId}:`, location);
+            
+            let currentLocation = null;
             let destination = null;
-            let isInTorn = false;
+            let isTravelling = false;
+            let travelTimeLeft = null;
             
             // Check if member has travel data
             if (location) {
+                // API v2 travel data structure
+                // location.destination - where they're heading
+                // location.departing - where they're departing from
+                // location.timestamp - when travel ends
+                // location.time_left - time remaining in travel
+                
                 if (location.destination) {
                     destination = location.destination;
+                    isTravelling = true;
+                    currentLocation = location.departing || 'Torn City';
+                    travelTimeLeft = location.time_left || location.timeleft || null;
+                    console.log(`Member ${memberId} is travelling from ${currentLocation} to ${destination}`);
                 } else if (location.departing) {
-                    // Member is departing from a location
-                    destination = location.departing;
+                    // Member is departing from a location (might be in transit)
+                    currentLocation = location.departing;
+                    destination = null;
+                    console.log(`Member ${memberId} is departing from ${currentLocation}`);
+                } else {
+                    // No travel data, they're in Torn City
+                    currentLocation = 'Torn City';
+                    destination = null;
                 }
+            } else {
+                // No travel data, assume member is in Torn City
+                currentLocation = 'Torn City';
+                destination = null;
             }
             
-            // If no travel data, assume member is in Torn City
-            if (!destination) {
-                destination = 'Torn';
-                isInTorn = true;
+            const memberName = memberData.name || `Member ${memberId}`;
+            const memberStatus = memberData.status ? memberData.status.state : 'Unknown';
+            
+            // Build location text - show destination if travelling, otherwise current location
+            let locationText = currentLocation || 'Torn City';
+            if (isTravelling && destination) {
+                locationText = `→ ${destination}`; // Arrow indicates travelling to destination
             }
             
-            // Get coordinates for the destination
-            const coordinates = getCityCoordinates(destination);
+            // Update member data with location and travel info
+            const memberIndex = factionMembersData.findIndex(m => String(m.id) === String(memberId));
+            if (memberIndex !== -1) {
+                factionMembersData[memberIndex].location = locationText;
+                factionMembersData[memberIndex].currentLocation = currentLocation;
+                factionMembersData[memberIndex].destination = destination;
+                factionMembersData[memberIndex].isTravelling = isTravelling;
+                factionMembersData[memberIndex].travelTimeLeft = travelTimeLeft;
+                console.log(`Updated location for member ${memberId}: ${locationText} (travelling: ${isTravelling})`);
+            } else {
+                console.warn(`Could not find member ${memberId} in factionMembersData to update location`);
+            }
             
-            if (coordinates) {
-                const memberName = memberData.name || `Member ${memberId}`;
-                const memberStatus = memberData.status ? memberData.status.state : 'Unknown';
-                const locationText = isInTorn ? 'Torn City' : destination;
+            // Get coordinates for the destination and add map marker (only if map is initialized)
+            // Use destination if travelling, otherwise use current location
+            const locationForMap = isTravelling && destination ? destination : currentLocation;
+            if (worldMap) {
+                const coordinates = getCityCoordinates(locationForMap);
                 
-                // Create custom icon
-                const customIcon = L.divIcon({
-                    className: 'faction-member-marker',
-                    html: `<div class="marker-pin">📍</div>`,
-                    iconSize: [30, 30],
-                    iconAnchor: [15, 30]
-                });
-                
-                const marker = L.marker(coordinates, { icon: customIcon })
-                    .addTo(worldMap)
-                    .bindPopup(`
-                        <div class="marker-popup">
-                            <strong>${memberName}</strong><br>
-                            <span>Status: ${memberStatus}</span><br>
-                            <span>Location: ${locationText}</span>
-                        </div>
-                    `);
-                
-                factionMarkers.push(marker);
-                markersAdded++;
+                if (coordinates) {
+                    // Create custom icon
+                    const customIcon = L.divIcon({
+                        className: 'faction-member-marker',
+                        html: `<div class="marker-pin">📍</div>`,
+                        iconSize: [30, 30],
+                        iconAnchor: [15, 30]
+                    });
+                    
+                    const marker = L.marker(coordinates, { icon: customIcon })
+                        .addTo(worldMap)
+                        .bindPopup(`
+                            <div class="marker-popup">
+                                <strong>${memberName}</strong><br>
+                                <span>Status: ${memberStatus}</span><br>
+                                <span>Location: ${locationText}</span>
+                            </div>
+                        `);
+                    
+                    factionMarkers.push(marker);
+                    markersAdded++;
+                }
             }
         });
         
-        // Fit map to show all markers
-        if (factionMarkers.length > 0) {
-            const group = new L.featureGroup(factionMarkers);
-            worldMap.fitBounds(group.getBounds().pad(0.1));
+            // Update the display with locations
+            console.log('Updating display with locations. Total members:', factionMembersData.length);
+            displayFactionMembersList();
+            
+            // Fit map to show all markers (only if map is initialized)
+            if (worldMap && factionMarkers.length > 0) {
+                const group = new L.featureGroup(factionMarkers);
+                worldMap.fitBounds(group.getBounds().pad(0.1));
+            }
+            
+            // Now fetch profile data for all members
+            console.log('=== Fetching profile data for all members ===');
+            const profileBatchSize = 3; // Smaller batch for profile fetching
+            for (let i = 0; i < factionMembersData.length; i += profileBatchSize) {
+                const batch = factionMembersData.slice(i, i + profileBatchSize);
+                const profilePromises = batch.map(async (member) => {
+                    try {
+                        // Add delay between batches
+                        if (i > 0) {
+                            await new Promise(resolve => setTimeout(resolve, 400));
+                        }
+                        console.log(`Fetching profile for member ${member.id}...`);
+                        const profileData = await fetchUserData(member.id, 'basic,profile,travel');
+                        member.profile = {
+                            level: profileData.level,
+                            status: profileData.status,
+                            travel: profileData.travel || null,
+                            // Add more profile fields as needed
+                        };
+                        console.log(`✓ Profile fetched for ${member.id}: Level ${profileData.level || 'N/A'}`);
+                        if (profileData.travel) {
+                            console.log(`  Travel data:`, profileData.travel);
+                        }
+                    } catch (error) {
+                        console.error(`Error fetching profile for user ${member.id}:`, error);
+                        member.profile = { 
+                            error: true,
+                            travel: null // Mark travel as checked (null means no travel or error)
+                        };
+                    }
+                });
+                await Promise.all(profilePromises);
+                
+                // Update display after each batch
+                displayFactionMembersList();
+            }
+            console.log('Finished fetching all profiles');
+            
+        } catch (locationError) {
+            console.error('Error fetching locations:', locationError);
+            // Still update display even if location fetching failed
+            console.log('Updating display despite location fetch error. Total members:', factionMembersData.length);
+            displayFactionMembersList();
         }
         
-        mapLoading.classList.add('hidden');
-        
-        if (markersAdded === 0) {
-            mapError.classList.remove('hidden');
-            mapError.textContent = 'No faction members with valid travel locations found.';
+        // Final display update to ensure table is shown
+        if (factionMembersData && factionMembersData.length > 0) {
+            console.log('Final display update. Members:', factionMembersData.length);
+            displayFactionMembersList();
         }
+        
+        // Final display update to ensure table is shown (even if previous calls failed)
+        console.log('=== FINAL DISPLAY CHECK ===');
+        console.log('factionMembersData exists:', !!factionMembersData);
+        console.log('factionMembersData length:', factionMembersData ? factionMembersData.length : 'N/A');
+        if (factionMembersData && factionMembersData.length > 0) {
+            console.log('Calling displayFactionMembersList() one final time');
+            displayFactionMembersList();
+        } else {
+            console.warn('No data to display in final check');
+        }
+        
+        if (mapLoading) mapLoading.classList.add('hidden');
+        if (mapError) mapError.classList.add('hidden');
         
     } catch (error) {
-        console.error('Error loading faction map:', error);
-        mapLoading.classList.add('hidden');
-        mapError.classList.remove('hidden');
-        mapError.textContent = `Error loading faction map: ${error.message}`;
+        console.error('Error loading faction members:', error);
+        console.error('Error stack:', error.stack);
+        if (mapLoading) mapLoading.classList.add('hidden');
+        if (mapError) {
+            mapError.classList.remove('hidden');
+            mapError.textContent = `Error loading faction members: ${error.message}`;
+        }
+        
+        // Show error in members list
+        const membersList = document.getElementById('factionMembersList');
+        const membersTableBody = document.getElementById('factionMembersTableBody');
+        if (membersTableBody) {
+            membersTableBody.innerHTML = `<tr><td colspan="5" style="color: #f44336; text-align: center; padding: 20px;">Error loading faction members: ${error.message}</td></tr>`;
+        }
+        
+        // Still show the list container so user can see the error
+        if (membersList) {
+            membersList.classList.remove('hidden');
+        }
     }
 }
 
-// Map Torn city names to coordinates
+// Map Torn city names to coordinates (only actual travelable destinations)
 function getCityCoordinates(cityName) {
     if (!cityName) return null;
     
-    // Torn city coordinates (approximate)
+    // Torn travelable city coordinates
     const cityCoordinates = {
-        'Torn': [51.5074, -0.1278], // London, UK
-        'United Kingdom': [51.5074, -0.1278],
+        'Torn': [51.5074, -0.1278], // London, UK (default location)
+        'United Kingdom': [51.5074, -0.1278], // London
         'UK': [51.5074, -0.1278],
-        'Mexico': [19.4326, -99.1332], // Mexico City
-        'Cayman Islands': [19.3133, -81.2546],
-        'Canada': [45.5017, -73.5673], // Montreal
+        'Mexico': [31.6904, -106.4244], // Ciudad Juárez
+        'Cayman Islands': [19.3133, -81.2546], // George Town
+        'Canada': [43.6532, -79.3832], // Toronto
         'Hawaii': [21.3099, -157.8581], // Honolulu
-        'United States': [40.7128, -74.0060], // New York
-        'USA': [40.7128, -74.0060],
-        'US': [40.7128, -74.0060],
+        'Switzerland': [47.3769, 8.5417], // Zurich
         'Argentina': [-34.6037, -58.3816], // Buenos Aires
-        'Switzerland': [46.2044, 6.1432], // Geneva
         'Japan': [35.6762, 139.6503], // Tokyo
         'China': [39.9042, 116.4074], // Beijing
         'UAE': [25.2048, 55.2708], // Dubai
         'United Arab Emirates': [25.2048, 55.2708],
-        'South Africa': [-26.2041, 28.0473], // Johannesburg
-        'New Zealand': [-36.8485, 174.7633], // Auckland
-        'Iceland': [64.1466, -21.9426], // Reykjavik
-        'Brazil': [-23.5505, -46.6333], // São Paulo
-        'Australia': [-33.8688, 151.2093], // Sydney
-        'Russia': [55.7558, 37.6173], // Moscow
-        'India': [28.6139, 77.2090], // New Delhi
-        'France': [48.8566, 2.3522], // Paris
-        'Germany': [52.5200, 13.4050], // Berlin
-        'Italy': [41.9028, 12.4964], // Rome
-        'Spain': [40.4168, -3.7038], // Madrid
-        'Netherlands': [52.3676, 4.9041], // Amsterdam
-        'Belgium': [50.8503, 4.3517], // Brussels
-        'Sweden': [59.3293, 18.0686], // Stockholm
-        'Norway': [59.9139, 10.7522], // Oslo
-        'Denmark': [55.6761, 12.5683], // Copenhagen
-        'Finland': [60.1699, 24.9384], // Helsinki
-        'Poland': [52.2297, 21.0122], // Warsaw
-        'Turkey': [41.0082, 28.9784], // Istanbul
-        'Egypt': [30.0444, 31.2357], // Cairo
-        'Saudi Arabia': [24.7136, 46.6753], // Riyadh
-        'Singapore': [1.3521, 103.8198], // Singapore
-        'Thailand': [13.7563, 100.5018], // Bangkok
-        'South Korea': [37.5665, 126.9780], // Seoul
-        'Philippines': [14.5995, 120.9842], // Manila
-        'Indonesia': [-6.2088, 106.8456], // Jakarta
-        'Malaysia': [3.1390, 101.6869], // Kuala Lumpur
-        'Vietnam': [10.8231, 106.6297], // Ho Chi Minh City
-        'Taiwan': [25.0330, 121.5654], // Taipei
-        'Hong Kong': [22.3193, 114.1694], // Hong Kong
+        'South Africa': [-26.2041, 28.0473] // Johannesburg
     };
     
     // Try exact match first
@@ -1153,7 +1614,7 @@ function getCityCoordinates(cityName) {
         }
     }
     
-    // Try partial match (e.g., "United States" matches "United States of America")
+    // Try partial match
     for (const [city, coords] of Object.entries(cityCoordinates)) {
         if (cityNameLower.includes(city.toLowerCase()) || city.toLowerCase().includes(cityNameLower)) {
             return coords;
@@ -1162,5 +1623,187 @@ function getCityCoordinates(cityName) {
     
     // Return null if city not found
     return null;
+}
+
+// Display faction members in a table
+function displayFactionMembersList() {
+    console.log('=== displayFactionMembersList called ===');
+    console.log('factionMembersData:', factionMembersData);
+    console.log('factionMembersData type:', typeof factionMembersData);
+    console.log('factionMembersData length:', factionMembersData ? factionMembersData.length : 'null/undefined');
+    
+    const membersListContainer = document.getElementById('factionMembersList');
+    const membersTableBody = document.getElementById('factionMembersTableBody');
+    
+    console.log('Members list container:', membersListContainer);
+    console.log('Members table body:', membersTableBody);
+    
+    if (!membersListContainer) {
+        console.error('Members list container not found!');
+        return;
+    }
+    
+    if (!membersTableBody) {
+        console.error('Members table body not found!');
+        return;
+    }
+    
+    if (!factionMembersData || factionMembersData.length === 0) {
+        console.log('No faction members data to display. Data:', factionMembersData);
+        console.log('factionMembersData is:', factionMembersData === null ? 'null' : factionMembersData === undefined ? 'undefined' : 'empty array');
+        // Show a message instead of hiding
+        membersTableBody.innerHTML = '<tr><td colspan="5" style="color: #c0c0c0; text-align: center; padding: 20px;">No faction members found.</td></tr>';
+        membersListContainer.classList.remove('hidden');
+        console.log('Table should now show "No faction members found" message');
+        return;
+    }
+    
+    console.log('About to create table rows for', factionMembersData.length, 'members');
+    
+    // Clear existing content
+    membersTableBody.innerHTML = '';
+    
+    // Sort members by name
+    const sortedMembers = [...factionMembersData].sort((a, b) => {
+        const nameA = a.name || '';
+        const nameB = b.name || '';
+        return nameA.localeCompare(nameB);
+    });
+    
+    console.log('Sorted members:', sortedMembers);
+    console.log('Number of rows to create:', sortedMembers.length);
+    
+    // Create table rows
+    sortedMembers.forEach((member, index) => {
+        console.log(`Creating row ${index + 1} for member:`, member);
+        const row = document.createElement('tr');
+        
+        // UserID column
+        const userIdCell = document.createElement('td');
+        userIdCell.textContent = member.id || 'N/A';
+        
+        // Name column
+        const nameCell = document.createElement('td');
+        nameCell.textContent = member.name || `Member ${member.id || index}`;
+        
+        // Etcetera column (profile information and travel destination)
+        const etceteraCell = document.createElement('td');
+        if (member.profile) {
+            // Display profile info: Level, Location/Travel
+            let profileText = '';
+            if (member.profile.level) {
+                profileText += `Level ${member.profile.level}`;
+            }
+            
+            // Show travel destination if travelling, otherwise show current location
+            if (member.isTravelling && member.destination) {
+                if (profileText) profileText += ' • ';
+                profileText += `→ ${member.destination}`;
+                if (member.travelTimeLeft) {
+                    const minutes = Math.floor(member.travelTimeLeft / 60);
+                    const seconds = member.travelTimeLeft % 60;
+                    profileText += ` (${minutes}:${seconds.toString().padStart(2, '0')})`;
+                }
+            } else if (member.location && member.location !== 'Unknown' && !member.location.startsWith('→')) {
+                if (profileText) profileText += ' • ';
+                profileText += member.location;
+            } else if (member.location && member.location.startsWith('→')) {
+                // Already has travel arrow
+                if (profileText) profileText += ' • ';
+                profileText += member.location;
+            }
+            
+            etceteraCell.textContent = profileText || 'Loading...';
+        } else {
+            // Show location/travel while profile is loading
+            if (member.isTravelling && member.destination) {
+                let travelText = `→ ${member.destination}`;
+                if (member.travelTimeLeft) {
+                    const minutes = Math.floor(member.travelTimeLeft / 60);
+                    const seconds = member.travelTimeLeft % 60;
+                    travelText += ` (${minutes}:${seconds.toString().padStart(2, '0')})`;
+                }
+                etceteraCell.textContent = travelText;
+            } else {
+                etceteraCell.textContent = member.location || 'Loading...';
+            }
+        }
+        
+        // Status column
+        const statusCell = document.createElement('td');
+        if (member.profile && member.profile.status) {
+            const status = member.profile.status.state || member.profile.status || member.status || 'Unknown';
+            statusCell.textContent = status;
+        } else if (member.status) {
+            statusCell.textContent = member.status;
+        } else {
+            statusCell.textContent = 'Loading...';
+        }
+        
+        // Travel column
+        const travelCell = document.createElement('td');
+        let travelText = 'Loading...';
+        
+        // Check if profile data has been fetched (even if travel is null, we know we've checked)
+        if (member.profile) {
+            if (member.profile.error) {
+                // Error fetching profile - show error or fallback
+                travelText = member.destination || member.currentLocation || 'Error';
+            } else if ('travel' in member.profile) {
+                const travel = member.profile.travel;
+                
+                if (travel && typeof travel === 'object') {
+                    if (travel.destination) {
+                        // Member is travelling to a destination
+                        travelText = `→ ${travel.destination}`;
+                        if (travel.time_left || travel.timeleft) {
+                            const timeLeft = travel.time_left || travel.timeleft;
+                            const minutes = Math.floor(timeLeft / 60);
+                            const seconds = timeLeft % 60;
+                            travelText += ` (${minutes}:${seconds.toString().padStart(2, '0')})`;
+                        }
+                    } else if (travel.departing) {
+                        // Member is departing from a location
+                        travelText = `Departing: ${travel.departing}`;
+                    } else {
+                        // Travel data exists but no destination/departing - in Torn City
+                        travelText = 'In Torn City';
+                    }
+                } else {
+                    // Travel is null or falsy - in Torn City
+                    travelText = 'In Torn City';
+                }
+            }
+        }
+        
+        // Fallback to location-based travel data if profile travel not available
+        if (travelText === 'Loading...' && (member.destination || member.isTravelling)) {
+            if (member.isTravelling && member.destination) {
+                travelText = `→ ${member.destination}`;
+                if (member.travelTimeLeft) {
+                    const minutes = Math.floor(member.travelTimeLeft / 60);
+                    const seconds = member.travelTimeLeft % 60;
+                    travelText += ` (${minutes}:${seconds.toString().padStart(2, '0')})`;
+                }
+            } else {
+                travelText = member.currentLocation || 'Torn City';
+            }
+        }
+        
+        travelCell.textContent = travelText;
+        
+        row.appendChild(userIdCell);
+        row.appendChild(nameCell);
+        row.appendChild(etceteraCell);
+        row.appendChild(statusCell);
+        row.appendChild(travelCell);
+        
+        membersTableBody.appendChild(row);
+        console.log(`Row ${index + 1} appended to table`);
+    });
+    
+    // Show the list
+    membersListContainer.classList.remove('hidden');
+    console.log('Members list should now be visible. Rows in table:', membersTableBody.children.length);
 }
 

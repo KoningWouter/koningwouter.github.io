@@ -76,6 +76,7 @@ let travelEndTime = null;
 let currentFactionId = null;
 let worldMap = null;
 let tornCityMarkers = [];
+let tornCityLines = [];
 let factionMarkers = [];
 let factionMembersData = [];
 let mapInitRetryCount = 0;
@@ -141,6 +142,68 @@ document.addEventListener('DOMContentLoaded', () => {
         handleSearch();
     }, 500);
 });
+
+// Fetch and display travel information for a specific user
+async function fetchAndDisplayTravelInfo(userId, userName) {
+    const tempTravelCard = document.getElementById('tempTravelCard');
+    const tempTravelInfo = document.getElementById('tempTravelInfo');
+    
+    if (!tempTravelCard || !tempTravelInfo) {
+        console.error('Travel card elements not found');
+        return;
+    }
+    
+    try {
+        tempTravelCard.classList.remove('hidden');
+        tempTravelInfo.textContent = 'Loading travel information...';
+        
+        const userData = await fetchUserData(userId, 'basic,travel');
+        const travelData = userData.travel || null;
+        
+        let infoHTML = '';
+        
+        if (travelData && typeof travelData === 'object') {
+            infoHTML += '<div class="travel-info-item"><strong>User:</strong> ' + (userData.name || userName) + ' (ID: ' + userId + ')</div>';
+            
+            if (travelData.destination) {
+                infoHTML += '<div class="travel-info-item"><strong>Destination:</strong> ' + travelData.destination + '</div>';
+            }
+            
+            if (travelData.departing) {
+                infoHTML += '<div class="travel-info-item"><strong>Departing From:</strong> ' + travelData.departing + '</div>';
+            }
+            
+            if (travelData.time_left !== undefined) {
+                const timeLeft = travelData.time_left;
+                const hours = Math.floor(timeLeft / 3600);
+                const minutes = Math.floor((timeLeft % 3600) / 60);
+                const seconds = timeLeft % 60;
+                infoHTML += '<div class="travel-info-item"><strong>Time Left:</strong> ' + 
+                    (hours > 0 ? hours + 'h ' : '') + 
+                    (minutes > 0 ? minutes + 'm ' : '') + 
+                    seconds + 's</div>';
+            }
+            
+            if (travelData.timestamp) {
+                const travelEnd = new Date(travelData.timestamp * 1000);
+                infoHTML += '<div class="travel-info-item"><strong>Travel Ends:</strong> ' + travelEnd.toLocaleString() + '</div>';
+            }
+            
+            if (!travelData.destination && !travelData.departing) {
+                infoHTML += '<div class="travel-info-item"><strong>Status:</strong> In Torn City</div>';
+            }
+        } else {
+            infoHTML = '<div class="travel-info-item">No travel data available. User is likely in Torn City.</div>';
+        }
+        
+        tempTravelInfo.innerHTML = infoHTML;
+        console.log('Travel info displayed for user', userId, travelData);
+        
+    } catch (error) {
+        console.error('Error fetching travel info:', error);
+        tempTravelInfo.innerHTML = '<div class="travel-info-item error">Error loading travel information: ' + error.message + '</div>';
+    }
+}
 
 // Setup tab functionality
 function setupTabs() {
@@ -1140,6 +1203,9 @@ async function initializeFactionMap() {
             // Add Torn city markers
             addTornCityMarkers();
             
+            // Add dashed lines from Torn to other cities
+            addTornCityLines();
+            
             mapInitRetryCount = 0;
             mapInitInProgress = false;
             
@@ -1166,6 +1232,10 @@ function addTornCityMarkers() {
     // Clear existing markers
     tornCityMarkers.forEach(marker => worldMap.removeLayer(marker));
     tornCityMarkers = [];
+    
+    // Clear existing lines
+    tornCityLines.forEach(line => worldMap.removeLayer(line));
+    tornCityLines = [];
     
     // Remove duplicates
     const uniqueCities = [];
@@ -1198,6 +1268,34 @@ function addTornCityMarkers() {
             .bindPopup(`<strong>${city.name}</strong><br>Torn Travel Destination`);
         
         tornCityMarkers.push(marker);
+    });
+}
+
+// Add dashed lines from Torn to all other cities
+function addTornCityLines() {
+    if (!worldMap) return;
+    
+    // Find Torn's coordinates
+    const tornCity = tornCities.find(city => city.name === 'Torn');
+    if (!tornCity) return;
+    
+    const tornCoords = tornCity.coords;
+    
+    // Draw lines from Torn to all other cities
+    tornCities.forEach(city => {
+        // Skip Torn itself
+        if (city.name === 'Torn') return;
+        
+        // Create dashed polyline from Torn to this city
+        const line = L.polyline([tornCoords, city.coords], {
+            color: '#d4af37',
+            weight: 2,
+            opacity: 0.6,
+            dashArray: '10, 10',
+            interactive: false
+        }).addTo(worldMap);
+        
+        tornCityLines.push(line);
     });
 }
 
@@ -1517,12 +1615,17 @@ async function loadFactionMembers() {
                 const coordinates = getCityCoordinates(locationForMap);
                 
                 if (coordinates) {
-                    // Create custom icon
+                    // Create custom icon with dot and text label
                     const customIcon = L.divIcon({
                         className: 'faction-member-marker',
-                        html: `<div class="marker-pin">📍</div>`,
-                        iconSize: [30, 30],
-                        iconAnchor: [15, 30]
+                        html: `
+                            <div class="marker-container">
+                                <div class="marker-dot"></div>
+                                <div class="marker-label">${memberName}</div>
+                            </div>
+                        `,
+                        iconSize: [100, 30],
+                        iconAnchor: [50, 15]
                     });
                     
                     const marker = L.marker(coordinates, { icon: customIcon })

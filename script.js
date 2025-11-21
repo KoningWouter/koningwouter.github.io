@@ -118,7 +118,8 @@ const tornCities = [
     { name: 'Japan', coords: [35.6762, 139.6503] }, // Tokyo
     { name: 'China', coords: [39.9042, 116.4074] }, // Beijing
     { name: 'UAE', coords: [25.2048, 55.2708] }, // Dubai
-    { name: 'South Africa', coords: [-26.2041, 28.0473] } // Johannesburg
+    { name: 'South Africa', coords: [-26.2041, 28.0473] }, // Johannesburg
+    { name: 'Torn', coords: [39.0997, -94.5786] } // Kansas City, United States
 ];
 
 // Initialize the page
@@ -164,6 +165,8 @@ function setupTabs() {
             } else if (targetTab === 'faction-map') {
                 const factionMapTab = document.getElementById('factionMapTab');
                 factionMapTab.classList.add('active');
+            } else if (targetTab === 'settings') {
+                document.getElementById('settingsTab').classList.add('active');
             }
         });
     });
@@ -598,28 +601,51 @@ function updateProgressBars(data) {
         console.warn('No happy data found');
     }
 
-    // Update Money display - show only wallet value
-    const moneyElement = document.getElementById('moneyValue');
-    if (moneyElement) {
-        let walletValue = null;
-        
-        // Check if money object exists and has wallet property
-        if (data.money && typeof data.money === 'object' && data.money.wallet !== undefined) {
+    // Update Money display - show wallet and faction money
+    const walletElement = document.getElementById('walletValue');
+    const factionElement = document.getElementById('factionValue');
+    
+    let walletValue = null;
+    let factionValue = null;
+    
+    // Check if money object exists and has wallet and faction properties
+    if (data.money && typeof data.money === 'object') {
+        if (data.money.wallet !== undefined) {
             walletValue = data.money.wallet;
         }
-        
-        // Format and display wallet value with dollar sign
-        if (walletValue !== null && typeof walletValue === 'number' && !isNaN(walletValue)) {
-            moneyElement.textContent = '$' + walletValue.toLocaleString('en-US', { 
+        // Faction money is nested: data.money.faction.money
+        if (data.money.faction && typeof data.money.faction === 'object' && data.money.faction.money !== undefined) {
+            factionValue = data.money.faction.money;
+        }
+    }
+    
+    // Format value with dollar sign - always display 0 if value is 0
+    const formatValue = (value) => {
+        if (value !== null && typeof value === 'number' && !isNaN(value)) {
+            return '$' + value.toLocaleString('en-US', { 
                 minimumFractionDigits: 0, 
                 maximumFractionDigits: 0 
             });
-            console.log('Wallet updated:', walletValue);
+        }
+        return '-';
+    };
+    
+    // Update wallet display
+    if (walletElement) {
+        walletElement.textContent = formatValue(walletValue);
+    }
+    
+    // Update faction display - always show value even if 0
+    if (factionElement) {
+        if (factionValue !== null && typeof factionValue === 'number' && !isNaN(factionValue)) {
+            // Display the value even if it's 0
+            factionElement.textContent = formatValue(factionValue);
         } else {
-            moneyElement.textContent = '-';
-            console.warn('Wallet data not found or invalid:', data.money);
+            factionElement.textContent = '-';
         }
     }
+    
+    console.log('Money updated - Wallet:', walletValue, 'Faction:', factionValue, 'Faction object:', data.money?.faction);
 }
 
 // Update status display
@@ -1078,10 +1104,14 @@ async function initializeFactionMap() {
             worldMap = L.map('worldMap', {
                 center: [0, 0],
                 zoom: 2,
-                zoomControl: true,
+                zoomControl: false,
                 attributionControl: false,
-                minZoom: 1,
-                maxZoom: 10
+                minZoom: 2,
+                maxZoom: 2,
+                scrollWheelZoom: false,
+                doubleClickZoom: false,
+                boxZoom: false,
+                keyboard: false
             });
             
             // Add dark theme tile layer (CartoDB Dark Matter)
@@ -1090,6 +1120,13 @@ async function initializeFactionMap() {
                 subdomains: 'abcd',
                 maxZoom: 19
             }).addTo(worldMap);
+            
+            // Disable all zoom interactions
+            worldMap.touchZoom.disable();
+            worldMap.doubleClickZoom.disable();
+            worldMap.scrollWheelZoom.disable();
+            worldMap.boxZoom.disable();
+            worldMap.keyboard.disable();
             
             // Wait for map to be ready, then invalidate size
             worldMap.whenReady(() => {
@@ -1604,7 +1641,7 @@ function getCityCoordinates(cityName) {
     
     // Torn travelable city coordinates
     const cityCoordinates = {
-        'Torn': [51.5074, -0.1278], // London, UK (default location)
+        'Torn': [39.0997, -94.5786], // Kansas City, United States
         'United Kingdom': [51.5074, -0.1278], // London
         'UK': [51.5074, -0.1278],
         'Mexico': [31.6904, -106.4244], // Ciudad Juárez

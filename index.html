@@ -35,6 +35,10 @@
                     <span class="tab-icon">⚔️</span>
                     <span class="tab-label">Player Info</span>
                 </button>
+                <button class="tab-button" data-tab="settings">
+                    <span class="tab-icon">⚙️</span>
+                    <span class="tab-label">Settings</span>
+                </button>
             </div>
         </div>
 
@@ -152,12 +156,29 @@
                     <div class="progress-bar-header">
                         <span class="progress-bar-icon">💰</span>
                         <span class="progress-bar-label">Money</span>
-                        <span class="progress-bar-value" id="moneyValue">-</span>
+                    </div>
+                    <div class="money-display-wrapper">
+                        <div class="money-display-main">
+                            <div class="money-label">Wallet</div>
+                            <div class="money-value-large" id="walletValue">-</div>
+                        </div>
+                        <div class="money-display-secondary">
+                            <div class="money-label">Faction</div>
+                            <div class="money-value-medium" id="factionValue">-</div>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <div id="userInfo" class="user-info hidden"></div>
+        </div>
+
+        <!-- Settings Tab Content -->
+        <div id="settingsTab" class="tab-content">
+            <div class="settings-section">
+                <h2>Settings</h2>
+                <p>Settings content will be displayed here.</p>
+            </div>
         </div>
 
         <div class="api-endpoints-section">

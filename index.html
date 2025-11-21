@@ -39,6 +39,10 @@
                     <span class="tab-icon">⚙️</span>
                     <span class="tab-label">Settings</span>
                 </button>
+                <button class="tab-button" data-tab="dummy">
+                    <span class="tab-icon">📋</span>
+                    <span class="tab-label">Dummy</span>
+                </button>
             </div>
         </div>
 
@@ -168,16 +172,92 @@
                         </div>
                     </div>
                 </div>
+
+                <div class="progress-bar-card" id="travelBarCard">
+                    <div class="progress-bar-header">
+                        <span class="progress-bar-icon">✈️</span>
+                        <span class="progress-bar-label">Travel</span>
+                    </div>
+                    <div class="travel-display-wrapper">
+                        <div class="travel-display-main">
+                            <div class="travel-label">Current Location</div>
+                            <div class="travel-value-large" id="travelLocation">Torn City</div>
+                        </div>
+                        <div class="travel-display-secondary">
+                            <div class="travel-label">Destination</div>
+                            <div class="travel-value-medium" id="travelDestination">-</div>
+                        </div>
+                        <div class="travel-display-tertiary">
+                            <div class="travel-label">Time Remaining</div>
+                            <div class="travel-value-small" id="travelTimeRemaining">-</div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div id="userInfo" class="user-info hidden"></div>
+            </div>
         </div>
 
         <!-- Settings Tab Content -->
         <div id="settingsTab" class="tab-content">
-            <div class="settings-section">
+            <div class="world-map-section">
                 <h2>Settings</h2>
-                <p>Settings content will be displayed here.</p>
+                <div class="settings-content-wrapper">
+                    <div class="settings-data-grid">
+                        <div class="settings-data-item">
+                            <div class="settings-data-label">API Key Status</div>
+                            <div class="settings-data-value">Active</div>
+                        </div>
+                        <div class="settings-data-item">
+                            <div class="settings-data-label">Auto Refresh</div>
+                            <div class="settings-data-value">Enabled (5s)</div>
+                        </div>
+                        <div class="settings-data-item">
+                            <div class="settings-data-label">Theme</div>
+                            <div class="settings-data-value">Dark Mode</div>
+                        </div>
+                        <div class="settings-data-item">
+                            <div class="settings-data-label">Notifications</div>
+                            <div class="settings-data-value">On</div>
+                        </div>
+                        <div class="settings-data-item">
+                            <div class="settings-data-label">Language</div>
+                            <div class="settings-data-value">English</div>
+                        </div>
+                        <div class="settings-data-item">
+                            <div class="settings-data-label">Version</div>
+                            <div class="settings-data-value">1.0.0</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dummy Tab Content -->
+        <div id="dummyTab" class="tab-content">
+            <div class="settings-section">
+                <h2>Dummy Data</h2>
+                <div style="color: #c0c0c0; font-size: 1rem; margin-top: 20px; padding: 20px;">
+                    <div style="margin-bottom: 15px;">
+                        <strong style="color: #d4af37;">Name:</strong> <span>John Doe</span>
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <strong style="color: #d4af37;">Level:</strong> <span>42</span>
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <strong style="color: #d4af37;">Status:</strong> <span>Online</span>
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <strong style="color: #d4af37;">Location:</strong> <span>New York</span>
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <strong style="color: #d4af37;">Score:</strong> <span>1,234,567</span>
+                    </div>
+                    <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(212, 175, 55, 0.2);">
+                        <p style="font-style: italic; color: #888;">This is dummy data for testing purposes.</p>
+                    </div>
+                </div>
             </div>
         </div>
 

@@ -81,29 +81,6 @@ let factionMarkers = [];
 let factionMembersData = [];
 let mapInitRetryCount = 0;
 
-// Test function to verify table works - can be called from console
-window.testFactionTable = function() {
-    console.log('=== TEST: Adding test data to table ===');
-    const membersListContainer = document.getElementById('factionMembersList');
-    const membersTableBody = document.getElementById('factionMembersTableBody');
-    
-    console.log('Container:', membersListContainer);
-    console.log('Table body:', membersTableBody);
-    
-    if (!membersListContainer || !membersTableBody) {
-        console.error('Table elements not found!');
-        return;
-    }
-    
-    // Add test data
-    factionMembersData = [
-        { id: '1', name: 'Test User 1', location: 'Torn City' },
-        { id: '2', name: 'Test User 2', location: 'Mexico' }
-    ];
-    
-    displayFactionMembersList();
-    console.log('Test complete - table should show 2 test users');
-};
 let mapInitInProgress = false;
 const MAX_MAP_INIT_RETRIES = 10;
 
@@ -229,7 +206,21 @@ function setupTabs() {
                 const factionMapTab = document.getElementById('factionMapTab');
                 factionMapTab.classList.add('active');
             } else if (targetTab === 'settings') {
-                document.getElementById('settingsTab').classList.add('active');
+                const settingsTab = document.getElementById('settingsTab');
+                if (settingsTab) {
+                    settingsTab.classList.add('active');
+                    console.log('Settings tab activated');
+                } else {
+                    console.error('Settings tab element not found');
+                }
+            } else if (targetTab === 'dummy') {
+                const dummyTab = document.getElementById('dummyTab');
+                if (dummyTab) {
+                    dummyTab.classList.add('active');
+                    console.log('Dummy tab activated');
+                } else {
+                    console.error('Dummy tab element not found');
+                }
             }
         });
     });
@@ -549,13 +540,6 @@ async function handleSearch() {
             } catch (error) {
                 console.error('ERROR calling loadFactionMembers():', error);
             }
-        } else {
-            console.log('✗ No faction ID, hiding members list');
-            // Hide members list if no faction
-            const membersList = document.getElementById('factionMembersList');
-            if (membersList) {
-                membersList.classList.add('hidden');
-            }
         }
         
         // Switch to Player Info tab after successful search
@@ -583,7 +567,18 @@ async function fetchUserData(userId, selections = 'basic,profile,bars,travel,fac
         throw new Error('API key is not configured. Please check config.js');
     }
 
-    const url = `${API_BASE_URL}/user/${userId}?selections=${selections}&key=${window.API_KEY}`;
+    // Validate userId is numeric
+    if (!userId || (typeof userId !== 'number' && !/^\d+$/.test(String(userId)))) {
+        throw new Error(`Invalid user ID: ${userId}. User ID must be a number.`);
+    }
+
+    // Ensure userId is a number
+    const numericUserId = typeof userId === 'number' ? userId : parseInt(userId, 10);
+    if (isNaN(numericUserId)) {
+        throw new Error(`Invalid user ID: ${userId}. Could not convert to number.`);
+    }
+
+    const url = `${API_BASE_URL}/user/${numericUserId}?selections=${selections}&key=${window.API_KEY}`;
     console.log('Fetching user data from URL:', url.replace(window.API_KEY, 'KEY_HIDDEN'));
     
     const response = await fetch(url);
@@ -593,8 +588,15 @@ async function fetchUserData(userId, selections = 'basic,profile,bars,travel,fac
     console.log('API response data:', data);
 
     if (data.error) {
+        const errorMessage = data.error.error || JSON.stringify(data.error);
         console.error('API Error:', data.error);
-        throw new Error(data.error.error || 'API Error: ' + JSON.stringify(data.error));
+        
+        // Handle specific "Incorrect ID-entity relation" error more gracefully
+        if (errorMessage.includes('Incorrect ID-entity relation') || errorMessage.includes('ID-entity')) {
+            throw new Error(`Permission denied: API key does not have access to user ${numericUserId}. This may be due to insufficient API key permissions.`);
+        }
+        
+        throw new Error(errorMessage);
     }
 
     return data;
@@ -602,7 +604,7 @@ async function fetchUserData(userId, selections = 'basic,profile,bars,travel,fac
 
 // Fetch only bars data for quick refresh
 async function fetchBarsData(userId) {
-    return await fetchUserData(userId, 'bars,money');
+    return await fetchUserData(userId, 'bars,money,travel');
 }
 
 // Fetch status data for quick refresh (includes travel)
@@ -709,6 +711,71 @@ function updateProgressBars(data) {
     }
     
     console.log('Money updated - Wallet:', walletValue, 'Faction:', factionValue, 'Faction object:', data.money?.faction);
+    
+    // Update Travel display with real data from API
+    const travelLocationElement = document.getElementById('travelLocation');
+    const travelDestinationElement = document.getElementById('travelDestination');
+    const travelTimeRemainingElement = document.getElementById('travelTimeRemaining');
+    
+    const travelData = data.travel || null;
+    
+    // Format time remaining in seconds to readable format (e.g., "2h 15m" or "45m 30s")
+    const formatTimeRemaining = (seconds) => {
+        if (!seconds || seconds <= 0) return '-';
+        
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        const secs = seconds % 60;
+        
+        let timeString = '';
+        if (hours > 0) {
+            timeString += hours + 'h ';
+        }
+        if (minutes > 0) {
+            timeString += minutes + 'm ';
+        }
+        if (secs > 0 && hours === 0) {
+            timeString += secs + 's';
+        }
+        
+        return timeString.trim() || '-';
+    };
+    
+    // Update current location
+    if (travelLocationElement) {
+        if (travelData && travelData.departing) {
+            // If travelling, show where they're departing from
+            travelLocationElement.textContent = travelData.departing;
+        } else {
+            // If not travelling or no travel data, they're in Torn City
+            travelLocationElement.textContent = 'Torn City';
+        }
+    }
+    
+    // Update destination
+    if (travelDestinationElement) {
+        if (travelData && travelData.destination) {
+            travelDestinationElement.textContent = travelData.destination;
+        } else {
+            travelDestinationElement.textContent = '-';
+        }
+    }
+    
+    // Update time remaining
+    if (travelTimeRemainingElement) {
+        if (travelData && travelData.time_left !== undefined) {
+            travelTimeRemainingElement.textContent = formatTimeRemaining(travelData.time_left);
+        } else if (travelData && travelData.timestamp) {
+            // Calculate time remaining from timestamp if time_left is not available
+            const now = Math.floor(Date.now() / 1000);
+            const timeLeft = Math.max(0, travelData.timestamp - now);
+            travelTimeRemainingElement.textContent = formatTimeRemaining(timeLeft);
+        } else {
+            travelTimeRemainingElement.textContent = '-';
+        }
+    }
+    
+    console.log('Travel updated:', travelData);
 }
 
 // Update status display
@@ -1321,31 +1388,8 @@ async function loadFactionMembers() {
             mapError.classList.remove('hidden');
             mapError.textContent = 'No faction found. Please search for a user who is in a faction.';
         }
-        // Hide members list if no faction
-        const membersList = document.getElementById('factionMembersList');
-        const membersTableBody = document.getElementById('factionMembersTableBody');
-        if (membersList) {
-            membersList.classList.add('hidden');
-        }
-        if (membersTableBody) {
-            membersTableBody.innerHTML = '';
-        }
         // Map is still visible, just no markers
         return;
-    }
-    
-    // Show loading state for members list
-    const membersList = document.getElementById('factionMembersList');
-    const membersTableBody = document.getElementById('factionMembersTableBody');
-    console.log('Members list element:', membersList);
-    console.log('Members table body element:', membersTableBody);
-    
-    if (membersList && membersTableBody) {
-        console.log('Showing loading state in table');
-        membersList.classList.remove('hidden');
-        membersTableBody.innerHTML = '<tr><td colspan="5" style="color: #c0c0c0; text-align: center; padding: 20px;">Loading faction members...</td></tr>';
-    } else {
-        console.error('Could not find members list or table body elements!');
     }
     
     try {
@@ -1468,17 +1512,6 @@ async function loadFactionMembers() {
         console.log('Faction members data after processing:', factionMembersData);
         console.log('Number of members in factionMembersData:', factionMembersData.length);
         
-        // Display faction members list immediately (even with placeholder names)
-        // FORCE DISPLAY - call it unconditionally
-        console.log('=== FORCING DISPLAY CALL ===');
-        console.log('About to call displayFactionMembersList()');
-        console.log('factionMembersData exists:', !!factionMembersData);
-        console.log('factionMembersData.length:', factionMembersData ? factionMembersData.length : 'N/A');
-        
-        // Call display function - MUST HAPPEN
-        displayFactionMembersList();
-        console.log('displayFactionMembersList() was called');
-        
         if (factionMembersData.length === 0) {
             console.warn('WARNING: No members in factionMembersData but display was called anyway');
         }
@@ -1515,9 +1548,7 @@ async function loadFactionMembers() {
                 });
                 await Promise.all(namePromises);
             }
-            console.log('Finished fetching user names, updating display...');
-            // Update display after fetching names
-            displayFactionMembersList();
+            console.log('Finished fetching user names');
         }
         
         // Fetch locations for all members in parallel (with rate limiting) for map markers and table
@@ -1644,10 +1675,6 @@ async function loadFactionMembers() {
             }
         });
         
-            // Update the display with locations
-            console.log('Updating display with locations. Total members:', factionMembersData.length);
-            displayFactionMembersList();
-            
             // Keep map at world view - don't auto-zoom to markers
             
             // Now fetch profile data for all members
@@ -1674,7 +1701,12 @@ async function loadFactionMembers() {
                             console.log(`  Travel data:`, profileData.travel);
                         }
                     } catch (error) {
-                        console.error(`Error fetching profile for user ${member.id}:`, error);
+                        // Handle permission errors gracefully - don't log as error if it's a permission issue
+                        if (error.message && error.message.includes('Permission denied')) {
+                            console.warn(`Permission denied for user ${member.id}: API key may not have access to this user's data`);
+                        } else {
+                            console.error(`Error fetching profile for user ${member.id}:`, error);
+                        }
                         member.profile = { 
                             error: true,
                             travel: null // Mark travel as checked (null means no travel or error)
@@ -1682,34 +1714,11 @@ async function loadFactionMembers() {
                     }
                 });
                 await Promise.all(profilePromises);
-                
-                // Update display after each batch
-                displayFactionMembersList();
             }
             console.log('Finished fetching all profiles');
             
         } catch (locationError) {
             console.error('Error fetching locations:', locationError);
-            // Still update display even if location fetching failed
-            console.log('Updating display despite location fetch error. Total members:', factionMembersData.length);
-            displayFactionMembersList();
-        }
-        
-        // Final display update to ensure table is shown
-        if (factionMembersData && factionMembersData.length > 0) {
-            console.log('Final display update. Members:', factionMembersData.length);
-            displayFactionMembersList();
-        }
-        
-        // Final display update to ensure table is shown (even if previous calls failed)
-        console.log('=== FINAL DISPLAY CHECK ===');
-        console.log('factionMembersData exists:', !!factionMembersData);
-        console.log('factionMembersData length:', factionMembersData ? factionMembersData.length : 'N/A');
-        if (factionMembersData && factionMembersData.length > 0) {
-            console.log('Calling displayFactionMembersList() one final time');
-            displayFactionMembersList();
-        } else {
-            console.warn('No data to display in final check');
         }
         
         if (mapLoading) mapLoading.classList.add('hidden');
@@ -1722,18 +1731,6 @@ async function loadFactionMembers() {
         if (mapError) {
             mapError.classList.remove('hidden');
             mapError.textContent = `Error loading faction members: ${error.message}`;
-        }
-        
-        // Show error in members list
-        const membersList = document.getElementById('factionMembersList');
-        const membersTableBody = document.getElementById('factionMembersTableBody');
-        if (membersTableBody) {
-            membersTableBody.innerHTML = `<tr><td colspan="5" style="color: #f44336; text-align: center; padding: 20px;">Error loading faction members: ${error.message}</td></tr>`;
-        }
-        
-        // Still show the list container so user can see the error
-        if (membersList) {
-            membersList.classList.remove('hidden');
         }
     }
 }
@@ -1785,184 +1782,4 @@ function getCityCoordinates(cityName) {
 }
 
 // Display faction members in a table
-function displayFactionMembersList() {
-    console.log('=== displayFactionMembersList called ===');
-    console.log('factionMembersData:', factionMembersData);
-    console.log('factionMembersData type:', typeof factionMembersData);
-    console.log('factionMembersData length:', factionMembersData ? factionMembersData.length : 'null/undefined');
-    
-    const membersListContainer = document.getElementById('factionMembersList');
-    const membersTableBody = document.getElementById('factionMembersTableBody');
-    
-    console.log('Members list container:', membersListContainer);
-    console.log('Members table body:', membersTableBody);
-    
-    if (!membersListContainer) {
-        console.error('Members list container not found!');
-        return;
-    }
-    
-    if (!membersTableBody) {
-        console.error('Members table body not found!');
-        return;
-    }
-    
-    if (!factionMembersData || factionMembersData.length === 0) {
-        console.log('No faction members data to display. Data:', factionMembersData);
-        console.log('factionMembersData is:', factionMembersData === null ? 'null' : factionMembersData === undefined ? 'undefined' : 'empty array');
-        // Show a message instead of hiding
-        membersTableBody.innerHTML = '<tr><td colspan="5" style="color: #c0c0c0; text-align: center; padding: 20px;">No faction members found.</td></tr>';
-        membersListContainer.classList.remove('hidden');
-        console.log('Table should now show "No faction members found" message');
-        return;
-    }
-    
-    console.log('About to create table rows for', factionMembersData.length, 'members');
-    
-    // Clear existing content
-    membersTableBody.innerHTML = '';
-    
-    // Sort members by name
-    const sortedMembers = [...factionMembersData].sort((a, b) => {
-        const nameA = a.name || '';
-        const nameB = b.name || '';
-        return nameA.localeCompare(nameB);
-    });
-    
-    console.log('Sorted members:', sortedMembers);
-    console.log('Number of rows to create:', sortedMembers.length);
-    
-    // Create table rows
-    sortedMembers.forEach((member, index) => {
-        console.log(`Creating row ${index + 1} for member:`, member);
-        const row = document.createElement('tr');
-        
-        // UserID column
-        const userIdCell = document.createElement('td');
-        userIdCell.textContent = member.id || 'N/A';
-        
-        // Name column
-        const nameCell = document.createElement('td');
-        nameCell.textContent = member.name || `Member ${member.id || index}`;
-        
-        // Etcetera column (profile information and travel destination)
-        const etceteraCell = document.createElement('td');
-        if (member.profile) {
-            // Display profile info: Level, Location/Travel
-            let profileText = '';
-            if (member.profile.level) {
-                profileText += `Level ${member.profile.level}`;
-            }
-            
-            // Show travel destination if travelling, otherwise show current location
-            if (member.isTravelling && member.destination) {
-                if (profileText) profileText += ' • ';
-                profileText += `→ ${member.destination}`;
-                if (member.travelTimeLeft) {
-                    const minutes = Math.floor(member.travelTimeLeft / 60);
-                    const seconds = member.travelTimeLeft % 60;
-                    profileText += ` (${minutes}:${seconds.toString().padStart(2, '0')})`;
-                }
-            } else if (member.location && member.location !== 'Unknown' && !member.location.startsWith('→')) {
-                if (profileText) profileText += ' • ';
-                profileText += member.location;
-            } else if (member.location && member.location.startsWith('→')) {
-                // Already has travel arrow
-                if (profileText) profileText += ' • ';
-                profileText += member.location;
-            }
-            
-            etceteraCell.textContent = profileText || 'Loading...';
-        } else {
-            // Show location/travel while profile is loading
-            if (member.isTravelling && member.destination) {
-                let travelText = `→ ${member.destination}`;
-                if (member.travelTimeLeft) {
-                    const minutes = Math.floor(member.travelTimeLeft / 60);
-                    const seconds = member.travelTimeLeft % 60;
-                    travelText += ` (${minutes}:${seconds.toString().padStart(2, '0')})`;
-                }
-                etceteraCell.textContent = travelText;
-            } else {
-                etceteraCell.textContent = member.location || 'Loading...';
-            }
-        }
-        
-        // Status column
-        const statusCell = document.createElement('td');
-        if (member.profile && member.profile.status) {
-            const status = member.profile.status.state || member.profile.status || member.status || 'Unknown';
-            statusCell.textContent = status;
-        } else if (member.status) {
-            statusCell.textContent = member.status;
-        } else {
-            statusCell.textContent = 'Loading...';
-        }
-        
-        // Travel column
-        const travelCell = document.createElement('td');
-        let travelText = 'Loading...';
-        
-        // Check if profile data has been fetched (even if travel is null, we know we've checked)
-        if (member.profile) {
-            if (member.profile.error) {
-                // Error fetching profile - show error or fallback
-                travelText = member.destination || member.currentLocation || 'Error';
-            } else if ('travel' in member.profile) {
-                const travel = member.profile.travel;
-                
-                if (travel && typeof travel === 'object') {
-                    if (travel.destination) {
-                        // Member is travelling to a destination
-                        travelText = `→ ${travel.destination}`;
-                        if (travel.time_left || travel.timeleft) {
-                            const timeLeft = travel.time_left || travel.timeleft;
-                            const minutes = Math.floor(timeLeft / 60);
-                            const seconds = timeLeft % 60;
-                            travelText += ` (${minutes}:${seconds.toString().padStart(2, '0')})`;
-                        }
-                    } else if (travel.departing) {
-                        // Member is departing from a location
-                        travelText = `Departing: ${travel.departing}`;
-                    } else {
-                        // Travel data exists but no destination/departing - in Torn City
-                        travelText = 'In Torn City';
-                    }
-                } else {
-                    // Travel is null or falsy - in Torn City
-                    travelText = 'In Torn City';
-                }
-            }
-        }
-        
-        // Fallback to location-based travel data if profile travel not available
-        if (travelText === 'Loading...' && (member.destination || member.isTravelling)) {
-            if (member.isTravelling && member.destination) {
-                travelText = `→ ${member.destination}`;
-                if (member.travelTimeLeft) {
-                    const minutes = Math.floor(member.travelTimeLeft / 60);
-                    const seconds = member.travelTimeLeft % 60;
-                    travelText += ` (${minutes}:${seconds.toString().padStart(2, '0')})`;
-                }
-            } else {
-                travelText = member.currentLocation || 'Torn City';
-            }
-        }
-        
-        travelCell.textContent = travelText;
-        
-        row.appendChild(userIdCell);
-        row.appendChild(nameCell);
-        row.appendChild(etceteraCell);
-        row.appendChild(statusCell);
-        row.appendChild(travelCell);
-        
-        membersTableBody.appendChild(row);
-        console.log(`Row ${index + 1} appended to table`);
-    });
-    
-    // Show the list
-    membersListContainer.classList.remove('hidden');
-    console.log('Members list should now be visible. Rows in table:', membersTableBody.children.length);
-}
 

@@ -1053,17 +1053,17 @@ async function initializeFactionMap() {
             
             // Initialize Leaflet map with dark theme
             worldMap = L.map('worldMap', {
-                center: [20, 0],
+                center: [0, 0],
                 zoom: 2,
                 zoomControl: true,
-                attributionControl: true,
+                attributionControl: false,
                 minZoom: 1,
                 maxZoom: 10
             });
             
             // Add dark theme tile layer (CartoDB Dark Matter)
             L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                attribution: '',
                 subdomains: 'abcd',
                 maxZoom: 19
             }).addTo(worldMap);
@@ -1485,11 +1485,7 @@ async function loadFactionMembers() {
             console.log('Updating display with locations. Total members:', factionMembersData.length);
             displayFactionMembersList();
             
-            // Fit map to show all markers (only if map is initialized)
-            if (worldMap && factionMarkers.length > 0) {
-                const group = new L.featureGroup(factionMarkers);
-                worldMap.fitBounds(group.getBounds().pad(0.1));
-            }
+            // Keep map at world view - don't auto-zoom to markers
             
             // Now fetch profile data for all members
             console.log('=== Fetching profile data for all members ===');

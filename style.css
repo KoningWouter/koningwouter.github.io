@@ -784,15 +784,7 @@ header h1 {
 }
 
 .world-map-container .leaflet-control-attribution {
-    background: rgba(10, 10, 10, 0.8);
-    color: #c0c0c0;
-    font-size: 11px;
-    padding: 5px;
-    border-radius: 4px;
-}
-
-.world-map-container .leaflet-control-attribution a {
-    color: #d4af37;
+    display: none !important;
 }
 
 /* Faction Members List */
@@ -1087,15 +1079,7 @@ header h1 {
 }
 
 .world-map-container .leaflet-control-attribution {
-    background: rgba(10, 10, 10, 0.8);
-    color: #c0c0c0;
-    font-size: 11px;
-    padding: 5px;
-    border-radius: 4px;
-}
-
-.world-map-container .leaflet-control-attribution a {
-    color: #d4af37;
+    display: none !important;
 }
 
 .map-placeholder {

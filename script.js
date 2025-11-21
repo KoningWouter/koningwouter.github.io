@@ -84,6 +84,9 @@ let mapInitRetryCount = 0;
 let mapInitInProgress = false;
 const MAX_MAP_INIT_RETRIES = 10;
 
+// Global variable for world map update interval
+let worldMapUpdateInterval = null;
+
 // Torn travel cities with coordinates (only actual travelable destinations in Torn)
 const tornCities = [
     { name: 'United Kingdom', coords: [51.5074, -0.1278] }, // London
@@ -195,6 +198,11 @@ function setupTabs() {
             tabButtons.forEach(btn => btn.classList.remove('active'));
             tabContents.forEach(content => content.classList.remove('active'));
             
+            // Stop world map updates when switching away from world map tab
+            if (targetTab !== 'world-map') {
+                stopWorldMapUpdates();
+            }
+            
             // Add active class to clicked button and corresponding content
             button.classList.add('active');
             
@@ -219,6 +227,9 @@ function setupTabs() {
                             }
                         }, 100);
                     }
+                    
+                    // Start automatic updates for markers
+                    startWorldMapUpdates();
                 } else {
                     console.error('World Map tab element not found');
                 }
@@ -1433,6 +1444,8 @@ async function loadFactionMembers() {
         if (worldMap) {
             factionMarkers.forEach(marker => worldMap.removeLayer(marker));
             factionMarkers = [];
+            // Stop updates when clearing markers
+            stopWorldMapUpdates();
         }
         
         // Handle different response formats (object with IDs as keys, or array)
@@ -1847,6 +1860,116 @@ async function fetchUserProfile(userId) {
     }
 
     return data;
+}
+
+// Update marker positions based on profile data (without updating display)
+async function updateMarkerPositions() {
+    if (!worldMap || factionMarkers.length === 0) {
+        return;
+    }
+    
+    console.log('Updating marker positions...');
+    
+    // Get all users that have markers
+    const usersWithMarkers = factionMembersData.filter(member => {
+        return member.location || member.currentLocation || member.destination;
+    });
+    
+    if (usersWithMarkers.length === 0) {
+        return;
+    }
+    
+    // Update each marker's position based on profile data
+    for (const member of usersWithMarkers) {
+        try {
+            const userId = member.id;
+            const userName = member.name || `User ${userId}`;
+            
+            // Fetch profile data
+            const profileData = await fetchUserProfile(userId);
+            
+            // Extract description from profile.user.description
+            const userDescription = profileData.profile && profileData.profile.user && profileData.profile.user.description ? profileData.profile.user.description : null;
+            const status = profileData.profile && profileData.profile.status ? profileData.profile.status : null;
+            
+            // Use profile.user.description as the primary source
+            let description = userDescription || (status && status.description ? status.description : null);
+            
+            // Check if description starts with "Traveling to" and extract destination
+            let destination = null;
+            if (description && description.trim().toLowerCase().startsWith('traveling to')) {
+                // Remove "Traveling to" prefix and trim
+                destination = description.replace(/^Traveling to\s+/i, '').trim();
+                
+                // Update marker position if we have a valid destination
+                if (destination) {
+                    const destinationCoords = getCityCoordinates(destination);
+                    if (destinationCoords) {
+                        // Find the marker for this user
+                        const userMarker = factionMarkers.find(marker => marker.memberId === userId);
+                        if (userMarker) {
+                            const currentLatLng = userMarker.getLatLng();
+                            const distance = Math.abs(currentLatLng.lat - destinationCoords[0]) + Math.abs(currentLatLng.lng - destinationCoords[1]);
+                            // Only update if position has changed significantly
+                            if (distance > 0.01) {
+                                console.log(`Updating marker for user ${userId} (${userName}) to ${destination}`);
+                                userMarker.setLatLng(destinationCoords);
+                            }
+                        }
+                    }
+                }
+            } else {
+                // If not traveling, they should be in Torn City
+                const tornCoords = getCityCoordinates('Torn');
+                if (tornCoords) {
+                    const userMarker = factionMarkers.find(marker => marker.memberId === userId);
+                    if (userMarker) {
+                        // Only update if not already at Torn
+                        const currentLatLng = userMarker.getLatLng();
+                        const distance = Math.abs(currentLatLng.lat - tornCoords[0]) + Math.abs(currentLatLng.lng - tornCoords[1]);
+                        if (distance > 0.01) { // If not already at Torn (with some tolerance)
+                            console.log(`Updating marker for user ${userId} (${userName}) to Torn City (not traveling)`);
+                            userMarker.setLatLng(tornCoords);
+                        }
+                    }
+                }
+            }
+            
+            // Add delay to avoid rate limiting
+            await new Promise(resolve => setTimeout(resolve, 200));
+        } catch (error) {
+            console.error(`Error updating marker position for user ${member.id}:`, error);
+        }
+    }
+    
+    console.log('Marker positions updated');
+}
+
+// Start automatic updates for world map markers
+function startWorldMapUpdates() {
+    // Clear any existing interval
+    if (worldMapUpdateInterval) {
+        clearInterval(worldMapUpdateInterval);
+    }
+    
+    // Update immediately
+    updateMarkerPositions();
+    
+    // Then update every 15 seconds
+    worldMapUpdateInterval = setInterval(() => {
+        updateMarkerPositions();
+    }, 15000);
+    
+    console.log('World map auto-update started (every 15 seconds)');
+}
+
+// Stop automatic updates for world map markers
+function stopWorldMapUpdates() {
+    if (worldMapUpdateInterval) {
+        clearInterval(worldMapUpdateInterval);
+        worldMapUpdateInterval = null;
+        console.log('World map auto-update stopped');
+    }
 }
 
 // Fetch and display profile data for all user markers

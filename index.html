@@ -35,6 +35,10 @@
                     <span class="tab-icon">⚔️</span>
                     <span class="tab-label">Player Info</span>
                 </button>
+                <button class="tab-button" data-tab="world-map">
+                    <span class="tab-icon">🗺️</span>
+                    <span class="tab-label">World Map</span>
+                </button>
                 <button class="tab-button" data-tab="settings">
                     <span class="tab-icon">⚙️</span>
                     <span class="tab-label">Settings</span>
@@ -43,14 +47,6 @@
                     <span class="tab-icon">📋</span>
                     <span class="tab-label">Dummy</span>
                 </button>
-            </div>
-        </div>
-
-        <!-- World Map Section -->
-        <div class="world-map-section">
-            <h2>World Map</h2>
-            <div class="world-map-wrapper">
-                <div id="worldMap" class="world-map-container"></div>
             </div>
         </div>
 
@@ -230,6 +226,16 @@
                             <div class="settings-data-value">1.0.0</div>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- World Map Tab Content -->
+        <div id="worldMapTab" class="tab-content">
+            <div class="world-map-section">
+                <h2>World Map</h2>
+                <div class="world-map-wrapper">
+                    <div id="worldMap" class="world-map-container"></div>
                 </div>
             </div>
         </div>

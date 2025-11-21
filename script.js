@@ -202,6 +202,26 @@ function setupTabs() {
                 document.getElementById('searchTab').classList.add('active');
             } else if (targetTab === 'player-info') {
                 document.getElementById('playerInfoTab').classList.add('active');
+            } else if (targetTab === 'world-map') {
+                const worldMapTab = document.getElementById('worldMapTab');
+                if (worldMapTab) {
+                    worldMapTab.classList.add('active');
+                    console.log('World Map tab activated');
+                    
+                    // Initialize map if not already initialized, or invalidate size if it exists
+                    if (!worldMap) {
+                        initializeFactionMap();
+                    } else {
+                        // Invalidate map size when tab becomes visible to ensure proper rendering
+                        setTimeout(() => {
+                            if (worldMap) {
+                                worldMap.invalidateSize();
+                            }
+                        }, 100);
+                    }
+                } else {
+                    console.error('World Map tab element not found');
+                }
             } else if (targetTab === 'faction-map') {
                 const factionMapTab = document.getElementById('factionMapTab');
                 factionMapTab.classList.add('active');

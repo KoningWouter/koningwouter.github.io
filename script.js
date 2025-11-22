@@ -2070,25 +2070,49 @@ async function updateMarkerPositions() {
             // Update last fetch time for this user
             userLastFetchTime[userId] = now;
             
-            // Extract description from profile.user.description
-            const userDescription = profileData.profile && profileData.profile.user && profileData.profile.user.description ? profileData.profile.user.description : null;
-            const status = profileData.profile && profileData.profile.status ? profileData.profile.status : null;
+            // Extract all profile data
+            const profile = profileData.profile || {};
+            const user = profile.user || {};
+            const status = profile.status || {};
+            const basic = profile.basic || {};
+            
+            // Extract description from profile.user.description (primary source)
+            const userDescription = user.description || null;
+            const statusDescription = status.description || null;
             
             // Use profile.user.description as the primary source
-            let description = userDescription || (status && status.description ? status.description : null);
+            let description = userDescription || statusDescription || null;
+            
+            // Store full profile data in member data
+            const memberIndex = factionMembersData.findIndex(m => String(m.id) === String(userId));
+            if (memberIndex !== -1) {
+                factionMembersData[memberIndex].profileData = profileData;
+                factionMembersData[memberIndex].profile = profile;
+                factionMembersData[memberIndex].user = user;
+                factionMembersData[memberIndex].status = status;
+                factionMembersData[memberIndex].basic = basic;
+                factionMembersData[memberIndex].description = description;
+            }
             
             // Check if description matches one of the patterns
             let destination = null;
             let location = null;
+            let originCountry = null;
             
             // Pattern 1: "Returning to Torn from <LandName>" - marker should be halfway between origin and Torn
             if (description && description.trim().toLowerCase().startsWith('returning to torn from')) {
                 // Extract the origin country name
                 const originMatch = description.match(/returning to torn from\s+(.+)/i);
                 if (originMatch && originMatch[1]) {
-                    const originCountry = originMatch[1].trim();
+                    originCountry = originMatch[1].trim();
                     const originCoords = getCityCoordinates(originCountry);
                     const tornCoords = getCityCoordinates('Torn');
+                    
+                    // Store origin in member data
+                    if (memberIndex !== -1) {
+                        factionMembersData[memberIndex].origin = originCountry;
+                        factionMembersData[memberIndex].destination = 'Torn';
+                    }
                     
                     if (originCoords && tornCoords) {
                         // Calculate midpoint between origin and Torn
@@ -2103,6 +2127,10 @@ async function updateMarkerPositions() {
                                     console.log(`Updating marker for user ${userId} (${userName}) to midpoint between ${originCountry} and Torn`);
                                     userMarker.setLatLng(midpointCoords);
                                 }
+                                // Store profile data on marker
+                                userMarker.profileData = profileData;
+                                userMarker.destination = 'Torn';
+                                userMarker.origin = originCountry;
                                 // Always update color in case description changed
                                 updateMarkerIcon(userMarker, userName, description);
                             }
@@ -2113,6 +2141,13 @@ async function updateMarkerPositions() {
                 // Pattern 2: "Travelling to <LandName>" or "Traveling to <LandName>" - marker should be halfway between Torn and destination
                 // Remove "Travelling to" or "Traveling to" prefix and trim
                 destination = description.replace(/^Travell?ing to\s+/i, '').trim();
+                
+                // Store destination in member data (important for blue markers)
+                if (memberIndex !== -1) {
+                    factionMembersData[memberIndex].destination = destination;
+                    factionMembersData[memberIndex].origin = 'Torn';
+                    console.log(`✓ Stored destination for blue marker: ${userName} → ${destination}`);
+                }
                 
                 // Update marker position if we have a valid destination
                 if (destination) {
@@ -2133,6 +2168,11 @@ async function updateMarkerPositions() {
                                     console.log(`Updating marker for user ${userId} (${userName}) to midpoint between Torn and ${destination}`);
                                     userMarker.setLatLng(midpointCoords);
                                 }
+                                // Store profile data and destination on marker (important for blue markers)
+                                userMarker.profileData = profileData;
+                                userMarker.destination = destination;
+                                userMarker.origin = 'Torn';
+                                console.log(`✓ Stored profile data on blue marker: ${userName} → ${destination}`);
                                 // Always update color in case description changed
                                 updateMarkerIcon(userMarker, userName, description);
                             }
@@ -2270,31 +2310,66 @@ async function fetchAndDisplayTravelDataForMarkers() {
             console.log(`Fetching profile data for user ${userId} (${userName})...`);
             const profileData = await fetchUserProfile(userId);
             
+            // Extract all profile data
+            const profile = profileData.profile || {};
+            const user = profile.user || {};
+            const status = profile.status || {};
+            const basic = profile.basic || {};
+            
             // Extract description from profile.user.description (as specified by user)
-            const userDescription = profileData.profile && profileData.profile.user && profileData.profile.user.description ? profileData.profile.user.description : null;
-            const status = profileData.profile && profileData.profile.status ? profileData.profile.status : null;
+            const userDescription = user.description || null;
+            const statusDescription = status.description || null;
             const statusColor = status ? (status.color || '#c0c0c0') : '#c0c0c0';
             
-            console.log('Profile data structure:', profileData);
-            console.log('User description:', userDescription);
+            console.log('=== Profile Data for User', userId, '===');
+            console.log('Full profileData:', profileData);
+            console.log('Profile keys:', Object.keys(profile));
+            console.log('User keys:', Object.keys(user));
+            console.log('User description (profile.user.description):', userDescription);
+            console.log('All profile.user data:', user);
             console.log('Status data:', status);
+            console.log('Basic data:', basic);
+            
+            // Log destination for blue markers
+            if (description && (description.trim().toLowerCase().startsWith('travelling to') || description.trim().toLowerCase().startsWith('traveling to'))) {
+                const dest = description.replace(/^Travell?ing to\s+/i, '').trim();
+                console.log(`🔵 BLUE MARKER - User ${userId} (${userName}) is traveling to: ${dest}`);
+            }
             
             // Use profile.user.description as the primary source
-            let description = userDescription || (status && status.description ? status.description : 'No status');
+            let description = userDescription || statusDescription || 'No status';
             let displayDescription = description;
+            
+            // Store full profile data in member data
+            const memberIndex = factionMembersData.findIndex(m => String(m.id) === String(userId));
+            if (memberIndex !== -1) {
+                factionMembersData[memberIndex].profileData = profileData;
+                factionMembersData[memberIndex].profile = profile;
+                factionMembersData[memberIndex].user = user;
+                factionMembersData[memberIndex].status = status;
+                factionMembersData[memberIndex].basic = basic;
+                factionMembersData[memberIndex].description = description;
+            }
             
             // Check if description matches one of the patterns
             let destination = null;
             let location = null;
+            let originCountry = null;
             
             // Pattern 1: "Returning to Torn from <LandName>" - marker should be halfway between origin and Torn
             if (description && description.trim().toLowerCase().startsWith('returning to torn from')) {
                 // Extract the origin country name
                 const originMatch = description.match(/returning to torn from\s+(.+)/i);
                 if (originMatch && originMatch[1]) {
-                    const originCountry = originMatch[1].trim();
+                    originCountry = originMatch[1].trim();
                     const originCoords = getCityCoordinates(originCountry);
                     const tornCoords = getCityCoordinates('Torn');
+                    
+                    // Store origin and destination in member data
+                    if (memberIndex !== -1) {
+                        factionMembersData[memberIndex].origin = originCountry;
+                        factionMembersData[memberIndex].destination = 'Torn';
+                    }
                     
                     console.log(`User ${userId} is returning to Torn from: ${originCountry}`);
                     
@@ -2306,6 +2381,10 @@ async function fetchAndDisplayTravelDataForMarkers() {
                             if (userMarker) {
                                 console.log(`Moving marker for user ${userId} (${userName}) to midpoint between ${originCountry} and Torn at coordinates:`, midpointCoords);
                                 userMarker.setLatLng(midpointCoords);
+                                // Store profile data on marker
+                                userMarker.profileData = profileData;
+                                userMarker.destination = 'Torn';
+                                userMarker.origin = originCountry;
                                 updateMarkerIcon(userMarker, userName, description);
                             } else {
                                 console.warn(`Marker not found for user ${userId}`);
@@ -2320,6 +2399,13 @@ async function fetchAndDisplayTravelDataForMarkers() {
                 // Remove "Travelling to" or "Traveling to" prefix and trim
                 destination = description.replace(/^Travell?ing to\s+/i, '').trim();
                 displayDescription = destination; // Display just the destination
+                
+                // Store destination in member data (important for blue markers)
+                if (memberIndex !== -1) {
+                    factionMembersData[memberIndex].destination = destination;
+                    factionMembersData[memberIndex].origin = 'Torn';
+                    console.log(`✓ Stored destination for blue marker in fetchAndDisplay: ${userName} → ${destination}`);
+                }
                 
                 console.log(`User ${userId} is travelling to: ${destination}`);
                 
@@ -2337,6 +2423,11 @@ async function fetchAndDisplayTravelDataForMarkers() {
                             if (userMarker) {
                                 console.log(`Moving marker for user ${userId} (${userName}) to midpoint between Torn and ${destination} at coordinates:`, midpointCoords);
                                 userMarker.setLatLng(midpointCoords);
+                                // Store profile data and destination on marker (important for blue markers)
+                                userMarker.profileData = profileData;
+                                userMarker.destination = destination;
+                                userMarker.origin = 'Torn';
+                                console.log(`✓ Stored profile data on blue marker in fetchAndDisplay: ${userName} → ${destination}`);
                                 updateMarkerIcon(userMarker, userName, description);
                             } else {
                                 console.warn(`Marker not found for user ${userId}`);

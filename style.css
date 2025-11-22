@@ -590,6 +590,66 @@ header h1 {
     position: relative;
 }
 
+/* Map Legend */
+.map-legend {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    background: linear-gradient(135deg, rgba(10, 10, 10, 0.95) 0%, rgba(26, 13, 46, 0.95) 100%);
+    border: 2px solid rgba(212, 175, 55, 0.4);
+    border-radius: 12px;
+    padding: 15px 20px;
+    box-shadow: 
+        0 8px 32px rgba(0, 0, 0, 0.8),
+        0 0 0 1px rgba(212, 175, 55, 0.2),
+        inset 0 1px 2px rgba(212, 175, 55, 0.1);
+    z-index: 1000;
+    min-width: 220px;
+    backdrop-filter: blur(10px);
+}
+
+.legend-title {
+    color: #f4e4bc;
+    font-family: 'Cinzel', serif;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+    text-shadow: 0 2px 8px rgba(212, 175, 55, 0.5);
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+    padding: 4px 0;
+}
+
+.legend-item:last-child {
+    margin-bottom: 0;
+}
+
+.legend-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 2px solid;
+    flex-shrink: 0;
+    box-shadow: 0 0 10px, 0 0 20px;
+}
+
+.legend-label {
+    color: #c0c0c0;
+    font-size: 0.9rem;
+    font-family: 'Cormorant Garamond', serif;
+    letter-spacing: 0.5px;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
 .faction-map-section::before {
     content: '';
     position: absolute;
@@ -1609,6 +1669,68 @@ header h1 {
     letter-spacing: 1px;
 }
 
+.settings-api-key-wrapper {
+    display: flex;
+    gap: 12px;
+    margin-top: 12px;
+    align-items: center;
+}
+
+.settings-api-key-input {
+    flex: 1;
+    padding: 12px 16px;
+    background: linear-gradient(135deg, rgba(10, 10, 10, 0.8) 0%, rgba(20, 20, 20, 0.6) 100%);
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    border-radius: 8px;
+    color: #f4e4bc;
+    font-size: 1rem;
+    font-family: 'Cormorant Garamond', serif;
+    letter-spacing: 1px;
+    transition: all 0.3s ease;
+    outline: none;
+}
+
+.settings-api-key-input:focus {
+    border-color: rgba(212, 175, 55, 0.6);
+    box-shadow: 
+        0 0 15px rgba(212, 175, 55, 0.3),
+        inset 0 1px 3px rgba(212, 175, 55, 0.1);
+    background: linear-gradient(135deg, rgba(15, 15, 15, 0.9) 0%, rgba(25, 25, 25, 0.7) 100%);
+}
+
+.settings-api-key-input::placeholder {
+    color: rgba(192, 192, 192, 0.5);
+    font-style: italic;
+}
+
+.settings-save-button {
+    padding: 12px 24px;
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, rgba(212, 175, 55, 0.1) 100%);
+    border: 1px solid rgba(212, 175, 55, 0.4);
+    border-radius: 8px;
+    color: #f4e4bc;
+    font-size: 1rem;
+    font-family: 'Cinzel', serif;
+    font-weight: 600;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    text-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+}
+
+.settings-save-button:hover {
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.3) 0%, rgba(212, 175, 55, 0.2) 100%);
+    border-color: rgba(212, 175, 55, 0.6);
+    box-shadow: 0 0 15px rgba(212, 175, 55, 0.4);
+    transform: translateY(-2px);
+}
+
+.settings-save-button:active {
+    transform: translateY(0);
+    box-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+}
+
 /* Travel Data Section */
 .travel-data-section {
     margin-top: 40px;
@@ -1632,6 +1754,36 @@ header h1 {
     margin-bottom: 24px;
     text-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
     letter-spacing: 2px;
+}
+
+.travel-data-header-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.3s ease;
+}
+
+.travel-data-header-toggle:hover {
+    color: #f4e4bc;
+    text-shadow: 0 0 15px rgba(212, 175, 55, 0.5);
+}
+
+.toggle-icon {
+    font-size: 1.2rem;
+    color: #d4af37;
+    transition: transform 0.3s ease;
+    margin-left: 15px;
+    display: inline-block;
+}
+
+.travel-data-header-toggle:hover .toggle-icon {
+    color: #f4e4bc;
+}
+
+.travel-data-content.hidden {
+    display: none;
 }
 
 .travel-data-content {
@@ -2399,6 +2551,7 @@ header h1 {
 }
 
 .api-endpoints-section {
+    margin-top: 60px;
     background: 
         linear-gradient(135deg, rgba(26, 13, 46, 0.95) 0%, rgba(10, 10, 10, 0.98) 100%),
         radial-gradient(ellipse at bottom right, rgba(212, 175, 55, 0.08) 0%, transparent 60%);

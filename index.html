@@ -43,9 +43,9 @@
                     <span class="tab-icon">⚙️</span>
                     <span class="tab-label">Settings</span>
                 </button>
-                <button class="tab-button" data-tab="dummy">
-                    <span class="tab-icon">📋</span>
-                    <span class="tab-label">Dummy</span>
+                <button class="tab-button" data-tab="docs">
+                    <span class="tab-icon">📚</span>
+                    <span class="tab-label">Docs</span>
                 </button>
             </div>
         </div>
@@ -253,36 +253,15 @@
             </div>
         </div>
 
-        <!-- Dummy Tab Content -->
-        <div id="dummyTab" class="tab-content">
-            <div class="settings-section">
-                <h2>Dummy Data</h2>
-                <div style="color: #c0c0c0; font-size: 1rem; margin-top: 20px; padding: 20px;">
-                    <div style="margin-bottom: 15px;">
-                        <strong style="color: #d4af37;">Name:</strong> <span>John Doe</span>
-                    </div>
-                    <div style="margin-bottom: 15px;">
-                        <strong style="color: #d4af37;">Level:</strong> <span>42</span>
-                    </div>
-                    <div style="margin-bottom: 15px;">
-                        <strong style="color: #d4af37;">Status:</strong> <span>Online</span>
-                    </div>
-                    <div style="margin-bottom: 15px;">
-                        <strong style="color: #d4af37;">Location:</strong> <span>New York</span>
-                    </div>
-                    <div style="margin-bottom: 15px;">
-                        <strong style="color: #d4af37;">Score:</strong> <span>1,234,567</span>
-                    </div>
-                    <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(212, 175, 55, 0.2);">
-                        <p style="font-style: italic; color: #888;">This is dummy data for testing purposes.</p>
-                    </div>
+        <!-- Docs Tab Content -->
+        <div id="docsTab" class="tab-content">
+            <div class="world-map-section">
+                <h2>API Documentation</h2>
+                <div class="api-endpoints-section">
+                    <h2>Available API Endpoints</h2>
+                    <div class="endpoints-grid" id="endpointsList"></div>
                 </div>
             </div>
-        </div>
-
-        <div class="api-endpoints-section">
-            <h2>Available API Endpoints</h2>
-            <div class="endpoints-grid" id="endpointsList"></div>
         </div>
     </div>
 

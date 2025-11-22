@@ -249,13 +249,13 @@ function setupTabs() {
                 } else {
                     console.error('Settings tab element not found');
                 }
-            } else if (targetTab === 'dummy') {
-                const dummyTab = document.getElementById('dummyTab');
-                if (dummyTab) {
-                    dummyTab.classList.add('active');
-                    console.log('Dummy tab activated');
+            } else if (targetTab === 'docs') {
+                const docsTab = document.getElementById('docsTab');
+                if (docsTab) {
+                    docsTab.classList.add('active');
+                    console.log('Docs tab activated');
                 } else {
-                    console.error('Dummy tab element not found');
+                    console.error('Docs tab element not found');
                 }
             }
         });

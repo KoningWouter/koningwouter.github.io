@@ -312,6 +312,18 @@ function setupApiKeyStorage() {
         window.API_KEY = savedApiKey;
     }
     
+    // Update API key in real-time as user types (so it's available for API calls immediately)
+    apiKeyInput.addEventListener('input', (e) => {
+        const apiKey = e.target.value.trim();
+        if (apiKey) {
+            window.API_KEY = apiKey; // Update immediately for API calls
+        } else {
+            // If input is cleared, fall back to localStorage
+            const savedKey = localStorage.getItem('torn_api_key');
+            window.API_KEY = savedKey || null;
+        }
+    });
+    
     // Save API key to localStorage when button is clicked
     saveApiKeyBtn.addEventListener('click', () => {
         const apiKey = apiKeyInput.value.trim();
@@ -681,11 +693,37 @@ async function handleSearch() {
     }
 }
 
+// Get API key from input field or localStorage (always use the latest from settings)
+function getApiKey() {
+    // First check the input field (most current value)
+    const apiKeyInput = document.getElementById('apiKeyInput');
+    if (apiKeyInput && apiKeyInput.value.trim()) {
+        const inputKey = apiKeyInput.value.trim();
+        window.API_KEY = inputKey; // Keep window.API_KEY in sync
+        return inputKey;
+    }
+    
+    // Fall back to localStorage
+    const savedKey = localStorage.getItem('torn_api_key');
+    if (savedKey) {
+        window.API_KEY = savedKey; // Keep window.API_KEY in sync
+        return savedKey;
+    }
+    
+    // Last fallback to window.API_KEY (from config.js)
+    if (window.API_KEY) {
+        return window.API_KEY;
+    }
+    
+    return null;
+}
+
 // Fetch user data from API
 async function fetchUserData(userId, selections = 'basic,profile,bars,travel,faction,money') {
-    // Check if API key is configured
-    if (!window.API_KEY) {
-        throw new Error('API key is not configured. Please check config.js');
+    // Get API key from localStorage (settings page)
+    const apiKey = getApiKey();
+    if (!apiKey) {
+        throw new Error('API key is not configured. Please enter your API key in the Settings tab.');
     }
 
     // Validate userId is numeric
@@ -699,8 +737,8 @@ async function fetchUserData(userId, selections = 'basic,profile,bars,travel,fac
         throw new Error(`Invalid user ID: ${userId}. Could not convert to number.`);
     }
 
-    const url = `${API_BASE_URL}/user/${numericUserId}?selections=${selections}&key=${window.API_KEY}`;
-    console.log('Fetching user data from URL:', url.replace(window.API_KEY, 'KEY_HIDDEN'));
+    const url = `${API_BASE_URL}/user/${numericUserId}?selections=${selections}&key=${apiKey}`;
+    console.log('Fetching user data from URL:', url.replace(apiKey, 'KEY_HIDDEN'));
     
     const response = await fetch(url);
     const data = await response.json();
@@ -1286,12 +1324,14 @@ function showError(message) {
 
 // Fetch faction data from API
 async function fetchFactionData(factionId, selections = 'basic,members') {
-    if (!window.API_KEY) {
-        throw new Error('API key is not configured. Please check config.js');
+    // Get API key from localStorage (settings page)
+    const apiKey = getApiKey();
+    if (!apiKey) {
+        throw new Error('API key is not configured. Please enter your API key in the Settings tab.');
     }
 
-    const url = `${API_BASE_URL}/faction/${factionId}?selections=${selections}&key=${window.API_KEY}`;
-    console.log('Fetching faction data from URL:', url.replace(window.API_KEY, 'KEY_HIDDEN'));
+    const url = `${API_BASE_URL}/faction/${factionId}?selections=${selections}&key=${apiKey}`;
+    console.log('Fetching faction data from URL:', url.replace(apiKey, 'KEY_HIDDEN'));
     
     const response = await fetch(url);
     const data = await response.json();
@@ -1791,13 +1831,17 @@ async function loadFactionMembers() {
                             </div>
                         `);
                     
-                    // Store member ID with marker for reference
+                    // Store member ID and name with marker for reference
                     marker.memberId = memberId;
+                    marker._memberName = memberName;
                     factionMarkers.push(marker);
                     markersAdded++;
                 }
             }
         });
+        
+        // Stack overlapping labels vertically
+        stackOverlappingLabels();
         
         // Fetch travel information for each user marker and display raw output
         await fetchAndDisplayTravelDataForMarkers();
@@ -1912,31 +1956,126 @@ function getMarkerColor(description) {
 }
 
 // Create marker HTML with color styling
-function createMarkerHTML(memberName, description) {
+function createMarkerHTML(memberName, description, verticalOffset = 0) {
     const colors = getMarkerColor(description);
+    const labelOffsetStyle = verticalOffset !== 0 ? `style="transform: translateY(${verticalOffset}px);"` : '';
     return `
         <div class="marker-container">
             <div class="marker-dot" style="background: ${colors.bg}; border-color: ${colors.border}; box-shadow: 0 0 10px ${colors.shadow}, 0 0 20px ${colors.shadow2};"></div>
-            <div class="marker-label">${memberName}</div>
+            <div class="marker-label" ${labelOffsetStyle}>${memberName}</div>
         </div>
     `;
 }
 
 // Update marker icon with new color based on description
-function updateMarkerIcon(marker, memberName, description) {
+function updateMarkerIcon(marker, memberName, description, verticalOffset = null) {
+    // Preserve existing offset if not explicitly provided
+    if (verticalOffset === null) {
+        verticalOffset = marker._labelOffset || 0;
+    }
+    
+    // Preserve member name if not provided
+    if (!memberName) {
+        memberName = marker._memberName || 'Unknown';
+    }
+    
     const colors = getMarkerColor(description);
+    const labelOffsetStyle = verticalOffset !== 0 ? `style="transform: translateY(${verticalOffset}px);"` : '';
     const newIcon = L.divIcon({
         className: 'faction-member-marker',
         html: `
             <div class="marker-container">
                 <div class="marker-dot" style="background: ${colors.bg}; border-color: ${colors.border}; box-shadow: 0 0 10px ${colors.shadow}, 0 0 20px ${colors.shadow2};"></div>
-                <div class="marker-label">${memberName}</div>
+                <div class="marker-label" ${labelOffsetStyle}>${memberName}</div>
             </div>
         `,
         iconSize: [100, 30],
         iconAnchor: [50, 15]
     });
     marker.setIcon(newIcon);
+    // Store the offset for later use
+    marker._labelOffset = verticalOffset;
+    // Store description for later use
+    marker._description = description;
+    // Store member name for later use
+    marker._memberName = memberName;
+}
+
+// Stack overlapping labels vertically
+function stackOverlappingLabels() {
+    if (!worldMap || factionMarkers.length === 0) {
+        return;
+    }
+    
+    // Group markers by location (with small tolerance for "same" location)
+    const locationGroups = new Map();
+    const tolerance = 0.0001; // Small coordinate difference tolerance
+    
+    factionMarkers.forEach(marker => {
+        const lat = marker.getLatLng().lat;
+        const lng = marker.getLatLng().lng;
+        
+        // Find existing group for this location
+        let foundGroup = false;
+        for (const [key, group] of locationGroups.entries()) {
+            const [groupLat, groupLng] = key.split(',').map(Number);
+            if (Math.abs(lat - groupLat) < tolerance && Math.abs(lng - groupLng) < tolerance) {
+                group.push(marker);
+                foundGroup = true;
+                break;
+            }
+        }
+        
+        // Create new group if no matching group found
+        if (!foundGroup) {
+            const key = `${lat},${lng}`;
+            locationGroups.set(key, [marker]);
+        }
+    });
+    
+    // Track which markers are in overlapping groups
+    const markersInGroups = new Set();
+    
+    // For each group with multiple markers, stack labels vertically
+    locationGroups.forEach((markers, locationKey) => {
+        if (markers.length > 1) {
+            // Add all markers in this group to the set
+            markers.forEach(marker => markersInGroups.add(marker));
+            
+            // Sort markers by member name for consistent ordering
+            markers.sort((a, b) => {
+                const nameA = a._memberName || '';
+                const nameB = b._memberName || '';
+                return nameA.localeCompare(nameB);
+            });
+            
+            // Calculate vertical offset for each marker
+            const labelHeight = 20; // Approximate height of each label including spacing
+            const baseOffset = -(markers.length - 1) * labelHeight / 2; // Center the stack
+            
+            markers.forEach((marker, index) => {
+                const verticalOffset = baseOffset + (index * labelHeight);
+                
+                // Get member name from marker (stored when marker was created)
+                const memberName = marker._memberName || 'Unknown';
+                
+                // Try to get description from marker data if available
+                const description = marker._description || null;
+                
+                // Update marker with offset
+                updateMarkerIcon(marker, memberName, description, verticalOffset);
+            });
+        }
+    });
+    
+    // Reset offsets for markers that are no longer in overlapping groups
+    factionMarkers.forEach(marker => {
+        if (!markersInGroups.has(marker) && marker._labelOffset !== 0) {
+            const memberName = marker._memberName || 'Unknown';
+            const description = marker._description || null;
+            updateMarkerIcon(marker, memberName, description, 0);
+        }
+    });
 }
 
 // Map Torn city names to coordinates (only actual travelable destinations)
@@ -1987,9 +2126,10 @@ function getCityCoordinates(cityName) {
 
 // Fetch user profile data from v2 API endpoint /user/<id>/profile
 async function fetchUserProfile(userId) {
-    // Check if API key is configured
-    if (!window.API_KEY) {
-        throw new Error('API key is not configured. Please check config.js');
+    // Get API key from localStorage (settings page)
+    const apiKey = getApiKey();
+    if (!apiKey) {
+        throw new Error('API key is not configured. Please enter your API key in the Settings tab.');
     }
 
     // Validate userId is numeric
@@ -2004,8 +2144,8 @@ async function fetchUserProfile(userId) {
     }
 
     // Use v2 API endpoint /user/<id>/profile
-    const url = `${API_BASE_URL}/user/${numericUserId}/profile?key=${window.API_KEY}`;
-    console.log('Fetching user profile from URL:', url.replace(window.API_KEY, 'KEY_HIDDEN'));
+    const url = `${API_BASE_URL}/user/${numericUserId}/profile?key=${apiKey}`;
+    console.log('Fetching user profile from URL:', url.replace(apiKey, 'KEY_HIDDEN'));
     
     const response = await fetch(url);
     const data = await response.json();
@@ -2246,6 +2386,9 @@ async function updateMarkerPositions() {
             console.error(`Error updating marker position for user ${member.id}:`, error);
         }
     }
+    
+    // Re-stack labels after positions are updated
+    stackOverlappingLabels();
     
     console.log('Marker positions updated');
 }
@@ -2533,3 +2676,163 @@ async function fetchAndDisplayTravelDataForMarkers() {
 
 // Display faction members in a table
 
+// ============================================
+// ROCK ANNOUNCEMENT FEATURE - HILARIOUS EDITION
+// ============================================
+
+// Epic announcement variations
+const ANNOUNCEMENTS = [
+    "Ladies and gentlemen, we are going to rock",
+    "Ladies and gentlemen, prepare yourselves, for we are about to rock",
+    "Attention all players, ladies and gentlemen, we are going to absolutely rock",
+    "Ladies and gentlemen, brace yourselves, we are going to rock this place",
+    "Ladies and gentlemen, hold onto your seats, because we are going to rock",
+    "Ladies and gentlemen, the moment you've been waiting for, we are going to rock",
+    "Ladies and gentlemen, get ready, because we are going to rock your world",
+    "Ladies and gentlemen, it's time, we are going to rock and roll"
+];
+
+// Create confetti/fireworks effect
+function createFireworks() {
+    const colors = ['#d4af37', '#dc143c', '#ffd700', '#f4e4bc', '#ff6b6b', '#4a9eff'];
+    const container = document.body;
+    
+    for (let i = 0; i < 50; i++) {
+        const particle = document.createElement('div');
+        const startX = Math.random() * window.innerWidth;
+        const startY = Math.random() * window.innerHeight;
+        const angle = Math.random() * Math.PI * 2;
+        const distance = 100 + Math.random() * 200;
+        const endX = startX + Math.cos(angle) * distance;
+        const endY = startY + Math.sin(angle) * distance;
+        const duration = 0.5 + Math.random() * 1;
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        
+        particle.style.position = 'fixed';
+        particle.style.width = '8px';
+        particle.style.height = '8px';
+        particle.style.backgroundColor = color;
+        particle.style.borderRadius = '50%';
+        particle.style.left = startX + 'px';
+        particle.style.top = startY + 'px';
+        particle.style.pointerEvents = 'none';
+        particle.style.zIndex = '9999';
+        particle.style.boxShadow = `0 0 15px ${color}, 0 0 30px ${color}`;
+        particle.style.transition = `all ${duration}s ease-out`;
+        particle.style.opacity = '1';
+        
+        container.appendChild(particle);
+        
+        // Trigger animation
+        requestAnimationFrame(() => {
+            particle.style.transform = `translate(${endX - startX}px, ${endY - startY}px) scale(0)`;
+            particle.style.opacity = '0';
+        });
+        
+        setTimeout(() => {
+            particle.remove();
+        }, duration * 1000 + 100);
+    }
+}
+
+// Add screen shake effect
+function screenShake() {
+    const body = document.body;
+    body.style.animation = 'screenShake 0.5s ease-in-out';
+    setTimeout(() => {
+        body.style.animation = '';
+    }, 500);
+}
+
+// Welcome announcement function - ENHANCED HILARIOUS VERSION
+function playWelcomeAnnouncement() {
+    // Stop any ongoing speech
+    speechSynthesis.cancel();
+    
+    // Pick a random announcement
+    const announcement = ANNOUNCEMENTS[Math.floor(Math.random() * ANNOUNCEMENTS.length)];
+    const utterance = new SpeechSynthesisUtterance(announcement);
+    
+    // Random dramatic voice settings for variety
+    const rateVariations = [0.75, 0.8, 0.85, 0.9];
+    const pitchVariations = [1.0, 1.1, 1.2, 0.95];
+    
+    utterance.rate = rateVariations[Math.floor(Math.random() * rateVariations.length)];
+    utterance.pitch = pitchVariations[Math.floor(Math.random() * pitchVariations.length)];
+    utterance.volume = 1.0;
+    
+    // Try to use a more dramatic voice if available
+    const voices = speechSynthesis.getVoices();
+    const preferredVoices = voices.filter(voice => 
+        voice.name.includes('Google') || 
+        voice.name.includes('Microsoft') ||
+        voice.name.includes('Zira') ||
+        voice.name.includes('David') ||
+        voice.lang.includes('en')
+    );
+    
+    if (preferredVoices.length > 0) {
+        utterance.voice = preferredVoices[Math.floor(Math.random() * preferredVoices.length)];
+    }
+    
+    // Add some flair with event handlers
+    utterance.onstart = () => {
+        console.log('🎤 Rock announcement started!', announcement);
+        const btn = document.getElementById('announceBtn');
+        if (btn) {
+            btn.style.animation = 'pulse 0.5s ease-in-out infinite';
+            btn.style.transform = 'scale(1.1)';
+        }
+        
+        // Create visual effects
+        createFireworks();
+        screenShake();
+        
+        // Add epic glow to the entire page
+        document.body.style.filter = 'brightness(1.1)';
+        setTimeout(() => {
+            document.body.style.filter = '';
+        }, 1000);
+    };
+    
+    utterance.onend = () => {
+        console.log('🎤 Rock announcement complete!');
+        const btn = document.getElementById('announceBtn');
+        if (btn) {
+            btn.style.animation = '';
+            btn.style.transform = '';
+        }
+    };
+    
+    utterance.onerror = (event) => {
+        console.error('Speech synthesis error:', event);
+    };
+    
+    speechSynthesis.speak(utterance);
+}
+
+// Initialize voices (needed for some browsers)
+if (speechSynthesis.onvoiceschanged !== undefined) {
+    speechSynthesis.onvoiceschanged = () => {
+        // Voices loaded
+    };
+}
+
+// Play announcement on page load (with delay for dramatic effect)
+document.addEventListener('DOMContentLoaded', () => {
+    // Wait for page to fully render
+    setTimeout(() => {
+        // Only play if user has interacted with page (browser requirement)
+        // Otherwise, wait for button click
+        console.log('🎸 Ready to rock!');
+    }, 500);
+    
+    // Add button event listener
+    const announceBtn = document.getElementById('announceBtn');
+    if (announceBtn) {
+        announceBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            playWelcomeAnnouncement();
+        });
+    }
+});

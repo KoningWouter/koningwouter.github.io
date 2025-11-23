@@ -313,8 +313,20 @@ function setupTabs() {
             
             if (targetTab === 'search') {
                 document.getElementById('searchTab').classList.add('active');
+                // Stop world map refresh when switching to another tab
+                if (worldMapUpdateInterval) {
+                    clearInterval(worldMapUpdateInterval);
+                    worldMapUpdateInterval = null;
+                    console.log('World map auto-refresh stopped');
+                }
             } else if (targetTab === 'player-info') {
                 document.getElementById('playerInfoTab').classList.add('active');
+                // Stop world map refresh when switching to another tab
+                if (worldMapUpdateInterval) {
+                    clearInterval(worldMapUpdateInterval);
+                    worldMapUpdateInterval = null;
+                    console.log('World map auto-refresh stopped');
+                }
             } else if (targetTab === 'world-map') {
                 const worldMapTab = document.getElementById('worldMapTab');
                 if (worldMapTab) {
@@ -335,12 +347,33 @@ function setupTabs() {
                     
                     // Load user status (username and status.description)
                     loadUserStatus();
+                    
+                    // Set up automatic refresh every 1 minute (60000 milliseconds)
+                    // Clear any existing interval first
+                    if (worldMapUpdateInterval) {
+                        clearInterval(worldMapUpdateInterval);
+                    }
+                    
+                    // Refresh every minute
+                    worldMapUpdateInterval = setInterval(() => {
+                        console.log('Auto-refreshing world map data...');
+                        loadUserStatus();
+                    }, 60000); // 60000ms = 1 minute
+                    
+                    console.log('World map auto-refresh started (every 1 minute)');
                 } else {
                     console.error('World Map tab element not found');
                 }
             } else if (targetTab === 'faction-map') {
                 const factionMapTab = document.getElementById('factionMapTab');
                 factionMapTab.classList.add('active');
+                
+                // Stop world map refresh when switching to another tab
+                if (worldMapUpdateInterval) {
+                    clearInterval(worldMapUpdateInterval);
+                    worldMapUpdateInterval = null;
+                    console.log('World map auto-refresh stopped');
+                }
             } else if (targetTab === 'settings') {
                 const settingsTab = document.getElementById('settingsTab');
                 if (settingsTab) {
@@ -1612,6 +1645,9 @@ async function initializeFactionMap() {
             // Add Torn city markers
             addTornCityMarkers();
             
+            // Add dashed lines from Torn to other cities
+            addTornCityLines();
+            
             mapInitRetryCount = 0;
             mapInitInProgress = false;
             
@@ -1692,12 +1728,12 @@ function addTornCityLines() {
         // Skip Torn itself
         if (city.name === 'Torn') return;
         
-        // Create dashed polyline from Torn to this city
+        // Create thin, subtle dashed polyline from Torn to this city
         const line = L.polyline([tornCoords, city.coords], {
             color: '#d4af37',
-            weight: 2,
-            opacity: 0.6,
-            dashArray: '10, 10',
+            weight: 1, // Thin line
+            opacity: 0.25, // Very subtle/low opacity
+            dashArray: '5, 5', // Small dashes
             interactive: false
         }).addTo(worldMap);
         

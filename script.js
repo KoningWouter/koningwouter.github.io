@@ -2000,10 +2000,13 @@ async function loadFactionMembers() {
                 const coordinates = getCityCoordinates(locationForMap);
                 
                 if (coordinates) {
+                    // Check if user is stationary in Torn City - hide label only if they are stationary
+                    const showLabel = !isStationaryInTorn(null, currentLocation);
+                    
                     // Create custom icon with dot and text label (default red color, will be updated when profile data is fetched)
                     const customIcon = L.divIcon({
                         className: 'faction-member-marker',
-                        html: createMarkerHTML(memberName, null),
+                        html: createMarkerHTML(memberName, null, 0, showLabel),
                         iconSize: [100, 30],
                         iconAnchor: [50, 15]
                     });
@@ -2021,6 +2024,7 @@ async function loadFactionMembers() {
                     // Store member ID and name with marker for reference
                     marker.memberId = memberId;
                     marker._memberName = memberName;
+                    marker._currentLocation = currentLocation; // Store location for label visibility
                     factionMarkers.push(marker);
                     markersAdded++;
                 }
@@ -2143,19 +2147,54 @@ function getMarkerColor(description) {
 }
 
 // Create marker HTML with color styling
-function createMarkerHTML(memberName, description, verticalOffset = 0) {
+function createMarkerHTML(memberName, description, verticalOffset = 0, showLabel = true) {
     const colors = getMarkerColor(description);
     const labelOffsetStyle = verticalOffset !== 0 ? `style="transform: translateY(${verticalOffset}px);"` : '';
+    const labelDisplayStyle = !showLabel ? 'style="display: none;"' : labelOffsetStyle;
     return `
         <div class="marker-container">
             <div class="marker-dot" style="background: ${colors.bg}; border-color: ${colors.border}; box-shadow: 0 0 10px ${colors.shadow}, 0 0 20px ${colors.shadow2};"></div>
-            <div class="marker-label" ${labelOffsetStyle}>${memberName}</div>
+            <div class="marker-label" ${labelDisplayStyle}>${memberName}</div>
         </div>
     `;
 }
 
+// Check if user is stationary in Torn City (not traveling)
+// Returns true only if they are stationary in Torn, false if traveling or abroad
+function isStationaryInTorn(description, location) {
+    if (!description && !location) return false;
+    
+    const descLower = (description || '').toLowerCase();
+    const locLower = (location || '').toLowerCase();
+    
+    // If description indicates traveling (to, from, returning), they're not stationary
+    if (descLower.includes('travelling') || descLower.includes('traveling') || 
+        descLower.includes('returning') || descLower.includes('flying')) {
+        return false; // They're traveling, so show label
+    }
+    
+    // Check if description explicitly says "in torn" (stationary)
+    if (descLower.includes('in torn') || descLower === 'torn') {
+        return true; // Stationary in Torn, hide label
+    }
+    
+    // Check if location is Torn and no travel indication
+    if ((locLower === 'torn' || locLower === 'torn city') && 
+        !descLower.includes('travelling') && !descLower.includes('traveling') &&
+        !descLower.includes('returning') && !descLower.includes('flying')) {
+        return true; // Stationary in Torn, hide label
+    }
+    
+    // If no description and location is Torn, assume stationary
+    if (!description && (locLower === 'torn' || locLower === 'torn city')) {
+        return true; // Stationary in Torn, hide label
+    }
+    
+    return false; // Not stationary in Torn, show label
+}
+
 // Update marker icon with new color based on description
-function updateMarkerIcon(marker, memberName, description, verticalOffset = null) {
+function updateMarkerIcon(marker, memberName, description, verticalOffset = null, location = null) {
     // Preserve existing offset if not explicitly provided
     if (verticalOffset === null) {
         verticalOffset = marker._labelOffset || 0;
@@ -2166,14 +2205,18 @@ function updateMarkerIcon(marker, memberName, description, verticalOffset = null
         memberName = marker._memberName || 'Unknown';
     }
     
+    // Check if user is stationary in Torn City - hide label only if they are stationary
+    const showLabel = !isStationaryInTorn(description, location);
+    
     const colors = getMarkerColor(description);
     const labelOffsetStyle = verticalOffset !== 0 ? `style="transform: translateY(${verticalOffset}px);"` : '';
+    const labelDisplayStyle = !showLabel ? 'style="display: none;"' : labelOffsetStyle;
     const newIcon = L.divIcon({
         className: 'faction-member-marker',
         html: `
             <div class="marker-container">
                 <div class="marker-dot" style="background: ${colors.bg}; border-color: ${colors.border}; box-shadow: 0 0 10px ${colors.shadow}, 0 0 20px ${colors.shadow2};"></div>
-                <div class="marker-label" ${labelOffsetStyle}>${memberName}</div>
+                <div class="marker-label" ${labelDisplayStyle}>${memberName}</div>
             </div>
         `,
         iconSize: [100, 30],
@@ -2186,6 +2229,8 @@ function updateMarkerIcon(marker, memberName, description, verticalOffset = null
     marker._description = description;
     // Store member name for later use
     marker._memberName = memberName;
+    // Store whether label should be shown
+    marker._showLabel = showLabel;
 }
 
 // Stack overlapping labels vertically
@@ -2249,8 +2294,10 @@ function stackOverlappingLabels() {
                 // Try to get description from marker data if available
                 const description = marker._description || null;
                 
+                // Get location from marker if available
+                const location = marker._currentLocation || null;
                 // Update marker with offset
-                updateMarkerIcon(marker, memberName, description, verticalOffset);
+                updateMarkerIcon(marker, memberName, description, verticalOffset, location);
             });
         }
     });
@@ -2260,7 +2307,8 @@ function stackOverlappingLabels() {
         if (!markersInGroups.has(marker) && marker._labelOffset !== 0) {
             const memberName = marker._memberName || 'Unknown';
             const description = marker._description || null;
-            updateMarkerIcon(marker, memberName, description, 0);
+            const location = marker._currentLocation || null;
+            updateMarkerIcon(marker, memberName, description, 0, location);
         }
     });
 }
@@ -2458,8 +2506,9 @@ async function updateMarkerPositions() {
                                 userMarker.profileData = profileData;
                                 userMarker.destination = 'Torn';
                                 userMarker.origin = originCountry;
+                                userMarker._currentLocation = 'Torn';
                                 // Always update color in case description changed
-                                updateMarkerIcon(userMarker, userName, description);
+                                updateMarkerIcon(userMarker, userName, description, null, 'Torn');
                             }
                         }
                     }
@@ -2499,9 +2548,10 @@ async function updateMarkerPositions() {
                                 userMarker.profileData = profileData;
                                 userMarker.destination = destination;
                                 userMarker.origin = 'Torn';
+                                userMarker._currentLocation = destination;
                                 console.log(`✓ Stored profile data on blue marker: ${userName} → ${destination}`);
                                 // Always update color in case description changed
-                                updateMarkerIcon(userMarker, userName, description);
+                                updateMarkerIcon(userMarker, userName, description, null, destination);
                             }
                         }
                     }
@@ -2520,8 +2570,9 @@ async function updateMarkerPositions() {
                             console.log(`Updating marker for user ${userId} (${userName}) to Torn (travelling back)`);
                             userMarker.setLatLng(tornCoords);
                         }
+                        userMarker._currentLocation = 'Torn';
                         // Always update color in case description changed
-                        updateMarkerIcon(userMarker, userName, description);
+                        updateMarkerIcon(userMarker, userName, description, null, 'Torn');
                     }
                 }
             } else if (description && description.trim().toLowerCase().startsWith('in ')) {
@@ -2543,8 +2594,9 @@ async function updateMarkerPositions() {
                                 console.log(`Updating marker for user ${userId} (${userName}) to exact location: ${location}`);
                                 userMarker.setLatLng(locationCoords);
                             }
+                            userMarker._currentLocation = location;
                             // Always update color in case description changed
-                            updateMarkerIcon(userMarker, userName, description);
+                            updateMarkerIcon(userMarker, userName, description, null, location);
                         }
                     }
                 }
@@ -2561,8 +2613,9 @@ async function updateMarkerPositions() {
                             console.log(`Updating marker for user ${userId} (${userName}) to Torn City (default location)`);
                             userMarker.setLatLng(tornCoords);
                         }
+                        userMarker._currentLocation = 'Torn';
                         // Always update color in case description changed
-                        updateMarkerIcon(userMarker, userName, description);
+                        updateMarkerIcon(userMarker, userName, description, null, 'Torn');
                     }
                 }
             }
@@ -2715,7 +2768,8 @@ async function fetchAndDisplayTravelDataForMarkers() {
                                 userMarker.profileData = profileData;
                                 userMarker.destination = 'Torn';
                                 userMarker.origin = originCountry;
-                                updateMarkerIcon(userMarker, userName, description);
+                                userMarker._currentLocation = 'Torn';
+                                updateMarkerIcon(userMarker, userName, description, null, 'Torn');
                             } else {
                                 console.warn(`Marker not found for user ${userId}`);
                             }
@@ -2757,8 +2811,9 @@ async function fetchAndDisplayTravelDataForMarkers() {
                                 userMarker.profileData = profileData;
                                 userMarker.destination = destination;
                                 userMarker.origin = 'Torn';
+                                userMarker._currentLocation = destination;
                                 console.log(`✓ Stored profile data on blue marker in fetchAndDisplay: ${userName} → ${destination}`);
-                                updateMarkerIcon(userMarker, userName, description);
+                                updateMarkerIcon(userMarker, userName, description, null, destination);
                             } else {
                                 console.warn(`Marker not found for user ${userId}`);
                             }
@@ -2782,7 +2837,8 @@ async function fetchAndDisplayTravelDataForMarkers() {
                         if (userMarker) {
                             console.log(`Moving marker for user ${userId} (${userName}) to Torn at coordinates:`, tornCoords);
                             userMarker.setLatLng(tornCoords);
-                            updateMarkerIcon(userMarker, userName, description);
+                            userMarker._currentLocation = 'Torn';
+                            updateMarkerIcon(userMarker, userName, description, null, 'Torn');
                         } else {
                             console.warn(`Marker not found for user ${userId}`);
                         }
@@ -2807,7 +2863,8 @@ async function fetchAndDisplayTravelDataForMarkers() {
                         if (userMarker) {
                             console.log(`Moving marker for user ${userId} (${userName}) to exact location: ${location} at coordinates:`, locationCoords);
                             userMarker.setLatLng(locationCoords);
-                            updateMarkerIcon(userMarker, userName, description);
+                            userMarker._currentLocation = location;
+                            updateMarkerIcon(userMarker, userName, description, null, location);
         } else {
                             console.warn(`Marker not found for user ${userId}`);
                         }

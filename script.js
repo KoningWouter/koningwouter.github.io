@@ -399,17 +399,12 @@ function setupApiKeyStorage() {
         return;
     }
     
-    // Load API key from localStorage on page load
+    // Load API key from localStorage on page load (only use localStorage, not config.js)
     const savedApiKey = localStorage.getItem('torn_api_key');
     if (savedApiKey) {
         apiKeyInput.value = savedApiKey;
-        window.API_KEY = savedApiKey;
+        window.API_KEY = savedApiKey; // Keep window.API_KEY in sync for backward compatibility
         console.log('API key loaded from localStorage');
-    }
-    
-    // Also check if API key exists in config.js (for backward compatibility)
-    if (!window.API_KEY && savedApiKey) {
-        window.API_KEY = savedApiKey;
     }
     
     // Update API key in real-time as user types (so it's available for API calls immediately)
@@ -881,28 +876,24 @@ async function handleSearch() {
     }
 }
 
-// Get API key from input field or localStorage (always use the latest from settings)
+// Get API key from input field or localStorage (only use localStorage, not config.js)
 function getApiKey() {
     // First check the input field (most current value)
     const apiKeyInput = document.getElementById('apiKeyInput');
     if (apiKeyInput && apiKeyInput.value.trim()) {
         const inputKey = apiKeyInput.value.trim();
-        window.API_KEY = inputKey; // Keep window.API_KEY in sync
+        window.API_KEY = inputKey; // Keep window.API_KEY in sync for backward compatibility
         return inputKey;
     }
     
-    // Fall back to localStorage
+    // Fall back to localStorage only
     const savedKey = localStorage.getItem('torn_api_key');
     if (savedKey) {
-        window.API_KEY = savedKey; // Keep window.API_KEY in sync
+        window.API_KEY = savedKey; // Keep window.API_KEY in sync for backward compatibility
         return savedKey;
     }
     
-    // Last fallback to window.API_KEY (from config.js)
-    if (window.API_KEY) {
-        return window.API_KEY;
-    }
-    
+    // No API key found - return null (don't use config.js)
     return null;
 }
 

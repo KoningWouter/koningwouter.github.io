@@ -1747,6 +1747,10 @@ header h1 {
     border: 2px solid rgba(212, 175, 55, 0.2);
 }
 
+.travel-data-section.hidden {
+    display: none;
+}
+
 .travel-data-section h2 {
     color: #d4af37;
     font-family: 'Cinzel', serif;

@@ -2330,6 +2330,9 @@ async function loadUserStatus() {
         
         statusDisplay.innerHTML = html;
         
+        // Update online players in Torn window
+        updateOnlinePlayersInTorn(membersArray);
+        
         // Place markers at Torn city for each user
         if (worldMap && membersArray.length > 0) {
             // Clear existing user markers and count marker
@@ -2792,6 +2795,69 @@ function updateMarkerIcon(marker, memberName, description, verticalOffset = null
     marker._memberName = memberName;
     // Store whether label should be shown
     marker._showLabel = showLabel;
+}
+
+// Update online players in Torn window
+function updateOnlinePlayersInTorn(membersArray) {
+    const onlinePlayersList = document.getElementById('onlinePlayersList');
+    if (!onlinePlayersList) {
+        console.error('Online players list element not found');
+        return;
+    }
+    
+    if (!membersArray || membersArray.length === 0) {
+        onlinePlayersList.innerHTML = '<div style="color: #c0c0c0; font-style: italic;">No data available</div>';
+        return;
+    }
+    
+    console.log('=== updateOnlinePlayersInTorn ===');
+    console.log('Total members:', membersArray.length);
+    
+    // Filter for players who are in Torn (status.description === "Okay")
+    // Include both online and offline players
+    const playersInTorn = membersArray.filter(member => {
+        // Check if status is "Okay" (in Torn)
+        let statusDescription = '';
+        if (member.status) {
+            if (typeof member.status === 'string') {
+                statusDescription = member.status;
+            } else if (typeof member.status === 'object' && member.status.description) {
+                statusDescription = member.status.description;
+            }
+        }
+        
+        const inTorn = statusDescription === 'Okay';
+        
+        // Debug logging for first few members
+        if (membersArray.indexOf(member) < 3) {
+            console.log(`Member: ${member.name}, Status: ${statusDescription}, In Torn: ${inTorn}`);
+        }
+        
+        return inTorn;
+    });
+    
+    console.log(`Found ${playersInTorn.length} players in Torn`);
+    
+    // Sort by name
+    playersInTorn.sort((a, b) => {
+        const nameA = (a.name || '').toLowerCase();
+        const nameB = (b.name || '').toLowerCase();
+        return nameA.localeCompare(nameB);
+    });
+    
+    // Display the list
+    if (playersInTorn.length === 0) {
+        onlinePlayersList.innerHTML = '<div style="color: #c0c0c0; font-style: italic;">No players in Torn</div>';
+    } else {
+        let html = '';
+        playersInTorn.forEach(member => {
+            const username = member.name || `User ${member.id || 'Unknown'}`;
+            html += `<div class="online-player-item">${username}</div>`;
+        });
+        onlinePlayersList.innerHTML = html;
+    }
+    
+    console.log(`Updated players in Torn: ${playersInTorn.length} players`);
 }
 
 // Stack overlapping labels vertically

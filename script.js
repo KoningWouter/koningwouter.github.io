@@ -1047,14 +1047,16 @@ function updateProgressBars(data) {
         console.warn('No happy data found');
     }
 
-    // Update Money display - show wallet and faction money
+    // Update Money display - show wallet, faction money, and city bank
     const walletElement = document.getElementById('walletValue');
     const factionElement = document.getElementById('factionValue');
+    const cityBankElement = document.getElementById('cityBankValue');
     
     let walletValue = null;
     let factionValue = null;
+    let cityBankValue = null;
     
-    // Check if money object exists and has wallet and faction properties
+    // Check if money object exists and has wallet, faction, and citybank properties
     if (data.money && typeof data.money === 'object') {
         if (data.money.wallet !== undefined) {
             walletValue = data.money.wallet;
@@ -1062,6 +1064,10 @@ function updateProgressBars(data) {
         // Faction money is nested: data.money.faction.money
         if (data.money.faction && typeof data.money.faction === 'object' && data.money.faction.money !== undefined) {
             factionValue = data.money.faction.money;
+        }
+        // City bank is at: data.money.city_bank.amount
+        if (data.money.city_bank && typeof data.money.city_bank === 'object' && data.money.city_bank.amount !== undefined) {
+            cityBankValue = data.money.city_bank.amount;
         }
     }
     
@@ -1088,6 +1094,16 @@ function updateProgressBars(data) {
             factionElement.textContent = formatValue(factionValue);
         } else {
             factionElement.textContent = '-';
+        }
+    }
+    
+    // Update city bank display - always show value even if 0
+    if (cityBankElement) {
+        if (cityBankValue !== null && typeof cityBankValue === 'number' && !isNaN(cityBankValue)) {
+            // Display the value even if it's 0
+            cityBankElement.textContent = formatValue(cityBankValue);
+        } else {
+            cityBankElement.textContent = '-';
         }
     }
     

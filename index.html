@@ -28,17 +28,21 @@
         <!-- Tabs Navigation -->
         <div class="tabs-container">
             <div class="tabs-nav">
-                <button class="tab-button active" data-tab="search">
-                    <span class="tab-icon">🔍</span>
-                    <span class="tab-label">Search</span>
-                </button>
-                <button class="tab-button" data-tab="player-info">
+                <button class="tab-button active" data-tab="player-info">
                     <span class="tab-icon">⚔️</span>
                     <span class="tab-label">Player Info</span>
+                </button>
+                <button class="tab-button" data-tab="stocks">
+                    <span class="tab-icon">📈</span>
+                    <span class="tab-label">Stocks</span>
                 </button>
                 <button class="tab-button" data-tab="world-map">
                     <span class="tab-icon">🗺️</span>
                     <span class="tab-label">World Map</span>
+                </button>
+                <button class="tab-button" data-tab="search">
+                    <span class="tab-icon">🔍</span>
+                    <span class="tab-label">Search</span>
                 </button>
                 <button class="tab-button" data-tab="settings">
                     <span class="tab-icon">⚙️</span>
@@ -52,7 +56,7 @@
         </div>
 
         <!-- Search Tab Content -->
-        <div id="searchTab" class="tab-content active">
+        <div id="searchTab" class="tab-content">
             <div class="search-section">
                 <div class="search-container">
                     <label for="userIdInput" class="search-label">Search by User ID</label>
@@ -71,7 +75,7 @@
         </div>
 
         <!-- Player Info Tab Content -->
-        <div id="playerInfoTab" class="tab-content">
+        <div id="playerInfoTab" class="tab-content active">
             <div id="progressBarsSection" class="progress-bars-section hidden">
             <h2>Live Stats</h2>
             <p class="refresh-indicator">🔄 Auto-refreshing every 5 seconds</p>
@@ -244,6 +248,20 @@
                 <div class="api-endpoints-section">
                     <h2>Available API Endpoints</h2>
                     <div class="endpoints-grid" id="endpointsList"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stocks Tab Content -->
+        <div id="stocksTab" class="tab-content">
+            <div class="world-map-section">
+                <h2>Stocks</h2>
+                <div id="stocksCard" class="world-map-section">
+                    <div style="background: rgba(0, 0, 0, 0.4); padding: 20px; border-radius: 12px; border: 1px solid rgba(212, 175, 55, 0.2);">
+                        <div id="stocksDisplay" style="color: #c0c0c0; font-family: 'Cormorant Garamond', serif; font-size: 1rem; line-height: 1.8;">
+                            Loading stock data...
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

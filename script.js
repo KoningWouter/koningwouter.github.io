@@ -390,6 +390,16 @@ function setupTabs() {
                 } else {
                     console.error('Docs tab element not found');
                 }
+            } else if (targetTab === 'stocks') {
+                const stocksTab = document.getElementById('stocksTab');
+                if (stocksTab) {
+                    stocksTab.classList.add('active');
+                    console.log('Stocks tab activated');
+                    // Load stock data when tab is activated
+                    loadStocksData();
+                } else {
+                    console.error('Stocks tab element not found');
+                }
             }
         });
     });
@@ -3134,6 +3144,114 @@ function stopWorldMapUpdates() {
         clearInterval(worldMapUpdateInterval);
         worldMapUpdateInterval = null;
         console.log('World map auto-update stopped');
+    }
+}
+
+// Load and display stock data from Torn API
+async function loadStocksData() {
+    console.log('=== loadStocksData() called ===');
+    
+    const stocksDisplay = document.getElementById('stocksDisplay');
+    if (!stocksDisplay) {
+        console.error('Stocks display element not found in DOM');
+        return;
+    }
+    
+    // Show loading state
+    stocksDisplay.innerHTML = '<p style="color: #c0c0c0; font-style: italic;">Loading stock data...</p>';
+    
+    const apiKey = getApiKey();
+    if (!apiKey) {
+        console.error('API key not configured');
+        stocksDisplay.innerHTML = '<p style="color: #ff6b6b;">API key not configured. Please enter your API key in the Settings tab.</p>';
+        return;
+    }
+    
+    try {
+        const stocksUrl = `${API_BASE_URL}/torn/?selections=stocks&key=${apiKey}`;
+        console.log('Fetching stocks data from URL:', stocksUrl.replace(apiKey, 'KEY_HIDDEN'));
+        
+        const stocksResponse = await fetch(stocksUrl);
+        
+        if (!stocksResponse.ok) {
+            throw new Error(`HTTP error! status: ${stocksResponse.status}`);
+        }
+        
+        const stocksData = await stocksResponse.json();
+        
+        console.log('Stocks API response status:', stocksResponse.status);
+        console.log('Stocks API response data:', stocksData);
+        
+        if (stocksData.error) {
+            stocksDisplay.innerHTML = `<p style="color: #ff6b6b;">Error: ${stocksData.error.error || JSON.stringify(stocksData.error)}</p>`;
+            return;
+        }
+        
+        // Display stocks in a table
+        let html = '';
+        
+        // Handle the API response structure: { "stocks": { "stockId": {...}, ... } }
+        const stocks = stocksData.stocks || {};
+        const stockIds = Object.keys(stocks);
+        
+        if (stockIds.length === 0) {
+            html = '<p style="color: #c0c0c0; font-style: italic;">No stock data found</p>';
+        } else {
+            // Convert stocks object to array and sort by name
+            const stocksArray = stockIds.map(id => ({
+                id: id,
+                ...stocks[id]
+            })).sort((a, b) => {
+                const nameA = (a.name || '').toLowerCase();
+                const nameB = (b.name || '').toLowerCase();
+                return nameA.localeCompare(nameB);
+            });
+            
+            // Create table
+            html += '<table style="width: 100%; border-collapse: collapse;">';
+            html += '<thead>';
+            html += '<tr style="border-bottom: 2px solid rgba(212, 175, 55, 0.3);">';
+            html += '<th style="padding: 12px; text-align: left; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Stock Name</th>';
+            html += '<th style="padding: 12px; text-align: right; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Current Price</th>';
+            html += '<th style="padding: 12px; text-align: right; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Total Shares</th>';
+            html += '<th style="padding: 12px; text-align: right; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Investors</th>';
+            html += '<th style="padding: 12px; text-align: right; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Market Cap</th>';
+            html += '</tr>';
+            html += '</thead>';
+            html += '<tbody>';
+            
+            stocksArray.forEach(stock => {
+                const name = stock.name || `Stock ${stock.id || 'Unknown'}`;
+                const currentPrice = stock.current_price !== undefined ? `$${Number(stock.current_price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-';
+                const totalShares = stock.total_shares !== undefined ? Number(stock.total_shares).toLocaleString('en-US') : '-';
+                const investors = stock.investors !== undefined ? Number(stock.investors).toLocaleString('en-US') : '-';
+                
+                // Calculate market cap (price * total shares)
+                let marketCap = '-';
+                if (stock.current_price !== undefined && stock.total_shares !== undefined) {
+                    const cap = Number(stock.current_price) * Number(stock.total_shares);
+                    marketCap = `$${cap.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                }
+                
+                html += '<tr style="border-bottom: 1px solid rgba(212, 175, 55, 0.1);">';
+                html += `<td style="padding: 12px; color: #f4e4bc; font-size: 1rem; font-weight: 500;">${name}</td>`;
+                html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem; text-align: right;">${currentPrice}</td>`;
+                html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem; text-align: right;">${totalShares}</td>`;
+                html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem; text-align: right;">${investors}</td>`;
+                html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem; text-align: right;">${marketCap}</td>`;
+                html += '</tr>';
+            });
+            
+            html += '</tbody>';
+            html += '</table>';
+        }
+        
+        stocksDisplay.innerHTML = html;
+        console.log('Stock data loaded and displayed successfully');
+        
+    } catch (error) {
+        console.error('Error loading stocks data:', error);
+        stocksDisplay.innerHTML = `<p style="color: #ff6b6b;">Error loading stock data: ${error.message}</p>`;
     }
 }
 

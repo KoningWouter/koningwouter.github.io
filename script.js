@@ -1639,15 +1639,15 @@ async function initializeFactionMap() {
             worldMap = L.map('worldMap', {
                 center: [0, 0],
                 zoom: 2,
-                zoomControl: false,
+                zoomControl: true,
                 attributionControl: false,
                 minZoom: 2,
-                maxZoom: 2,
-                scrollWheelZoom: false,
-                doubleClickZoom: false,
-                boxZoom: false,
-                keyboard: false,
-                dragging: false
+                maxZoom: 10,
+                scrollWheelZoom: true,
+                doubleClickZoom: true,
+                boxZoom: true,
+                keyboard: true,
+                dragging: true
             });
             
             // Add dark theme tile layer (CartoDB Dark Matter)
@@ -1656,14 +1656,6 @@ async function initializeFactionMap() {
                 subdomains: 'abcd',
                 maxZoom: 19
             }).addTo(worldMap);
-            
-            // Disable all zoom interactions and dragging
-            worldMap.touchZoom.disable();
-            worldMap.doubleClickZoom.disable();
-            worldMap.scrollWheelZoom.disable();
-            worldMap.boxZoom.disable();
-            worldMap.keyboard.disable();
-            worldMap.dragging.disable();
             
             // Wait for map to be ready, then invalidate size
             worldMap.whenReady(() => {

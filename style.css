@@ -2287,6 +2287,12 @@ header h1 {
     overflow: hidden;
 }
 
+/* Nerve bar - no transition, completely static */
+#nerveBar.progress-bar-fill {
+    transition: none !important;
+    animation: none !important;
+}
+
 .progress-bar-shine {
     position: absolute;
     top: 0;
@@ -2366,6 +2372,14 @@ header h1 {
         0 0 30px rgba(212, 175, 55, 0.8),
         inset 0 2px 8px rgba(255, 255, 255, 0.3),
         inset 0 -2px 8px rgba(0, 0, 0, 0.5);
+    transition: none !important; /* Remove transition to prevent animation */
+    animation: none !important; /* Remove any animations */
+}
+
+/* Disable shine animation on nerve bar */
+#nerveBar .progress-bar-shine {
+    animation: none !important;
+    display: none; /* Hide the shine element completely */
 }
 
 #nerveBarCard:hover {

@@ -1312,13 +1312,35 @@ function updateProgressBar(type, current, maximum) {
 
     const percentage = maximum > 0 ? (current / maximum) * 100 : 0;
     
+    // Get current percentage to avoid unnecessary updates
+    const currentPercentage = parseFloat(bar.getAttribute('data-percentage') || '0');
+    const newPercentage = parseFloat(percentage.toFixed(1));
+    
+    // Only update if the value has actually changed (with small tolerance for floating point)
+    if (Math.abs(currentPercentage - newPercentage) < 0.1) {
+        // Value hasn't changed, just ensure text is up to date and return early
+        // This prevents the bar from animating when the value is the same
+        valueElement.textContent = `${current.toLocaleString()} / ${maximum.toLocaleString()}`;
+        return;
+    }
+    
     // Add updating class for glow effect
     bar.classList.add('updating');
     setTimeout(() => bar.classList.remove('updating'), 500);
 
-    // Update width with smooth transition
-    bar.style.width = `${percentage}%`;
-    bar.setAttribute('data-percentage', percentage.toFixed(1));
+    // Update width - for nerve bar, set immediately without any transition or animation
+    if (type === 'nerve') {
+        // Completely disable transition and animation for instant, static update
+        bar.style.transition = 'none';
+        bar.style.animation = 'none';
+        bar.style.width = `${percentage}%`;
+        // Force reflow to apply the change immediately
+        void bar.offsetHeight;
+    } else {
+        // Other bars can use smooth transition
+        bar.style.width = `${percentage}%`;
+    }
+    bar.setAttribute('data-percentage', newPercentage);
 
     // Update value text
     valueElement.textContent = `${current.toLocaleString()} / ${maximum.toLocaleString()}`;

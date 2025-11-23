@@ -3215,12 +3215,18 @@ function createFireworks() {
 }
 
 // Add screen shake effect
-function screenShake() {
+// Global variable to track shake interval
+let shakeInterval = null;
+
+function startScreenShake() {
     const body = document.body;
-    body.style.animation = 'screenShake 0.5s ease-in-out';
-    setTimeout(() => {
-        body.style.animation = '';
-    }, 500);
+    // Start continuous shake animation
+    body.style.animation = 'screenShake 0.1s ease-in-out infinite';
+}
+
+function stopScreenShake() {
+    const body = document.body;
+    body.style.animation = '';
 }
 
 // Welcome announcement function - ENHANCED HILARIOUS VERSION
@@ -3265,22 +3271,35 @@ function playWelcomeAnnouncement() {
         
         // Create visual effects
         createFireworks();
-        screenShake();
         
-        // Add epic glow to the entire page
-        document.body.style.filter = 'brightness(1.1)';
-        setTimeout(() => {
-            document.body.style.filter = '';
-        }, 1000);
+        // Start continuous screen shake
+        startScreenShake();
+        
+        // Add epic glow/light-up effect to the entire page (continuous until announcement ends)
+        document.body.style.filter = 'brightness(1.3) drop-shadow(0 0 20px rgba(212, 175, 55, 0.8))';
+        document.body.style.transition = 'filter 0.3s ease-in-out';
     };
     
     utterance.onend = () => {
         console.log('🎤 Rock announcement complete!');
+        
+        // Stop screen shake
+        stopScreenShake();
+        
+        // Remove light-up effect
+        document.body.style.filter = '';
+        
         const btn = document.getElementById('announceBtn');
         if (btn) {
             btn.style.animation = '';
             btn.style.transform = '';
         }
+    };
+    
+    utterance.onerror = () => {
+        // Also stop effects if there's an error
+        stopScreenShake();
+        document.body.style.filter = '';
     };
     
     utterance.onerror = (event) => {

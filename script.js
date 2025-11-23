@@ -333,8 +333,8 @@ function setupTabs() {
                         }, 100);
                     }
                     
-                    // Start automatic updates for markers
-                    startWorldMapUpdates();
+                    // Load user status (username and status.description)
+                    loadUserStatus();
                 } else {
                     console.error('World Map tab element not found');
                 }
@@ -1612,9 +1612,6 @@ async function initializeFactionMap() {
             // Add Torn city markers
             addTornCityMarkers();
             
-            // Add dashed lines from Torn to other cities
-            addTornCityLines();
-            
             mapInitRetryCount = 0;
             mapInitInProgress = false;
             
@@ -1738,7 +1735,64 @@ async function loadFactionMembers() {
         console.log('=== Starting to fetch faction members ===');
         console.log('Loading faction members for faction ID:', currentFactionId);
         
-        // Fetch faction members - try with both 'members' and 'basic,members' selections
+        // Fetch faction members from /faction/members endpoint
+        const apiKey = getApiKey();
+        if (!apiKey) {
+            throw new Error('API key is not configured. Please enter your API key in the Settings tab.');
+        }
+        
+        const membersUrl = `${API_BASE_URL}/faction/members?key=${apiKey}`;
+        console.log('Fetching faction members from URL:', membersUrl.replace(apiKey, 'KEY_HIDDEN'));
+        
+        const membersResponse = await fetch(membersUrl);
+        const membersData = await membersResponse.json();
+        
+        console.log('Faction members API response status:', membersResponse.status);
+        console.log('Faction members API response data:', membersData);
+        
+        if (membersData.error) {
+            console.error('Faction members API Error:', membersData.error);
+            throw new Error(membersData.error.error || 'API Error: ' + JSON.stringify(membersData.error));
+        }
+        
+        // Display members (username and status.description) from /faction/members endpoint
+        const jsonDisplay = document.getElementById('factionMembersJsonDisplay');
+        if (jsonDisplay) {
+            let displayText = '';
+            const memberIds = Object.keys(membersData);
+            
+            if (memberIds.length === 0) {
+                displayText = 'No members found';
+            } else {
+                // Sort members by name
+                const sortedMemberIds = memberIds.sort((a, b) => {
+                    const nameA = (membersData[a].name || '').toLowerCase();
+                    const nameB = (membersData[b].name || '').toLowerCase();
+                    return nameA.localeCompare(nameB);
+                });
+                
+                sortedMemberIds.forEach(memberId => {
+                    const member = membersData[memberId];
+                    const username = member.name || `User ${memberId}`;
+                    
+                    // Get status.description - status can be a string or an object
+                    let statusDescription = '';
+                    if (member.status) {
+                        if (typeof member.status === 'string') {
+                            statusDescription = member.status;
+                        } else if (typeof member.status === 'object' && member.status.description) {
+                            statusDescription = member.status.description;
+                        }
+                    }
+                    
+                    displayText += `${username}: ${statusDescription || 'No status'}\n`;
+                });
+            }
+            
+            jsonDisplay.textContent = displayText.trim();
+        }
+        
+        // Also fetch faction data for backward compatibility with existing code
         const factionData = await fetchFactionData(currentFactionId, 'basic,members');
         console.log('Faction data received:', factionData);
         console.log('Faction data keys:', Object.keys(factionData));
@@ -1751,11 +1805,8 @@ async function loadFactionMembers() {
             throw new Error('No members found in faction data');
         }
         
-        // Clear existing markers if map is initialized
+        // Markers removed - no longer clearing markers
         if (worldMap) {
-            factionMarkers.forEach(marker => worldMap.removeLayer(marker));
-            factionMarkers = [];
-            
             // Remove Torn count marker
             if (tornCountMarker) {
                 worldMap.removeLayer(tornCountMarker);
@@ -1998,89 +2049,10 @@ async function loadFactionMembers() {
                 console.warn(`Could not find member ${memberId} in factionMembersData to update location`);
             }
             
-            // Get coordinates for the destination and add map marker (only if map is initialized)
-            // For traveling players, place marker at midpoint between origin and destination
-            let coordinates = null;
-            if (worldMap) {
-                if (isTravelling && destination && currentLocation) {
-                    // Calculate midpoint for traveling players
-                    const originCoords = getCityCoordinates(currentLocation);
-                    const destCoords = getCityCoordinates(destination);
-                    console.log(`Traveling player ${memberName}: origin=${currentLocation} (${originCoords}), dest=${destination} (${destCoords})`);
-                    
-                    if (originCoords && destCoords) {
-                        coordinates = getMidpointCoordinates(originCoords, destCoords);
-                        console.log(`Placing traveling marker for ${memberName} at midpoint:`, coordinates);
-                    } else if (destCoords) {
-                        // Fallback to destination if origin not found
-                        coordinates = destCoords;
-                        console.log(`Using destination coordinates for ${memberName}:`, coordinates);
-                    } else if (originCoords) {
-                        // Fallback to origin if destination not found
-                        coordinates = originCoords;
-                        console.log(`Using origin coordinates for ${memberName}:`, coordinates);
-                    } else {
-                        // Both not found - log error but don't default to Torn for traveling players
-                        console.error(`Could not find coordinates for traveling player ${memberName}: origin=${currentLocation}, dest=${destination}`);
-                        // Don't create marker if we can't find coordinates for traveling player
-                        coordinates = null;
-                    }
-                } else {
-                    // For non-traveling players, use current location
-                    // This includes players who are abroad (not in Torn)
-                    coordinates = getCityCoordinates(currentLocation);
-                    console.log(`Non-traveling player ${memberName} at ${currentLocation}:`, coordinates);
-                    
-                    // If coordinates not found for a non-Torn location, don't create marker
-                    if (!coordinates && currentLocation && currentLocation !== 'Torn City' && currentLocation !== 'Torn') {
-                        console.warn(`Could not find coordinates for location: ${currentLocation}, player: ${memberName} - skipping marker`);
-                    }
-                }
-                
-                if (coordinates) {
-                    // Check if user is stationary in Torn City - hide label only if they are stationary
-                    // If they're traveling, always show label regardless of location
-                    const showLabel = isTravelling || !isStationaryInTorn(null, currentLocation);
-                    
-                    // Create custom icon with dot and text label (default red color, will be updated when profile data is fetched)
-                    const customIcon = L.divIcon({
-                        className: 'faction-member-marker',
-                        html: createMarkerHTML(memberName, null, 0, showLabel),
-                        iconSize: [100, 30],
-                        iconAnchor: [50, 15]
-                    });
-                    
-                    const marker = L.marker(coordinates, { icon: customIcon })
-                        .addTo(worldMap)
-                        .bindPopup(`
-                            <div class="marker-popup">
-                                <strong>${memberName}</strong><br>
-                                <span>Status: ${memberStatus}</span><br>
-                                <span>Location: ${locationText}</span>
-                            </div>
-                        `);
-                    
-                    // Store member ID and name with marker for reference
-                    marker.memberId = memberId;
-                    marker._memberName = memberName;
-                    marker._currentLocation = currentLocation; // Store location for label visibility
-                    marker._isTravelling = isTravelling; // Store travel status
-                    marker._destination = destination; // Store destination for traveling players
-                    marker._origin = isTravelling && destination ? currentLocation : null; // Store origin for traveling players
-                    factionMarkers.push(marker);
-                    markersAdded++;
-                }
-            }
+            // Markers removed - no longer creating user markers on the map
         });
         
-        // Stack overlapping labels vertically
-        stackOverlappingLabels();
-        
-        // Update Torn count label after initial markers are created
-        updateTornCountLabel();
-        
-        // Fetch travel information for each user marker and display raw output
-        await fetchAndDisplayTravelDataForMarkers();
+        // Markers removed - no longer stacking labels or updating count
         
         // Keep map at world view - don't auto-zoom to markers
             
@@ -2141,6 +2113,463 @@ async function loadFactionMembers() {
         }
     }
 }
+
+// Load and display members from /faction/members endpoint
+async function loadFactionMembersTable() {
+    console.log('=== loadFactionMembersTable() called ===');
+    
+    const jsonDisplay = document.getElementById('factionMembersDisplay');
+    if (!jsonDisplay) {
+        console.error('Faction members display element not found in DOM');
+        return;
+    }
+    
+    // Show loading state
+    jsonDisplay.textContent = 'Loading faction members...';
+    
+    const apiKey = getApiKey();
+    if (!apiKey) {
+        console.error('API key not configured');
+        jsonDisplay.textContent = 'API key not configured. Please enter your API key in the Settings tab.';
+        return;
+    }
+    
+    try {
+        const membersUrl = `${API_BASE_URL}/faction/members?key=${apiKey}`;
+        console.log('Fetching faction members from URL:', membersUrl.replace(apiKey, 'KEY_HIDDEN'));
+        
+        const membersResponse = await fetch(membersUrl);
+        
+        if (!membersResponse.ok) {
+            throw new Error(`HTTP error! status: ${membersResponse.status}`);
+        }
+        
+        const membersData = await membersResponse.json();
+        
+        console.log('Faction members API response status:', membersResponse.status);
+        console.log('Faction members API response data:', membersData);
+        
+        if (membersData.error) {
+            jsonDisplay.textContent = `Error: ${membersData.error.error || JSON.stringify(membersData.error)}`;
+            return;
+        }
+        
+        // Display raw JSON data
+        jsonDisplay.textContent = JSON.stringify(membersData, null, 2);
+    } catch (error) {
+        console.error('Error loading faction members:', error);
+        console.error('Error stack:', error.stack);
+        jsonDisplay.textContent = `Error loading members: ${error.message}`;
+    }
+}
+
+// Load and display username and status.description from /faction/members endpoint
+async function loadUserStatus() {
+    console.log('=== loadUserStatus() called ===');
+    
+    const statusDisplay = document.getElementById('userStatusDisplay');
+    if (!statusDisplay) {
+        console.error('User status display element not found in DOM');
+        return;
+    }
+    
+    // Show loading state
+    statusDisplay.textContent = 'Loading user status...';
+    
+    const apiKey = getApiKey();
+    if (!apiKey) {
+        console.error('API key not configured');
+        statusDisplay.textContent = 'API key not configured. Please enter your API key in the Settings tab.';
+        return;
+    }
+    
+    try {
+        const membersUrl = `${API_BASE_URL}/faction/members?key=${apiKey}`;
+        console.log('Fetching faction members from URL:', membersUrl.replace(apiKey, 'KEY_HIDDEN'));
+        
+        const membersResponse = await fetch(membersUrl);
+        
+        if (!membersResponse.ok) {
+            throw new Error(`HTTP error! status: ${membersResponse.status}`);
+        }
+        
+        const membersData = await membersResponse.json();
+        
+        console.log('Faction members API response status:', membersResponse.status);
+        console.log('Faction members API response data:', membersData);
+        
+        if (membersData.error) {
+            statusDisplay.textContent = `Error: ${membersData.error.error || JSON.stringify(membersData.error)}`;
+            return;
+        }
+        
+        // Display username and status.description in a table
+        let html = '';
+        
+        // Handle the API response structure: { "members": [...] }
+        let membersArray = [];
+        if (membersData.members && Array.isArray(membersData.members)) {
+            membersArray = membersData.members;
+        } else if (Array.isArray(membersData)) {
+            membersArray = membersData;
+        } else {
+            // Fallback: treat as object with member IDs as keys
+            membersArray = Object.values(membersData);
+        }
+        
+        if (membersArray.length === 0) {
+            html = '<p style="color: #c0c0c0; font-style: italic;">No members found</p>';
+        } else {
+            // Sort members by name
+            const sortedMembers = membersArray.sort((a, b) => {
+                const nameA = (a.name || '').toLowerCase();
+                const nameB = (b.name || '').toLowerCase();
+                return nameA.localeCompare(nameB);
+            });
+            
+            // Create table
+            html += '<table style="width: 100%; border-collapse: collapse;">';
+            html += '<thead>';
+            html += '<tr style="border-bottom: 2px solid rgba(212, 175, 55, 0.3);">';
+            html += '<th style="padding: 12px; text-align: left; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Username</th>';
+            html += '<th style="padding: 12px; text-align: left; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Travel Status</th>';
+            html += '</tr>';
+            html += '</thead>';
+            html += '<tbody>';
+            
+            sortedMembers.forEach(member => {
+                const username = member.name || `User ${member.id || 'Unknown'}`;
+                
+                // Get status.description - status is an object with description property
+                let statusDescription = '';
+                if (member.status) {
+                    if (typeof member.status === 'string') {
+                        statusDescription = member.status;
+                    } else if (typeof member.status === 'object' && member.status.description) {
+                        statusDescription = member.status.description;
+                    }
+                }
+                
+                html += '<tr style="border-bottom: 1px solid rgba(212, 175, 55, 0.1);">';
+                html += `<td style="padding: 12px; color: #f4e4bc; font-size: 1rem;">${username}</td>`;
+                html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem;">${statusDescription || 'No status'}</td>`;
+                html += '</tr>';
+            });
+            
+            html += '</tbody>';
+            html += '</table>';
+        }
+        
+        statusDisplay.innerHTML = html;
+        
+        // Place markers at Torn city for each user
+        if (worldMap && membersArray.length > 0) {
+            // Clear existing user markers and count marker
+            if (factionMarkers && factionMarkers.length > 0) {
+                factionMarkers.forEach(marker => {
+                    if (worldMap.hasLayer(marker)) {
+                        worldMap.removeLayer(marker);
+                    }
+                });
+                factionMarkers = [];
+            }
+            
+            // Remove existing Torn count marker
+            if (tornCountMarker) {
+                if (worldMap.hasLayer(tornCountMarker)) {
+                    worldMap.removeLayer(tornCountMarker);
+                }
+                tornCountMarker = null;
+            }
+            
+            // Get Torn city coordinates
+            const tornCoords = getCityCoordinates('Torn');
+            if (tornCoords) {
+                let usersInTorn = 0;
+                let usersNotInTorn = [];
+                
+                // Separate users by status
+                membersArray.forEach(member => {
+                    const username = member.name || `User ${member.id || 'Unknown'}`;
+                    
+                    // Get status.description
+                    let statusDescription = '';
+                    if (member.status) {
+                        if (typeof member.status === 'string') {
+                            statusDescription = member.status;
+                        } else if (typeof member.status === 'object' && member.status.description) {
+                            statusDescription = member.status.description;
+                        }
+                    }
+                    
+                    // Check if user is in Torn (status is "Okay")
+                    if (statusDescription === 'Okay') {
+                        usersInTorn++;
+                    } else {
+                        // User is not in Torn, add to list for individual markers
+                        usersNotInTorn.push({ member, username, statusDescription });
+                    }
+                });
+                
+                // Create count marker at Torn city if there are users in Torn
+                if (usersInTorn > 0) {
+                    const countIcon = L.divIcon({
+                        className: 'faction-member-marker',
+                        html: `
+                            <div class="marker-container">
+                                <div class="marker-dot" style="background: #dc143c; border-color: #ff6b6b; box-shadow: 0 0 10px rgba(220, 20, 60, 0.8), 0 0 20px rgba(220, 20, 60, 0.5);"></div>
+                                <div class="marker-label">${usersInTorn} in Torn</div>
+                            </div>
+                        `,
+                        iconSize: [100, 30],
+                        iconAnchor: [50, 15]
+                    });
+                    
+                    tornCountMarker = L.marker(tornCoords, { icon: countIcon })
+                        .addTo(worldMap)
+                        .bindPopup(`
+                            <div class="marker-popup">
+                                <strong>Players in Torn</strong><br>
+                                <span>${usersInTorn} player${usersInTorn !== 1 ? 's' : ''} currently in Torn City</span>
+                            </div>
+                        `);
+                    
+                    console.log(`Created count marker: ${usersInTorn} in Torn`);
+                }
+                
+                // Create individual markers for users NOT in Torn based on their status
+                usersNotInTorn.forEach((userData) => {
+                    const { member, username, statusDescription } = userData;
+                    
+                    let markerCoordinates = null;
+                    let markerColor = '#dc143c'; // Default red
+                    let markerBorderColor = '#ff6b6b';
+                    let markerShadow = 'rgba(220, 20, 60, 0.8)';
+                    let markerShadow2 = 'rgba(220, 20, 60, 0.5)';
+                    
+                    const statusLower = (statusDescription || '').toLowerCase().trim();
+                    
+                    // Check if status starts with "In a <landname> hospital"
+                    if (statusLower.startsWith('in a ') && statusLower.includes('hospital')) {
+                        // Extract landname from "In a <landname> hospital for x min"
+                        // Pattern: "In a Chinese hospital for 1 mins" -> extract "Chinese"
+                        const hospitalMatch = statusDescription.match(/in a\s+([a-z]+)\s+hospital/i);
+                        if (hospitalMatch && hospitalMatch[1]) {
+                            const landname = hospitalMatch[1].trim();
+                            // Map country names to city names if needed
+                            // "Chinese" -> "China", "Swiss" -> "Switzerland", etc.
+                            let locationName = landname;
+                            if (landname.toLowerCase() === 'chinese') {
+                                locationName = 'China';
+                            } else if (landname.toLowerCase() === 'swiss') {
+                                locationName = 'Switzerland';
+                            } else if (landname.toLowerCase() === 'british' || landname.toLowerCase() === 'uk') {
+                                locationName = 'United Kingdom';
+                            } else if (landname.toLowerCase() === 'south african') {
+                                locationName = 'South Africa';
+                            } else if (landname.toLowerCase() === 'united arab emirates' || landname.toLowerCase() === 'uae') {
+                                locationName = 'UAE';
+                            } else {
+                                // Try to capitalize first letter for other cases
+                                locationName = landname.charAt(0).toUpperCase() + landname.slice(1).toLowerCase();
+                            }
+                            
+                            markerCoordinates = getCityCoordinates(locationName);
+                            // Red marker for "In a <landname> hospital"
+                            markerColor = '#dc143c';
+                            markerBorderColor = '#ff6b6b';
+                            markerShadow = 'rgba(220, 20, 60, 0.8)';
+                            markerShadow2 = 'rgba(220, 20, 60, 0.5)';
+                            console.log(`User ${username} is in a ${landname} hospital (${locationName}) - placing red marker`);
+                        }
+                    }
+                    // Check if status starts with "In <landname>"
+                    else if (statusLower.startsWith('in ')) {
+                        // Extract landname (everything after "In ")
+                        const landname = statusDescription.substring(3).trim();
+                        markerCoordinates = getCityCoordinates(landname);
+                        // Red marker for "In <landname>"
+                        markerColor = '#dc143c';
+                        markerBorderColor = '#ff6b6b';
+                        markerShadow = 'rgba(220, 20, 60, 0.8)';
+                        markerShadow2 = 'rgba(220, 20, 60, 0.5)';
+                        console.log(`User ${username} is in ${landname} - placing red marker`);
+                    }
+                    // Check if status contains "Returning to Torn"
+                    else if (statusLower.includes('returning to torn')) {
+                        // Extract origin location (everything after "Returning to Torn from ")
+                        const originMatch = statusDescription.match(/returning to torn from\s+(.+)/i);
+                        if (originMatch && originMatch[1]) {
+                            const originLocation = originMatch[1].trim();
+                            const originCoords = getCityCoordinates(originLocation);
+                            
+                            if (originCoords && tornCoords) {
+                                markerCoordinates = getMidpointCoordinates(originCoords, tornCoords);
+                                // Blue marker for "Returning to Torn"
+                                markerColor = '#4169e1';
+                                markerBorderColor = '#6495ed';
+                                markerShadow = 'rgba(65, 105, 225, 0.8)';
+                                markerShadow2 = 'rgba(65, 105, 225, 0.5)';
+                                console.log(`User ${username} is returning to Torn from ${originLocation} - placing blue marker at midpoint`);
+                            }
+                        }
+                    }
+                    // Check if status contains "Traveling to <LandName>" or "Travelling to <LandName>"
+                    else if (statusLower.includes('traveling to ') || statusLower.includes('travelling to ')) {
+                        // Extract destination (everything after "Traveling to " or "Travelling to ")
+                        const destMatch = statusDescription.match(/travell?ing to\s+(.+)/i);
+                        if (destMatch && destMatch[1]) {
+                            const destination = destMatch[1].trim();
+                            const destCoords = getCityCoordinates(destination);
+                            
+                            if (destCoords && tornCoords) {
+                                markerCoordinates = getMidpointCoordinates(tornCoords, destCoords);
+                                // Green marker for "Traveling to <LandName>"
+                                markerColor = '#00ff00';
+                                markerBorderColor = '#32cd32';
+                                markerShadow = 'rgba(0, 255, 0, 0.8)';
+                                markerShadow2 = 'rgba(0, 255, 0, 0.5)';
+                                console.log(`User ${username} is traveling to ${destination} - placing green marker at midpoint`);
+                            }
+                        }
+                    }
+                    
+                    // Only create marker if we have valid coordinates
+                    if (markerCoordinates) {
+                        // Store marker data temporarily (we'll create markers after calculating offsets)
+                        factionMarkers.push({
+                            coordinates: markerCoordinates,
+                            username: username,
+                            memberId: member.id,
+                            statusDescription: statusDescription,
+                            markerColor: markerColor,
+                            markerBorderColor: markerBorderColor,
+                            markerShadow: markerShadow,
+                            markerShadow2: markerShadow2
+                        });
+                    } else {
+                        console.warn(`Could not determine coordinates for user ${username} with status: ${statusDescription}`);
+                    }
+                });
+                
+                // Stack overlapping labels by grouping markers at same location
+                const locationGroups = new Map();
+                const tolerance = 0.001; // Coordinate difference tolerance for "same" location
+                
+                // First pass: group markers by location
+                factionMarkers.forEach((markerData) => {
+                    const lat = markerData.coordinates[0];
+                    const lng = markerData.coordinates[1];
+                    
+                    // Find existing group for this location
+                    let foundGroup = false;
+                    for (const [key, group] of locationGroups.entries()) {
+                        const [groupLat, groupLng] = key.split(',').map(Number);
+                        const latDiff = Math.abs(lat - groupLat);
+                        const lngDiff = Math.abs(lng - groupLng);
+                        
+                        if (latDiff < tolerance && lngDiff < tolerance) {
+                            group.push(markerData);
+                            foundGroup = true;
+                            break;
+                        }
+                    }
+                    
+                    // Create new group if no matching group found
+                    if (!foundGroup) {
+                        locationGroups.set(`${lat},${lng}`, [markerData]);
+                    }
+                });
+                
+                // Second pass: calculate offsets and create markers
+                const tempMarkers = [...factionMarkers];
+                factionMarkers = [];
+                
+                // Create markers with vertical offsets for overlapping labels
+                tempMarkers.forEach((markerData) => {
+                    // Find which group this marker belongs to and its position
+                    let verticalOffset = 0;
+                    
+                    for (const [key, group] of locationGroups.entries()) {
+                        const [groupLat, groupLng] = key.split(',').map(Number);
+                        const latDiff = Math.abs(markerData.coordinates[0] - groupLat);
+                        const lngDiff = Math.abs(markerData.coordinates[1] - groupLng);
+                        
+                        if (latDiff < tolerance && lngDiff < tolerance) {
+                            // Find this marker's position in the group
+                            const groupIndex = group.findIndex(m => 
+                                m.coordinates[0] === markerData.coordinates[0] && 
+                                m.coordinates[1] === markerData.coordinates[1] && 
+                                m.username === markerData.username
+                            );
+                            
+                            if (group.length > 1 && groupIndex !== -1) {
+                                // Sort group by username for consistent ordering
+                                const sortedGroup = [...group].sort((a, b) => 
+                                    (a.username || '').localeCompare(b.username || '')
+                                );
+                                
+                                // Find position in sorted group
+                                const sortedIndex = sortedGroup.findIndex(m => 
+                                    m.coordinates[0] === markerData.coordinates[0] && 
+                                    m.coordinates[1] === markerData.coordinates[1] && 
+                                    m.username === markerData.username
+                                );
+                                
+                                // Calculate vertical offset: center the group, then offset each marker
+                                const labelSpacing = 25; // 25px spacing between labels for better visibility
+                                const totalOffset = (group.length - 1) * labelSpacing;
+                                const startOffset = -totalOffset / 2;
+                                verticalOffset = startOffset + (sortedIndex * labelSpacing);
+                            }
+                            break;
+                        }
+                    }
+                    
+                    // Create custom icon with appropriate color and username label (with offset)
+                    const labelOffsetStyle = verticalOffset !== 0 ? `style="transform: translateY(${verticalOffset}px);"` : '';
+                    const customIcon = L.divIcon({
+                        className: 'faction-member-marker',
+                        html: `
+                            <div class="marker-container">
+                                <div class="marker-dot" style="background: ${markerData.markerColor}; border-color: ${markerData.markerBorderColor}; box-shadow: 0 0 10px ${markerData.markerShadow}, 0 0 20px ${markerData.markerShadow2};"></div>
+                                <div class="marker-label" ${labelOffsetStyle}>${markerData.username}</div>
+                            </div>
+                        `,
+                        iconSize: [100, 30],
+                        iconAnchor: [50, 15]
+                    });
+                    
+                    const marker = L.marker(markerData.coordinates, { icon: customIcon })
+                        .addTo(worldMap)
+                        .bindPopup(`
+                            <div class="marker-popup">
+                                <strong>${markerData.username}</strong><br>
+                                <span>Status: ${markerData.statusDescription || 'Unknown'}</span>
+                            </div>
+                        `);
+                    
+                    // Store member info with marker
+                    marker.memberId = markerData.memberId;
+                    marker._memberName = markerData.username;
+                    marker._statusDescription = markerData.statusDescription;
+                    marker._labelOffset = verticalOffset;
+                    
+                    factionMarkers.push(marker);
+                });
+                
+                console.log(`Created ${factionMarkers.length} individual markers and ${usersInTorn > 0 ? '1' : '0'} count marker`);
+            } else {
+                console.error('Could not find Torn city coordinates');
+            }
+        }
+    } catch (error) {
+        console.error('Error loading user status:', error);
+        console.error('Error stack:', error.stack);
+        statusDisplay.textContent = `Error loading user status: ${error.message}`;
+    }
+}
+
 
 // Calculate midpoint between two coordinates (for showing in-transit markers)
 function getMidpointCoordinates(coord1, coord2) {
@@ -2475,51 +2904,8 @@ function getCityCoordinates(cityName) {
     return null;
 }
 
-// Fetch user profile data from v2 API endpoint /user/<id>/profile
-async function fetchUserProfile(userId) {
-    // Get API key from localStorage (settings page)
-    const apiKey = getApiKey();
-    if (!apiKey) {
-        throw new Error('API key is not configured. Please enter your API key in the Settings tab.');
-    }
 
-    // Validate userId is numeric
-    if (!userId || (typeof userId !== 'number' && !/^\d+$/.test(String(userId)))) {
-        throw new Error(`Invalid user ID: ${userId}. User ID must be a number.`);
-    }
-
-    // Ensure userId is a number
-    const numericUserId = typeof userId === 'number' ? userId : parseInt(userId, 10);
-    if (isNaN(numericUserId)) {
-        throw new Error(`Invalid user ID: ${userId}. Could not convert to number.`);
-    }
-
-    // Use v2 API endpoint /user/<id>/profile
-    const url = `${API_BASE_URL}/user/${numericUserId}/profile?key=${apiKey}`;
-    console.log('Fetching user profile from URL:', url.replace(apiKey, 'KEY_HIDDEN'));
-    
-    const response = await fetch(url);
-    const data = await response.json();
-    
-    console.log('API response status:', response.status);
-    console.log('API response data:', data);
-
-    if (data.error) {
-        const errorMessage = data.error.error || JSON.stringify(data.error);
-        console.error('API Error:', data.error);
-        
-        // Handle specific "Incorrect ID-entity relation" error more gracefully
-        if (errorMessage.includes('Incorrect ID-entity relation') || errorMessage.includes('ID-entity')) {
-            throw new Error(`Permission denied: API key does not have access to user ${numericUserId}. This may be due to insufficient API key permissions.`);
-        }
-        
-        throw new Error(errorMessage);
-    }
-
-    return data;
-}
-
-// Update marker positions based on profile data (without updating display)
+// Update marker positions based on faction/members data (without updating display)
 async function updateMarkerPositions() {
     if (!worldMap || factionMarkers.length === 0) {
         return;
@@ -2527,220 +2913,134 @@ async function updateMarkerPositions() {
     
     console.log('Updating marker positions...');
     
-    // Get all users that have markers
-    const usersWithMarkers = factionMembersData.filter(member => {
-        return member.location || member.currentLocation || member.destination;
-    });
-    
-    if (usersWithMarkers.length === 0) {
-        return;
-    }
-    
-    const now = Date.now();
-    const oneMinute = 60 * 1000; // 1 minute in milliseconds
-    
-    // Update each marker's position based on profile data
-    for (const member of usersWithMarkers) {
-        try {
-            const userId = member.id;
-            const userName = member.name || `User ${userId}`;
+    // Fetch fresh data from /faction/members endpoint
+    try {
+        const apiKey = getApiKey();
+        if (!apiKey) {
+            console.error('API key not configured');
+            return;
+        }
+        
+        const membersUrl = `${API_BASE_URL}/faction/members?key=${apiKey}`;
+        console.log('Fetching updated faction members from URL:', membersUrl.replace(apiKey, 'KEY_HIDDEN'));
+        
+        const membersResponse = await fetch(membersUrl);
+        const membersData = await membersResponse.json();
+        
+        if (membersData.error) {
+            console.error('Faction members API Error:', membersData.error);
+            return;
+        }
+        
+        // Update member data with fresh status information
+        Object.keys(membersData).forEach(memberId => {
+            const memberData = membersData[memberId];
+            const memberIndex = factionMembersData.findIndex(m => String(m.id) === String(memberId));
             
-            // Check if we've fetched this user's data in the last minute
-            const lastFetch = userLastFetchTime[userId] || 0;
-            const timeSinceLastFetch = now - lastFetch;
-            
-            if (timeSinceLastFetch < oneMinute) {
-                // Skip this user, we fetched them recently
-                console.log(`Skipping user ${userId} - last fetched ${Math.round(timeSinceLastFetch / 1000)}s ago`);
-                continue;
-            }
-            
-            // Fetch profile data
-            const profileData = await fetchUserProfile(userId);
-            
-            // Update last fetch time for this user
-            userLastFetchTime[userId] = now;
-            
-            // Extract all profile data
-            const profile = profileData.profile || {};
-            const user = profile.user || {};
-            const status = profile.status || {};
-            const basic = profile.basic || {};
-            
-            // Extract description from profile.user.description (primary source)
-            const userDescription = user.description || null;
-            const statusDescription = status.description || null;
-            
-            // Use profile.user.description as the primary source
-            let description = userDescription || statusDescription || null;
-            
-            // Store full profile data in member data
-            const memberIndex = factionMembersData.findIndex(m => String(m.id) === String(userId));
             if (memberIndex !== -1) {
-                factionMembersData[memberIndex].profileData = profileData;
-                factionMembersData[memberIndex].profile = profile;
-                factionMembersData[memberIndex].user = user;
-                factionMembersData[memberIndex].status = status;
-                factionMembersData[memberIndex].basic = basic;
-                factionMembersData[memberIndex].description = description;
-            }
-            
-            // Check if description matches one of the patterns
-            let destination = null;
-            let location = null;
-            let originCountry = null;
-            
-            // Pattern 1: "Returning to Torn from <LandName>" - marker should be halfway between origin and Torn
-            if (description && description.trim().toLowerCase().startsWith('returning to torn from')) {
-                // Extract the origin country name
-                const originMatch = description.match(/returning to torn from\s+(.+)/i);
-                if (originMatch && originMatch[1]) {
-                    originCountry = originMatch[1].trim();
-                    const originCoords = getCityCoordinates(originCountry);
-                    const tornCoords = getCityCoordinates('Torn');
+                const memberStatus = memberData.status || 'Unknown';
+                const memberName = memberData.name || factionMembersData[memberIndex].name;
+                
+                // Parse status to determine location/destination
+                let currentLocation = 'Torn City';
+                let destination = null;
+                let isTravelling = false;
+                let locationText = 'Torn City';
+                
+                if (memberStatus && typeof memberStatus === 'string') {
+                    const statusLower = memberStatus.toLowerCase().trim();
                     
-                    // Store origin in member data
-                    if (memberIndex !== -1) {
-                        factionMembersData[memberIndex].origin = originCountry;
-                        factionMembersData[memberIndex].destination = 'Torn';
+                    // Pattern 1: "traveling to <Location>" or "travelling to <Location>"
+                    if (statusLower.startsWith('traveling to ') || statusLower.startsWith('travelling to ')) {
+                        destination = memberStatus.replace(/^travell?ing to\s+/i, '').trim();
+                        currentLocation = 'Torn City';
+                        isTravelling = true;
+                        locationText = `→ ${destination}`;
                     }
-                    
-                    if (originCoords && tornCoords) {
-                        // Calculate midpoint between origin and Torn
-                        const midpointCoords = getMidpointCoordinates(originCoords, tornCoords);
-                        if (midpointCoords) {
-                            const userMarker = factionMarkers.find(marker => marker.memberId === userId);
-                            if (userMarker) {
-                                const currentLatLng = userMarker.getLatLng();
-                                const distance = Math.abs(currentLatLng.lat - midpointCoords[0]) + Math.abs(currentLatLng.lng - midpointCoords[1]);
-                                // Only update if position has changed significantly
-                                if (distance > 0.01) {
-                                    console.log(`Updating marker for user ${userId} (${userName}) to midpoint between ${originCountry} and Torn`);
-                                    userMarker.setLatLng(midpointCoords);
-                                }
-                                // Store profile data on marker
-                                userMarker.profileData = profileData;
-                                userMarker.destination = 'Torn';
-                                userMarker.origin = originCountry;
-                                userMarker._currentLocation = 'Torn';
-                                // Always update color in case description changed
-                                updateMarkerIcon(userMarker, userName, description, null, 'Torn');
-                            }
+                    // Pattern 2: "returning to torn from <Location>"
+                    else if (statusLower.startsWith('returning to torn from ')) {
+                        const originMatch = memberStatus.match(/returning to torn from\s+(.+)/i);
+                        if (originMatch && originMatch[1]) {
+                            const originCountry = originMatch[1].trim();
+                            destination = 'Torn';
+                            currentLocation = originCountry;
+                            isTravelling = true;
+                            locationText = `→ Torn (from ${originCountry})`;
                         }
                     }
-                }
-            } else if (description && (description.trim().toLowerCase().startsWith('travelling to') || description.trim().toLowerCase().startsWith('traveling to'))) {
-                // Pattern 2: "Travelling to <LandName>" or "Traveling to <LandName>" - marker should be halfway between Torn and destination
-                // Remove "Travelling to" or "Traveling to" prefix and trim
-                destination = description.replace(/^Travell?ing to\s+/i, '').trim();
-                
-                // Store destination in member data (important for blue markers)
-                if (memberIndex !== -1) {
-                    factionMembersData[memberIndex].destination = destination;
-                    factionMembersData[memberIndex].origin = 'Torn';
-                    console.log(`✓ Stored destination for blue marker: ${userName} → ${destination}`);
-                }
-                
-                // Update marker position if we have a valid destination
-                if (destination) {
-                    const destinationCoords = getCityCoordinates(destination);
-                    const tornCoords = getCityCoordinates('Torn');
-                    
-                    if (destinationCoords && tornCoords) {
-                        // Calculate midpoint between Torn and destination
-                        const midpointCoords = getMidpointCoordinates(tornCoords, destinationCoords);
-                        if (midpointCoords) {
-                            // Find the marker for this user
-                            const userMarker = factionMarkers.find(marker => marker.memberId === userId);
-                            if (userMarker) {
-                                const currentLatLng = userMarker.getLatLng();
-                                const distance = Math.abs(currentLatLng.lat - midpointCoords[0]) + Math.abs(currentLatLng.lng - midpointCoords[1]);
-                                // Only update if position has changed significantly
-                                if (distance > 0.01) {
-                                    console.log(`Updating marker for user ${userId} (${userName}) to midpoint between Torn and ${destination}`);
-                                    userMarker.setLatLng(midpointCoords);
-                                }
-                                // Store profile data and destination on marker (important for blue markers)
-                                userMarker.profileData = profileData;
-                                userMarker.destination = destination;
-                                userMarker.origin = 'Torn';
-                                userMarker._currentLocation = destination;
-                                console.log(`✓ Stored profile data on blue marker: ${userName} → ${destination}`);
-                                // Always update color in case description changed
-                                updateMarkerIcon(userMarker, userName, description, null, destination);
-                            }
-                        }
+                    // Pattern 3: "in <Location>"
+                    else if (statusLower.startsWith('in ')) {
+                        currentLocation = memberStatus.replace(/^in\s+/i, '').trim();
+                        destination = null;
+                        isTravelling = false;
+                        locationText = currentLocation;
+                    }
+                    // Pattern 4: "travelling back to torn" or "traveling back to torn"
+                    else if (statusLower.includes('travelling back to torn') || statusLower.includes('traveling back to torn')) {
+                        currentLocation = 'Torn City';
+                        destination = 'Torn';
+                        isTravelling = true;
+                        locationText = '→ Torn';
                     }
                 }
-            } else if (description && (description.trim().toLowerCase().startsWith('travelling back to torn') || description.trim().toLowerCase().startsWith('traveling back to torn'))) {
-                // Pattern 3: "Travelling back to Torn" or "Traveling back to Torn"
-                // Move marker to Torn City
-                const tornCoords = getCityCoordinates('Torn');
-                if (tornCoords) {
-                    const userMarker = factionMarkers.find(marker => marker.memberId === userId);
-                    if (userMarker) {
+                
+                // Update member data
+                factionMembersData[memberIndex].status = memberStatus;
+                factionMembersData[memberIndex].name = memberName;
+                factionMembersData[memberIndex].location = locationText;
+                factionMembersData[memberIndex].currentLocation = currentLocation;
+                factionMembersData[memberIndex].destination = destination;
+                factionMembersData[memberIndex].isTravelling = isTravelling;
+                
+                // Update marker position
+                const userMarker = factionMarkers.find(marker => marker.memberId === memberId);
+                if (userMarker) {
+                    // Calculate new coordinates based on status
+                    let newCoordinates = null;
+                    
+                    if (isTravelling && destination && currentLocation) {
+                        // Calculate midpoint for traveling players
+                        const originCoords = getCityCoordinates(currentLocation);
+                        const destCoords = getCityCoordinates(destination);
+                        
+                        if (originCoords && destCoords) {
+                            newCoordinates = getMidpointCoordinates(originCoords, destCoords);
+                        } else if (destCoords) {
+                            newCoordinates = destCoords;
+                        } else if (originCoords) {
+                            newCoordinates = originCoords;
+                        }
+                    } else {
+                        // For non-traveling players, use current location
+                        newCoordinates = getCityCoordinates(currentLocation);
+                    }
+                    
+                    if (newCoordinates) {
                         const currentLatLng = userMarker.getLatLng();
-                        const distance = Math.abs(currentLatLng.lat - tornCoords[0]) + Math.abs(currentLatLng.lng - tornCoords[1]);
+                        const distance = Math.abs(currentLatLng.lat - newCoordinates[0]) + Math.abs(currentLatLng.lng - newCoordinates[1]);
+                        
                         // Only update if position has changed significantly
                         if (distance > 0.01) {
-                            console.log(`Updating marker for user ${userId} (${userName}) to Torn (travelling back)`);
-                            userMarker.setLatLng(tornCoords);
+                            console.log(`Updating marker for user ${memberId} (${memberName}) to new position based on status: ${memberStatus}`);
+                            userMarker.setLatLng(newCoordinates);
                         }
-                        userMarker._currentLocation = 'Torn';
-                        // Always update color in case description changed
-                        updateMarkerIcon(userMarker, userName, description, null, 'Torn');
-                    }
-                }
-            } else if (description && description.trim().toLowerCase().startsWith('in ')) {
-                // Pattern 4: "In <LandName>" - user is at the exact location, place marker there
-                // Remove "In " prefix and trim to get location name
-                location = description.replace(/^In\s+/i, '').trim();
-                
-                // Update marker position to the exact location
-                if (location) {
-                    const locationCoords = getCityCoordinates(location);
-                    if (locationCoords) {
-                        // Find the marker for this user
-                        const userMarker = factionMarkers.find(marker => marker.memberId === userId);
-                        if (userMarker) {
-                            const currentLatLng = userMarker.getLatLng();
-                            const distance = Math.abs(currentLatLng.lat - locationCoords[0]) + Math.abs(currentLatLng.lng - locationCoords[1]);
-                            // Only update if position has changed significantly
-                            if (distance > 0.01) {
-                                console.log(`Updating marker for user ${userId} (${userName}) to exact location: ${location}`);
-                                userMarker.setLatLng(locationCoords);
-                            }
-                            userMarker._currentLocation = location;
-                            // Always update color in case description changed
-                            updateMarkerIcon(userMarker, userName, description, null, location);
-                        }
-                    }
-                }
-            } else {
-                // If not traveling and not in a specific location, they should be in Torn City
-                const tornCoords = getCityCoordinates('Torn');
-                if (tornCoords) {
-                    const userMarker = factionMarkers.find(marker => marker.memberId === userId);
-                    if (userMarker) {
-                        // Only update if not already at Torn
-                        const currentLatLng = userMarker.getLatLng();
-                        const distance = Math.abs(currentLatLng.lat - tornCoords[0]) + Math.abs(currentLatLng.lng - tornCoords[1]);
-                        if (distance > 0.01) { // If not already at Torn (with some tolerance)
-                            console.log(`Updating marker for user ${userId} (${userName}) to Torn City (default location)`);
-                            userMarker.setLatLng(tornCoords);
-                        }
-                        userMarker._currentLocation = 'Torn';
-                        // Always update color in case description changed
-                        updateMarkerIcon(userMarker, userName, description, null, 'Torn');
+                        
+                        // Update marker properties
+                        userMarker._currentLocation = currentLocation;
+                        userMarker._isTravelling = isTravelling;
+                        userMarker._destination = destination;
+                        userMarker._origin = isTravelling && destination ? currentLocation : null;
+                        userMarker._status = memberStatus;
+                        
+                        // Update marker icon color based on status
+                        updateMarkerIcon(userMarker, memberName, memberStatus, null, destination || currentLocation);
                     }
                 }
             }
-            
-            // Add delay to avoid rate limiting
-            await new Promise(resolve => setTimeout(resolve, 200));
-        } catch (error) {
-            console.error(`Error updating marker position for user ${member.id}:`, error);
-        }
+        });
+        
+    } catch (error) {
+        console.error('Error updating marker positions:', error);
     }
     
     // Re-stack labels after positions are updated
@@ -2762,12 +3062,12 @@ function startWorldMapUpdates() {
     // Update immediately
     updateMarkerPositions();
     
-    // Then update every 1 minute
+    // Then update every 5 minutes (300000 milliseconds)
     worldMapUpdateInterval = setInterval(() => {
         updateMarkerPositions();
-    }, 60000);
+    }, 300000);
     
-    console.log('World map auto-update started (every 1 minute)');
+    console.log('World map auto-update started (every 5 minutes)');
 }
 
 // Stop automatic updates for world map markers
@@ -2779,7 +3079,7 @@ function stopWorldMapUpdates() {
     }
 }
 
-// Fetch and display profile data for all user markers
+// Fetch and display travel data for all user markers using /faction/members data
 async function fetchAndDisplayTravelDataForMarkers() {
     const travelDataContent = document.getElementById('travelDataContent');
     if (!travelDataContent) {
@@ -2788,7 +3088,7 @@ async function fetchAndDisplayTravelDataForMarkers() {
     }
     
     // Clear existing content
-    travelDataContent.innerHTML = '<p style="color: #c0c0c0; font-style: italic;">Fetching profile information for users...</p>';
+    travelDataContent.innerHTML = '<p style="color: #c0c0c0; font-style: italic;">Fetching member information...</p>';
     
     // Get all users that have markers (members with location data have markers)
     const usersWithMarkers = factionMembersData.filter(member => {
@@ -2803,195 +3103,14 @@ async function fetchAndDisplayTravelDataForMarkers() {
     
     let html = '';
     
-    // Fetch profile data for each user using /user/<id>/profile endpoint
+    // Display data from factionMembersData (which comes from /faction/members endpoint)
     for (const member of usersWithMarkers) {
         try {
             const userId = member.id;
             const userName = member.name || `User ${userId}`;
+            const memberStatus = member.status || 'Unknown';
             
-            console.log(`Fetching profile data for user ${userId} (${userName})...`);
-            const profileData = await fetchUserProfile(userId);
-            
-            // Extract all profile data
-            const profile = profileData.profile || {};
-            const user = profile.user || {};
-            const status = profile.status || {};
-            const basic = profile.basic || {};
-            
-            // Extract description from profile.user.description (as specified by user)
-            const userDescription = user.description || null;
-            const statusDescription = status.description || null;
-            const statusColor = status ? (status.color || '#c0c0c0') : '#c0c0c0';
-            
-            console.log('=== Profile Data for User', userId, '===');
-            console.log('Full profileData:', profileData);
-            console.log('Profile keys:', Object.keys(profile));
-            console.log('User keys:', Object.keys(user));
-            console.log('User description (profile.user.description):', userDescription);
-            console.log('All profile.user data:', user);
-            console.log('Status data:', status);
-            console.log('Basic data:', basic);
-            
-            // Log destination for blue markers
-            if (description && (description.trim().toLowerCase().startsWith('travelling to') || description.trim().toLowerCase().startsWith('traveling to'))) {
-                const dest = description.replace(/^Travell?ing to\s+/i, '').trim();
-                console.log(`🔵 BLUE MARKER - User ${userId} (${userName}) is traveling to: ${dest}`);
-            }
-            
-            // Use profile.user.description as the primary source
-            let description = userDescription || statusDescription || 'No status';
-            let displayDescription = description;
-            
-            // Store full profile data in member data
-            const memberIndex = factionMembersData.findIndex(m => String(m.id) === String(userId));
-            if (memberIndex !== -1) {
-                factionMembersData[memberIndex].profileData = profileData;
-                factionMembersData[memberIndex].profile = profile;
-                factionMembersData[memberIndex].user = user;
-                factionMembersData[memberIndex].status = status;
-                factionMembersData[memberIndex].basic = basic;
-                factionMembersData[memberIndex].description = description;
-            }
-            
-            // Check if description matches one of the patterns
-            let destination = null;
-            let location = null;
-            let originCountry = null;
-            
-            // Pattern 1: "Returning to Torn from <LandName>" - marker should be halfway between origin and Torn
-            if (description && description.trim().toLowerCase().startsWith('returning to torn from')) {
-                // Extract the origin country name
-                const originMatch = description.match(/returning to torn from\s+(.+)/i);
-                if (originMatch && originMatch[1]) {
-                    originCountry = originMatch[1].trim();
-                    const originCoords = getCityCoordinates(originCountry);
-                    const tornCoords = getCityCoordinates('Torn');
-                    
-                    // Store origin and destination in member data
-                    if (memberIndex !== -1) {
-                        factionMembersData[memberIndex].origin = originCountry;
-                        factionMembersData[memberIndex].destination = 'Torn';
-                    }
-                    
-                    console.log(`User ${userId} is returning to Torn from: ${originCountry}`);
-                    
-                    if (originCoords && tornCoords) {
-                        // Calculate midpoint between origin and Torn
-                        const midpointCoords = getMidpointCoordinates(originCoords, tornCoords);
-                        if (midpointCoords && worldMap) {
-                            const userMarker = factionMarkers.find(marker => marker.memberId === userId);
-                            if (userMarker) {
-                                console.log(`Moving marker for user ${userId} (${userName}) to midpoint between ${originCountry} and Torn at coordinates:`, midpointCoords);
-                                userMarker.setLatLng(midpointCoords);
-                                // Store profile data on marker
-                                userMarker.profileData = profileData;
-                                userMarker.destination = 'Torn';
-                                userMarker.origin = originCountry;
-                                userMarker._currentLocation = 'Torn';
-                                updateMarkerIcon(userMarker, userName, description, null, 'Torn');
-                            } else {
-                                console.warn(`Marker not found for user ${userId}`);
-                            }
-                        }
-                    } else {
-                        console.warn(`Coordinates not found for origin: ${originCountry} or Torn`);
-                    }
-                }
-            } else if (description && (description.trim().toLowerCase().startsWith('travelling to') || description.trim().toLowerCase().startsWith('traveling to'))) {
-                // Pattern 2: "Travelling to <LandName>" or "Traveling to <LandName>" - marker should be halfway between Torn and destination
-                // Remove "Travelling to" or "Traveling to" prefix and trim
-                destination = description.replace(/^Travell?ing to\s+/i, '').trim();
-                displayDescription = destination; // Display just the destination
-                
-                // Store destination in member data (important for blue markers)
-                if (memberIndex !== -1) {
-                    factionMembersData[memberIndex].destination = destination;
-                    factionMembersData[memberIndex].origin = 'Torn';
-                    console.log(`✓ Stored destination for blue marker in fetchAndDisplay: ${userName} → ${destination}`);
-                }
-                
-                console.log(`User ${userId} is travelling to: ${destination}`);
-                
-                // Update marker position if we have a valid destination
-                if (worldMap && destination) {
-                    const destinationCoords = getCityCoordinates(destination);
-                    const tornCoords = getCityCoordinates('Torn');
-                    
-                    if (destinationCoords && tornCoords) {
-                        // Calculate midpoint between Torn and destination
-                        const midpointCoords = getMidpointCoordinates(tornCoords, destinationCoords);
-                        if (midpointCoords) {
-                            // Find the marker for this user
-                            const userMarker = factionMarkers.find(marker => marker.memberId === userId);
-                            if (userMarker) {
-                                console.log(`Moving marker for user ${userId} (${userName}) to midpoint between Torn and ${destination} at coordinates:`, midpointCoords);
-                                userMarker.setLatLng(midpointCoords);
-                                // Store profile data and destination on marker (important for blue markers)
-                                userMarker.profileData = profileData;
-                                userMarker.destination = destination;
-                                userMarker.origin = 'Torn';
-                                userMarker._currentLocation = destination;
-                                console.log(`✓ Stored profile data on blue marker in fetchAndDisplay: ${userName} → ${destination}`);
-                                updateMarkerIcon(userMarker, userName, description, null, destination);
-                            } else {
-                                console.warn(`Marker not found for user ${userId}`);
-                            }
-                        }
-                    } else {
-                        console.warn(`Coordinates not found for destination: ${destination} or Torn`);
-                    }
-                }
-            } else if (description && (description.trim().toLowerCase().startsWith('travelling back to torn') || description.trim().toLowerCase().startsWith('traveling back to torn'))) {
-                // Pattern 3: "Travelling back to Torn" or "Traveling back to Torn"
-                displayDescription = 'Torn'; // Display Torn
-                
-                console.log(`User ${userId} is travelling back to Torn`);
-                
-                // Update marker position to Torn
-                if (worldMap) {
-                    const tornCoords = getCityCoordinates('Torn');
-                    if (tornCoords) {
-                        // Find the marker for this user
-                        const userMarker = factionMarkers.find(marker => marker.memberId === userId);
-                        if (userMarker) {
-                            console.log(`Moving marker for user ${userId} (${userName}) to Torn at coordinates:`, tornCoords);
-                            userMarker.setLatLng(tornCoords);
-                            userMarker._currentLocation = 'Torn';
-                            updateMarkerIcon(userMarker, userName, description, null, 'Torn');
-                        } else {
-                            console.warn(`Marker not found for user ${userId}`);
-                        }
-                    } else {
-                        console.warn(`Coordinates not found for Torn`);
-                    }
-                }
-            } else if (description && description.trim().toLowerCase().startsWith('in ')) {
-                // Pattern 4: "In <LandName>" - user is at the exact location, place marker there
-                // Remove "In " prefix and trim to get location name
-                location = description.replace(/^In\s+/i, '').trim();
-                displayDescription = location; // Display just the location
-                
-                console.log(`User ${userId} is in: ${location}`);
-                
-                // Update marker position to the exact location
-                if (worldMap && location) {
-                    const locationCoords = getCityCoordinates(location);
-                    if (locationCoords) {
-                        // Find the marker for this user
-                        const userMarker = factionMarkers.find(marker => marker.memberId === userId);
-                        if (userMarker) {
-                            console.log(`Moving marker for user ${userId} (${userName}) to exact location: ${location} at coordinates:`, locationCoords);
-                            userMarker.setLatLng(locationCoords);
-                            userMarker._currentLocation = location;
-                            updateMarkerIcon(userMarker, userName, description, null, location);
-        } else {
-                            console.warn(`Marker not found for user ${userId}`);
-                        }
-                    } else {
-                        console.warn(`Coordinates not found for location: ${location}`);
-                    }
-                }
-            }
+            console.log(`Displaying travel data for user ${userId} (${userName})...`);
             
             // Display status prominently, with other data collapsed
             html += `<div class="travel-data-item">`;
@@ -2999,22 +3118,19 @@ async function fetchAndDisplayTravelDataForMarkers() {
             html += `<strong style="color: #d4af37;">${userName}</strong> (ID: ${userId})`;
             html += `</div>`;
             
-            // Status display (always visible) - showing full description string
+            // Status display (always visible) - showing status from /faction/members
             html += `<div class="status-display">`;
             html += `<div class="status-label">Status:</div>`;
-            html += `<div class="status-value" style="color: ${statusColor};">${description}</div>`;
+            html += `<div class="status-value" style="color: #c0c0c0;">${memberStatus}</div>`;
             html += `</div>`;
             
-            // Collapsible section for all other data
+            // Collapsible section for all other member data
             html += `<details class="profile-details">`;
-            html += `<summary class="profile-summary">Show all profile data</summary>`;
-            html += `<pre class="travel-data-json">${JSON.stringify(profileData, null, 2)}</pre>`;
+            html += `<summary class="profile-summary">Show all member data</summary>`;
+            html += `<pre class="travel-data-json">${JSON.stringify(member, null, 2)}</pre>`;
             html += `</details>`;
             
             html += `</div>`;
-            
-            // Add delay to avoid rate limiting
-            await new Promise(resolve => setTimeout(resolve, 200));
         } catch (error) {
             const userId = member.id;
             const userName = member.name || `User ${userId}`;
@@ -3026,12 +3142,12 @@ async function fetchAndDisplayTravelDataForMarkers() {
             html += `<pre class="travel-data-json error">Error: ${error.message}</pre>`;
             html += `</div>`;
             
-            console.error(`Error fetching profile data for user ${userId}:`, error);
+            console.error(`Error displaying data for user ${userId}:`, error);
         }
     }
     
     if (html === '') {
-        travelDataContent.innerHTML = '<p style="color: #c0c0c0; font-style: italic;">No profile data available.</p>';
+        travelDataContent.innerHTML = '<p style="color: #c0c0c0; font-style: italic;">No member data available.</p>';
     } else {
         travelDataContent.innerHTML = html;
     }

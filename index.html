@@ -225,31 +225,14 @@
                 <h2>World Map</h2>
                 <div class="world-map-wrapper">
                     <div id="worldMap" class="world-map-container"></div>
-                    <div id="mapLegend" class="map-legend">
-                        <div class="legend-title">Legend</div>
-                        <div class="legend-item">
-                            <div class="legend-dot" style="background: #dc143c; border-color: #ff6b6b; box-shadow: 0 0 10px rgba(220, 20, 60, 0.8), 0 0 20px rgba(220, 20, 60, 0.5);"></div>
-                            <span class="legend-label">Stationary</span>
-                        </div>
-                        <div class="legend-item">
-                            <div class="legend-dot" style="background: #4169e1; border-color: #6495ed; box-shadow: 0 0 10px rgba(65, 105, 225, 0.8), 0 0 20px rgba(65, 105, 225, 0.5);"></div>
-                            <span class="legend-label">Flying away from Torn</span>
-                        </div>
-                        <div class="legend-item">
-                            <div class="legend-dot" style="background: #00ff00; border-color: #32cd32; box-shadow: 0 0 10px rgba(0, 255, 0, 0.8), 0 0 20px rgba(0, 255, 0, 0.5);"></div>
-                            <span class="legend-label">Returning to Torn</span>
-                        </div>
-                    </div>
                 </div>
             </div>
             
-            <div id="travelDataSection" class="travel-data-section hidden">
-                <h2 class="travel-data-header-toggle">
-                    <span>User Profile Data</span>
-                    <span id="travelDataToggleIcon" class="toggle-icon">▼</span>
-                </h2>
-                <div id="travelDataContent" class="travel-data-content hidden">
-                    <p style="color: #c0c0c0; font-style: italic;">Profile data will be displayed here for each user marker on the map.</p>
+            <!-- User Status Card -->
+            <div id="userStatusCard" class="world-map-section">
+                <h2>User Status</h2>
+                <div id="userStatusCardContent" style="background: rgba(0, 0, 0, 0.4); padding: 20px; border-radius: 12px; border: 1px solid rgba(212, 175, 55, 0.2);">
+                    <div id="userStatusDisplay" style="color: #c0c0c0; font-family: 'Cormorant Garamond', serif; font-size: 1rem; line-height: 1.8;">Loading user status...</div>
                 </div>
             </div>
         </div>

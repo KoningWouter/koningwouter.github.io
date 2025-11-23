@@ -66,6 +66,105 @@ const API_ENDPOINTS = [
     }
 ];
 
+// Selector descriptions for each endpoint
+const SELECTOR_DESCRIPTIONS = {
+    'User': {
+        'basic': 'Basic user information including ID, name, level, and status.',
+        'profile': 'Detailed profile information including personal stats and achievements.',
+        'personalstats': 'Personal statistics including total attacks, defends, and other metrics.',
+        'battlestats': 'Battle statistics including wins, losses, and battle history.',
+        'education': 'Education information including courses completed and current education.',
+        'workstats': 'Work statistics including job performance and work history.',
+        'crimes': 'Crime-related information including successful crimes and crime history.',
+        'travel': 'Travel information including current location and travel history.',
+        'icons': 'User icons and visual elements.',
+        'cooldowns': 'Current cooldowns for various actions.',
+        'money': 'Financial information including wallet and bank balances.',
+        'notifications': 'User notifications and alerts.',
+        'perks': 'Active perks and their effects.',
+        'bars': 'Current status bars (life, energy, nerve, happy).',
+        'networth': 'Total net worth calculation.',
+        'jobpoints': 'Job points and job-related information.',
+        'merits': 'Merits earned and available.',
+        'refills': 'Refill information and availability.',
+        'discord': 'Discord integration information.',
+        'weaponexp': 'Weapon experience and proficiency.',
+        'log': 'Activity log and recent actions.',
+        'events': 'Recent events and notifications.',
+        'messages': 'Message information and inbox status.',
+        'competition': 'Competition participation and results.',
+        'stocks': 'Stock portfolio and investments.',
+        'properties': 'Owned properties and property details.',
+        'honors': 'Honors earned and available.',
+        'medals': 'Medals earned and achievements.',
+        'display': 'Display preferences and settings.',
+        'awards': 'Awards and recognition received.'
+    },
+    'Faction': {
+        'basic': 'Basic faction information including ID, name, and tag.',
+        'contributors': 'Faction contributors and contribution statistics.',
+        'members': 'List of all faction members with basic information.',
+        'memberstats': 'Detailed statistics for each faction member.',
+        'territory': 'Territory information and control status.',
+        'chain': 'Current chain information and progress.',
+        'chainreport': 'Detailed chain report with statistics.',
+        'upgrades': 'Faction upgrades and their status.',
+        'stats': 'Overall faction statistics and performance.'
+    },
+    'Company': {
+        'basic': 'Basic company information including ID, name, and type.',
+        'profile': 'Detailed company profile and description.',
+        'detailed': 'Comprehensive company details and statistics.',
+        'employees': 'List of employees and their roles.',
+        'stock': 'Company stock information and availability.',
+        'applications': 'Job applications and applicant information.',
+        'news': 'Company news and announcements.'
+    },
+    'Market': {
+        'bazaar': 'Bazaar listings and item availability.',
+        'itemmarket': 'Item market data and pricing information.',
+        'pointsmarket': 'Points market data and exchange rates.',
+        'timestamp': 'Market data timestamp for synchronization.'
+    },
+    'Torn': {
+        'currency': 'Currency information and exchange rates.',
+        'items': 'Available items and their properties.',
+        'competition': 'Competition information and leaderboards.',
+        'education': 'Education system and available courses.',
+        'honors': 'Available honors and requirements.',
+        'medals': 'Available medals and achievement requirements.',
+        'organisedcrimes': 'Organized crime information and requirements.',
+        'properties': 'Property information and availability.',
+        'rackets': 'Racket information and control status.',
+        'raids': 'Raid information and availability.',
+        'stats': 'General game statistics and metrics.',
+        'stocks': 'Stock market information and listings.',
+        'territory': 'Territory information and control.',
+        'territorywars': 'Territory war information and status.',
+        'companies': 'Company listings and information.',
+        'factions': 'Faction listings and information.',
+        'rankedwars': 'Ranked war information and standings.'
+    },
+    'Key': {
+        'info': 'API key information including access level, rate limits, and permissions.'
+    },
+    'Property': {
+        'property': 'Property details including upgrades, ownership, and status.'
+    },
+    'Racing': {
+        'stats': 'Racing statistics and performance metrics.',
+        'leaderboard': 'Racing leaderboard and rankings.'
+    },
+    'Forum': {
+        'forums': 'Forum listings and categories.',
+        'threads': 'Forum threads and discussions.',
+        'posts': 'Forum posts and replies.'
+    },
+    'Bank': {
+        'bank': 'Banking information including accounts, transactions, and investments.'
+    }
+};
+
 // Global variables for auto-refresh
 let currentUserId = null;
 let refreshInterval = null;
@@ -501,15 +600,103 @@ function displayEndpoints() {
     const endpointsList = document.getElementById('endpointsList');
     endpointsList.innerHTML = '';
 
-    API_ENDPOINTS.forEach(endpoint => {
+    API_ENDPOINTS.forEach((endpoint, index) => {
         const card = document.createElement('div');
         card.className = 'endpoint-card';
+        card.dataset.endpointIndex = index;
+        
+        // Parse URL to separate base URL and parameters
+        const fullUrl = `${API_BASE_URL}${endpoint.url}`;
+        const urlParts = fullUrl.split('?');
+        const baseUrl = urlParts[0];
+        const queryString = urlParts[1] || '';
+        
+        // Extract parameters
+        let parameters = [];
+        if (endpoint.selections && endpoint.selections.length > 0) {
+            // Use the selections array if available
+            parameters = endpoint.selections;
+        } else if (queryString) {
+            // Parse from query string
+            const params = new URLSearchParams(queryString);
+            params.forEach((value, key) => {
+                if (key === 'selections') {
+                    parameters = value.split(',').map(p => p.trim());
+                } else {
+                    parameters.push(`${key}=${value}`);
+                }
+            });
+        }
+        
+        // Build parameters list HTML with clickable items
+        const selectorDescriptions = SELECTOR_DESCRIPTIONS[endpoint.name] || {};
+        let parametersHtml = '';
+        if (parameters.length > 0) {
+            parametersHtml = '<ul class="endpoint-parameters">';
+            parameters.forEach(param => {
+                parametersHtml += `<li class="endpoint-parameter-item" data-param="${param}">${param}</li>`;
+            });
+            parametersHtml += '</ul>';
+        }
         
         card.innerHTML = `
-            <div class="endpoint-name">${endpoint.name}</div>
-            <div class="endpoint-description">${endpoint.description}</div>
-            <div class="endpoint-url">${API_BASE_URL}${endpoint.url}</div>
+            <div class="endpoint-header">
+                <div class="endpoint-name">${endpoint.name}</div>
+            </div>
+            <div class="endpoint-content">
+                <div class="endpoint-description">${endpoint.description}</div>
+                <div class="endpoint-url">${baseUrl}</div>
+                ${parametersHtml}
+            </div>
         `;
+        
+        // Add click handlers to each parameter item
+        const parameterItems = card.querySelectorAll('.endpoint-parameter-item');
+        const parametersList = card.querySelector('.endpoint-parameters');
+        let currentDescriptionElement = null;
+        
+        parameterItems.forEach(item => {
+            item.addEventListener('click', function(e) {
+                e.stopPropagation(); // Prevent card click
+                
+                const param = this.dataset.param;
+                const description = selectorDescriptions[param] || 'No description available for this selector.';
+                
+                // Check if this parameter is already showing
+                const isAlreadyActive = this.classList.contains('active');
+                
+                // Remove any existing description element
+                if (currentDescriptionElement && currentDescriptionElement.parentNode) {
+                    currentDescriptionElement.parentNode.removeChild(currentDescriptionElement);
+                    currentDescriptionElement = null;
+                }
+                
+                // Remove active state from all parameters in this card
+                parameterItems.forEach(pi => pi.classList.remove('active'));
+                
+                if (isAlreadyActive) {
+                    // Hide description if clicking the same parameter
+                    this.classList.remove('active');
+                } else {
+                    // Show description for clicked parameter
+                    this.classList.add('active');
+                    
+                    // Create description element
+                    const descriptionElement = document.createElement('div');
+                    descriptionElement.className = 'endpoint-selector-description';
+                    descriptionElement.innerHTML = `
+                        <div class="selector-description-content">
+                            <span class="selector-name-display">${param}:</span>
+                            <span class="selector-desc-display">${description}</span>
+                        </div>
+                    `;
+                    
+                    // Insert right after the clicked parameter item
+                    this.parentNode.insertBefore(descriptionElement, this.nextSibling);
+                    currentDescriptionElement = descriptionElement;
+                }
+            });
+        });
         
         endpointsList.appendChild(card);
     });

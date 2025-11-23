@@ -1047,16 +1047,18 @@ function updateProgressBars(data) {
         console.warn('No happy data found');
     }
 
-    // Update Money display - show wallet, faction money, and city bank
+    // Update Money display - show wallet, faction money, city bank, and cayman bank
     const walletElement = document.getElementById('walletValue');
     const factionElement = document.getElementById('factionValue');
     const cityBankElement = document.getElementById('cityBankValue');
+    const caymanBankElement = document.getElementById('caymanBankValue');
     
     let walletValue = null;
     let factionValue = null;
     let cityBankValue = null;
+    let caymanBankValue = null;
     
-    // Check if money object exists and has wallet, faction, and citybank properties
+    // Check if money object exists and has wallet, faction, citybank, and cayman_bank properties
     if (data.money && typeof data.money === 'object') {
         if (data.money.wallet !== undefined) {
             walletValue = data.money.wallet;
@@ -1068,6 +1070,10 @@ function updateProgressBars(data) {
         // City bank is at: data.money.city_bank.amount
         if (data.money.city_bank && typeof data.money.city_bank === 'object' && data.money.city_bank.amount !== undefined) {
             cityBankValue = data.money.city_bank.amount;
+        }
+        // Cayman bank is at: data.money.cayman_bank
+        if (data.money.cayman_bank !== undefined) {
+            caymanBankValue = data.money.cayman_bank;
         }
     }
     
@@ -1104,6 +1110,16 @@ function updateProgressBars(data) {
             cityBankElement.textContent = formatValue(cityBankValue);
         } else {
             cityBankElement.textContent = '-';
+        }
+    }
+    
+    // Update cayman bank display - always show value even if 0
+    if (caymanBankElement) {
+        if (caymanBankValue !== null && typeof caymanBankValue === 'number' && !isNaN(caymanBankValue)) {
+            // Display the value even if it's 0
+            caymanBankElement.textContent = formatValue(caymanBankValue);
+        } else {
+            caymanBankElement.textContent = '-';
         }
     }
     

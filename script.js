@@ -178,6 +178,7 @@ let tornCityMarkers = [];
 let tornCityLines = [];
 let factionMarkers = [];
 let factionMembersData = [];
+let tornCountMarker = null; // Marker showing count of players in Torn
 let mapInitRetryCount = 0;
 
 let mapInitInProgress = false;
@@ -1763,6 +1764,13 @@ async function loadFactionMembers() {
         if (worldMap) {
             factionMarkers.forEach(marker => worldMap.removeLayer(marker));
             factionMarkers = [];
+            
+            // Remove Torn count marker
+            if (tornCountMarker) {
+                worldMap.removeLayer(tornCountMarker);
+                tornCountMarker = null;
+            }
+            
             // Stop updates when clearing markers
             stopWorldMapUpdates();
             // Reset last fetch times when clearing markers
@@ -1955,20 +1963,26 @@ async function loadFactionMembers() {
                     currentLocation = location.departing || 'Torn City';
                     travelTimeLeft = location.time_left || location.timeleft || null;
                     console.log(`Member ${memberId} is travelling from ${currentLocation} to ${destination}`);
-                } else if (location.departing) {
-                    // Member is departing from a location (might be in transit)
-                    currentLocation = location.departing;
+                } else if (location.departing && location.departing.trim() !== '') {
+                    // Member is at a location (abroad or in transit)
+                    // If they have departing but no destination, they're at that location (abroad)
+                    currentLocation = location.departing.trim();
                     destination = null;
-                    console.log(`Member ${memberId} is departing from ${currentLocation}`);
+                    isTravelling = false; // Not actively traveling, but might be abroad
+                    console.log(`Member ${memberId} is at ${currentLocation} (abroad, not traveling)`);
                 } else {
-                    // No travel data, they're in Torn City
+                    // No travel data or empty departing, they're in Torn City
                     currentLocation = 'Torn City';
                     destination = null;
+                    isTravelling = false;
+                    console.log(`Member ${memberId} has no travel data, assuming Torn City`);
                 }
             } else {
-                // No travel data, assume member is in Torn City
+                // No travel data object, assume member is in Torn City
                 currentLocation = 'Torn City';
                 destination = null;
+                isTravelling = false;
+                console.log(`Member ${memberId} has no location data, assuming Torn City`);
             }
             
             const memberName = memberData.name || `Member ${memberId}`;
@@ -1994,14 +2008,48 @@ async function loadFactionMembers() {
             }
             
             // Get coordinates for the destination and add map marker (only if map is initialized)
-            // Use destination if travelling, otherwise use current location
-            const locationForMap = isTravelling && destination ? destination : currentLocation;
+            // For traveling players, place marker at midpoint between origin and destination
+            let coordinates = null;
             if (worldMap) {
-                const coordinates = getCityCoordinates(locationForMap);
+                if (isTravelling && destination && currentLocation) {
+                    // Calculate midpoint for traveling players
+                    const originCoords = getCityCoordinates(currentLocation);
+                    const destCoords = getCityCoordinates(destination);
+                    console.log(`Traveling player ${memberName}: origin=${currentLocation} (${originCoords}), dest=${destination} (${destCoords})`);
+                    
+                    if (originCoords && destCoords) {
+                        coordinates = getMidpointCoordinates(originCoords, destCoords);
+                        console.log(`Placing traveling marker for ${memberName} at midpoint:`, coordinates);
+                    } else if (destCoords) {
+                        // Fallback to destination if origin not found
+                        coordinates = destCoords;
+                        console.log(`Using destination coordinates for ${memberName}:`, coordinates);
+                    } else if (originCoords) {
+                        // Fallback to origin if destination not found
+                        coordinates = originCoords;
+                        console.log(`Using origin coordinates for ${memberName}:`, coordinates);
+                    } else {
+                        // Both not found - log error but don't default to Torn for traveling players
+                        console.error(`Could not find coordinates for traveling player ${memberName}: origin=${currentLocation}, dest=${destination}`);
+                        // Don't create marker if we can't find coordinates for traveling player
+                        coordinates = null;
+                    }
+                } else {
+                    // For non-traveling players, use current location
+                    // This includes players who are abroad (not in Torn)
+                    coordinates = getCityCoordinates(currentLocation);
+                    console.log(`Non-traveling player ${memberName} at ${currentLocation}:`, coordinates);
+                    
+                    // If coordinates not found for a non-Torn location, don't create marker
+                    if (!coordinates && currentLocation && currentLocation !== 'Torn City' && currentLocation !== 'Torn') {
+                        console.warn(`Could not find coordinates for location: ${currentLocation}, player: ${memberName} - skipping marker`);
+                    }
+                }
                 
                 if (coordinates) {
                     // Check if user is stationary in Torn City - hide label only if they are stationary
-                    const showLabel = !isStationaryInTorn(null, currentLocation);
+                    // If they're traveling, always show label regardless of location
+                    const showLabel = isTravelling || !isStationaryInTorn(null, currentLocation);
                     
                     // Create custom icon with dot and text label (default red color, will be updated when profile data is fetched)
                     const customIcon = L.divIcon({
@@ -2025,6 +2073,9 @@ async function loadFactionMembers() {
                     marker.memberId = memberId;
                     marker._memberName = memberName;
                     marker._currentLocation = currentLocation; // Store location for label visibility
+                    marker._isTravelling = isTravelling; // Store travel status
+                    marker._destination = destination; // Store destination for traveling players
+                    marker._origin = isTravelling && destination ? currentLocation : null; // Store origin for traveling players
                     factionMarkers.push(marker);
                     markersAdded++;
                 }
@@ -2033,6 +2084,9 @@ async function loadFactionMembers() {
         
         // Stack overlapping labels vertically
         stackOverlappingLabels();
+        
+        // Update Torn count label after initial markers are created
+        updateTornCountLabel();
         
         // Fetch travel information for each user marker and display raw output
         await fetchAndDisplayTravelDataForMarkers();
@@ -2194,7 +2248,7 @@ function isStationaryInTorn(description, location) {
 }
 
 // Update marker icon with new color based on description
-function updateMarkerIcon(marker, memberName, description, verticalOffset = null, location = null) {
+function updateMarkerIcon(marker, memberName, description, verticalOffset = null, location = null, isTravelling = null) {
     // Preserve existing offset if not explicitly provided
     if (verticalOffset === null) {
         verticalOffset = marker._labelOffset || 0;
@@ -2205,8 +2259,27 @@ function updateMarkerIcon(marker, memberName, description, verticalOffset = null
         memberName = marker._memberName || 'Unknown';
     }
     
+    // Determine travel status if not provided
+    if (isTravelling === null) {
+        // Check if we have stored travel status
+        isTravelling = marker._isTravelling;
+        
+        // If not stored, check description for travel keywords
+        if (isTravelling === undefined || isTravelling === null) {
+            const descLower = (description || '').toLowerCase();
+            isTravelling = descLower.includes('travelling') || 
+                          descLower.includes('traveling') || 
+                          descLower.includes('returning') || 
+                          descLower.includes('flying');
+        }
+    }
+    
+    // Store travel status on marker
+    marker._isTravelling = isTravelling;
+    
     // Check if user is stationary in Torn City - hide label only if they are stationary
-    const showLabel = !isStationaryInTorn(description, location);
+    // If they're traveling, always show label regardless of location
+    const showLabel = isTravelling || !isStationaryInTorn(description, location);
     
     const colors = getMarkerColor(description);
     const labelOffsetStyle = verticalOffset !== 0 ? `style="transform: translateY(${verticalOffset}px);"` : '';
@@ -2311,6 +2384,58 @@ function stackOverlappingLabels() {
             updateMarkerIcon(marker, memberName, description, 0, location);
         }
     });
+    
+    // Update Torn count label
+    updateTornCountLabel();
+}
+
+// Update the Torn count label showing number of stationary players in Torn
+function updateTornCountLabel() {
+    if (!worldMap) return;
+    
+    // Count markers that are stationary in Torn
+    const stationaryInTorn = factionMarkers.filter(marker => {
+        const description = marker._description || null;
+        const location = marker._currentLocation || null;
+        const isTravelling = marker._isTravelling || false;
+        // Only count as stationary if not traveling AND stationary in Torn
+        return !isTravelling && isStationaryInTorn(description, location);
+    });
+    
+    const count = stationaryInTorn.length;
+    
+    // Remove existing count marker if it exists
+    if (tornCountMarker) {
+        worldMap.removeLayer(tornCountMarker);
+        tornCountMarker = null;
+    }
+    
+    // Only create marker if there are players in Torn
+    if (count > 0) {
+        const tornCoords = getCityCoordinates('Torn');
+        if (tornCoords) {
+            const countIcon = L.divIcon({
+                className: 'faction-member-marker',
+                html: `
+                    <div class="marker-container">
+                        <div class="marker-dot" style="background: #dc143c; border-color: #ff6b6b; box-shadow: 0 0 10px rgba(220, 20, 60, 0.8), 0 0 20px rgba(220, 20, 60, 0.5);"></div>
+                        <div class="marker-label">${count} in Torn</div>
+                    </div>
+                `,
+                iconSize: [100, 30],
+                iconAnchor: [50, 15]
+            });
+            
+            tornCountMarker = L.marker(tornCoords, { icon: countIcon })
+                .addTo(worldMap)
+                .bindPopup(`
+                    <div class="marker-popup">
+                        <strong>Players in Torn</strong><br>
+                        <span>${count} player${count !== 1 ? 's' : ''} currently in Torn City</span>
+                    </div>
+                `);
+        }
+    }
 }
 
 // Map Torn city names to coordinates (only actual travelable destinations)
@@ -2629,6 +2754,9 @@ async function updateMarkerPositions() {
     
     // Re-stack labels after positions are updated
     stackOverlappingLabels();
+    
+    // Update Torn count label
+    updateTornCountLabel();
     
     console.log('Marker positions updated');
 }

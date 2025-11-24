@@ -3625,12 +3625,21 @@ async function loadStocksData() {
                 
                 finalKeys.forEach(key => {
                     const value = stock[key];
+                    
+                    // Keys that should be displayed as JSON strings if they are objects
+                    const jsonStringifyKeys = ['benefit', 'dividend', 'transactions'];
+                    const shouldStringify = jsonStringifyKeys.includes(key.toLowerCase());
+                    
                     const isNumeric = ['shares', 'bought_price', 'current_price', 'total_cost', 'total_value', 'profit', 'profit_percent', 'stock_id'].includes(key);
-                    const align = isNumeric ? 'right' : 'left';
+                    // JSON columns should always be left-aligned
+                    const align = shouldStringify ? 'left' : (isNumeric ? 'right' : 'left');
                     let displayValue = '-';
                     
                     if (value !== undefined && value !== null) {
-                        if (typeof value === 'number') {
+                        if (typeof value === 'object' && shouldStringify) {
+                            // Stringify objects for benefit, dividend, and transactions
+                            displayValue = JSON.stringify(value, null, 2);
+                        } else if (typeof value === 'number') {
                             if (key.includes('price') || key.includes('cost') || key.includes('value') || key.includes('profit')) {
                                 displayValue = `$${Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
                             } else if (key === 'profit_percent') {
@@ -3651,7 +3660,12 @@ async function loadStocksData() {
                         ? (value > 0 ? '#4ade80' : value < 0 ? '#ff6b6b' : '#c0c0c0')
                         : '#c0c0c0';
                     
-                    html += `<td style="padding: 12px; color: ${textColor}; font-size: 0.95rem; text-align: ${align};">${displayValue}</td>`;
+                    // Special styling for JSON stringified columns
+                    const jsonStyle = shouldStringify && typeof value === 'object' 
+                        ? 'word-wrap: break-word; white-space: pre-wrap; font-family: monospace; font-size: 0.85rem; max-width: 400px;' 
+                        : '';
+                    
+                    html += `<td style="padding: 12px; color: ${textColor}; font-size: 0.95rem; text-align: ${align}; ${jsonStyle}">${displayValue}</td>`;
                 });
                 
                 html += '</tr>';

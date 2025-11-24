@@ -941,7 +941,7 @@ function getApiKey() {
 }
 
 // Fetch user data from API
-async function fetchUserData(userId, selections = 'basic,profile,bars,travel,faction,money') {
+async function fetchUserData(userId, selections = 'basic,profile,bars,travel,faction,money,battlestats') {
     // Get API key from localStorage (settings page)
     const apiKey = getApiKey();
     if (!apiKey) {
@@ -985,7 +985,7 @@ async function fetchUserData(userId, selections = 'basic,profile,bars,travel,fac
 
 // Fetch only bars data for quick refresh
 async function fetchBarsData(userId) {
-    return await fetchUserData(userId, 'bars,money,travel');
+    return await fetchUserData(userId, 'bars,money,travel,battlestats');
 }
 
 // Fetch status data for quick refresh (includes travel)
@@ -1189,6 +1189,105 @@ function updateProgressBars(data) {
     }
     
     console.log('Travel updated:', travelData);
+    
+    // Update Battle Stats display
+    updateBattleStats(data);
+}
+
+// Update battle stats (Strength, Defense, Dexterity, Speed) with modifiers
+function updateBattleStats(data) {
+    const battlestats = data.battlestats || {};
+    
+    // Format stat value
+    const formatStat = (value) => {
+        if (value !== null && typeof value === 'number' && !isNaN(value)) {
+            return value.toLocaleString('en-US', { 
+                minimumFractionDigits: 0, 
+                maximumFractionDigits: 0 
+            });
+        }
+        return '-';
+    };
+    
+    // Format modifiers - extract effect from each modifier and join them
+    const formatModifiers = (modifiersArray) => {
+        if (!modifiersArray || !Array.isArray(modifiersArray) || modifiersArray.length === 0) {
+            return '-';
+        }
+        
+        // Extract effect from each modifier and join with newlines
+        const effects = modifiersArray
+            .map(modifier => modifier?.effect)
+            .filter(effect => effect !== null && effect !== undefined);
+        
+        if (effects.length === 0) {
+            return '-';
+        }
+        
+        return effects.join('\n');
+    };
+    
+    // Update Strength
+    const strengthBaseElement = document.getElementById('strengthBase');
+    const strengthModifierElement = document.getElementById('strengthModifier');
+    if (strengthBaseElement) {
+        const baseValue = battlestats.strength?.value || null;
+        strengthBaseElement.textContent = formatStat(baseValue);
+    }
+    if (strengthModifierElement) {
+        const modifiers = battlestats.strength?.modifiers || [];
+        strengthModifierElement.textContent = formatModifiers(modifiers);
+        // Preserve line breaks
+        strengthModifierElement.style.whiteSpace = 'pre-line';
+    }
+    
+    // Update Defense
+    const defenseBaseElement = document.getElementById('defenseBase');
+    const defenseModifierElement = document.getElementById('defenseModifier');
+    if (defenseBaseElement) {
+        const baseValue = battlestats.defense?.value || null;
+        defenseBaseElement.textContent = formatStat(baseValue);
+    }
+    if (defenseModifierElement) {
+        const modifiers = battlestats.defense?.modifiers || [];
+        defenseModifierElement.textContent = formatModifiers(modifiers);
+        // Preserve line breaks
+        defenseModifierElement.style.whiteSpace = 'pre-line';
+    }
+    
+    // Update Dexterity
+    const dexterityBaseElement = document.getElementById('dexterityBase');
+    const dexterityModifierElement = document.getElementById('dexterityModifier');
+    if (dexterityBaseElement) {
+        const baseValue = battlestats.dexterity?.value || null;
+        dexterityBaseElement.textContent = formatStat(baseValue);
+    }
+    if (dexterityModifierElement) {
+        const modifiers = battlestats.dexterity?.modifiers || [];
+        dexterityModifierElement.textContent = formatModifiers(modifiers);
+        // Preserve line breaks
+        dexterityModifierElement.style.whiteSpace = 'pre-line';
+    }
+    
+    // Update Speed
+    const speedBaseElement = document.getElementById('speedBase');
+    const speedModifierElement = document.getElementById('speedModifier');
+    if (speedBaseElement) {
+        const baseValue = battlestats.speed?.value || null;
+        speedBaseElement.textContent = formatStat(baseValue);
+    }
+    if (speedModifierElement) {
+        const modifiers = battlestats.speed?.modifiers || [];
+        speedModifierElement.textContent = formatModifiers(modifiers);
+        // Preserve line breaks
+        speedModifierElement.style.whiteSpace = 'pre-line';
+    }
+    
+    console.log('Battle stats updated:', battlestats);
+    console.log('Strength modifiers:', battlestats.strength?.modifiers);
+    console.log('Defense modifiers:', battlestats.defense?.modifiers);
+    console.log('Dexterity modifiers:', battlestats.dexterity?.modifiers);
+    console.log('Speed modifiers:', battlestats.speed?.modifiers);
 }
 
 // Update status display
@@ -1375,7 +1474,7 @@ function updateProgressBar(type, current, maximum) {
         // Completely disable transition and animation for instant, static update
         bar.style.transition = 'none';
         bar.style.animation = 'none';
-        bar.style.width = `${percentage}%`;
+    bar.style.width = `${percentage}%`;
         // Force reflow to apply the change immediately
         void bar.offsetHeight;
     } else {
@@ -2143,7 +2242,7 @@ async function loadFactionMembers() {
             
             // Markers removed - no longer creating user markers on the map
         });
-        
+                    
         // Markers removed - no longer stacking labels or updating count
         
         // Keep map at world view - don't auto-zoom to markers
@@ -3076,9 +3175,9 @@ async function updateMarkerPositions() {
         const apiKey = getApiKey();
         if (!apiKey) {
             console.error('API key not configured');
-            return;
-        }
-        
+        return;
+    }
+    
         const membersUrl = `${API_BASE_URL}/faction/members?key=${apiKey}`;
         console.log('Fetching updated faction members from URL:', membersUrl.replace(apiKey, 'KEY_HIDDEN'));
         
@@ -3101,13 +3200,13 @@ async function updateMarkerPositions() {
                 
                 // Parse status to determine location/destination
                 let currentLocation = 'Torn City';
-                let destination = null;
+            let destination = null;
                 let isTravelling = false;
                 let locationText = 'Torn City';
                 
                 if (memberStatus && typeof memberStatus === 'string') {
                     const statusLower = memberStatus.toLowerCase().trim();
-                    
+            
                     // Pattern 1: "traveling to <Location>" or "travelling to <Location>"
                     if (statusLower.startsWith('traveling to ') || statusLower.startsWith('travelling to ')) {
                         destination = memberStatus.replace(/^travell?ing to\s+/i, '').trim();
@@ -3118,7 +3217,7 @@ async function updateMarkerPositions() {
                     // Pattern 2: "returning to torn from <Location>"
                     else if (statusLower.startsWith('returning to torn from ')) {
                         const originMatch = memberStatus.match(/returning to torn from\s+(.+)/i);
-                        if (originMatch && originMatch[1]) {
+                if (originMatch && originMatch[1]) {
                             const originCountry = originMatch[1].trim();
                             destination = 'Torn';
                             currentLocation = originCountry;
@@ -3147,12 +3246,12 @@ async function updateMarkerPositions() {
                 factionMembersData[memberIndex].name = memberName;
                 factionMembersData[memberIndex].location = locationText;
                 factionMembersData[memberIndex].currentLocation = currentLocation;
-                factionMembersData[memberIndex].destination = destination;
+                    factionMembersData[memberIndex].destination = destination;
                 factionMembersData[memberIndex].isTravelling = isTravelling;
                 
                 // Update marker position
                 const userMarker = factionMarkers.find(marker => marker.memberId === memberId);
-                if (userMarker) {
+                            if (userMarker) {
                     // Calculate new coordinates based on status
                     let newCoordinates = null;
                     
@@ -3197,7 +3296,7 @@ async function updateMarkerPositions() {
             }
         });
         
-    } catch (error) {
+        } catch (error) {
         console.error('Error updating marker positions:', error);
     }
     
@@ -3279,7 +3378,7 @@ async function loadStocksData() {
         
         // Display stocks in a table
         let html = '';
-        
+            
         // Handle the API response structure: { "stocks": { "stockId": {...}, ... } }
         const stocks = stocksData.stocks || {};
         const stockIds = Object.keys(stocks);
@@ -3351,7 +3450,7 @@ async function fetchAndDisplayTravelDataForMarkers() {
     if (!travelDataContent) {
         console.error('Travel data content element not found');
         return;
-    }
+                    }
     
     // Clear existing content
     travelDataContent.innerHTML = '<p style="color: #c0c0c0; font-style: italic;">Fetching member information...</p>';
@@ -3492,7 +3591,7 @@ function startScreenShake() {
 
 function stopScreenShake() {
     const body = document.body;
-    body.style.animation = '';
+        body.style.animation = '';
 }
 
 // Welcome announcement function - ENHANCED HILARIOUS VERSION

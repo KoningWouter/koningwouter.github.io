@@ -2603,6 +2603,53 @@ header h1 {
     line-height: 1.2;
 }
 
+/* Stat Display Styles */
+.stat-display-wrapper {
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.stat-display-main,
+.stat-display-secondary {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.stat-label {
+    color: #c0c0c0;
+    font-size: 0.85rem;
+    font-weight: 500;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.stat-value-large {
+    color: #dc143c;
+    font-size: 2rem;
+    font-weight: 700;
+    font-family: 'Cinzel', serif;
+    text-shadow: 
+        0 0 20px rgba(220, 20, 60, 0.8),
+        0 2px 10px rgba(0, 0, 0, 0.8);
+    letter-spacing: 1px;
+    line-height: 1.2;
+}
+
+.stat-value-medium {
+    color: #ff6b6b;
+    font-size: 0.7rem;
+    font-weight: 400;
+    font-family: 'Cinzel', serif;
+    text-shadow: 
+        0 0 8px rgba(255, 107, 107, 0.4),
+        0 1px 4px rgba(0, 0, 0, 0.8);
+    letter-spacing: 0.3px;
+    line-height: 1.5;
+}
+
 /* Pulse animation for low values */
 .progress-bar-fill[data-percentage]:not([data-percentage="0"]) {
     animation: pulse 2s ease-in-out infinite;

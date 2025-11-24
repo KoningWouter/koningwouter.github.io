@@ -841,7 +841,6 @@ async function handleSearch() {
     console.log('=== handleSearch() called ===');
     const userIdInput = document.getElementById('userIdInput');
     const userId = userIdInput ? userIdInput.value.trim() : '';
-    const userInfoDiv = document.getElementById('userInfo');
 
     console.log('User ID entered:', userId);
 
@@ -858,10 +857,6 @@ async function handleSearch() {
     }
 
     console.log('Starting search for user ID:', userId);
-
-    // Show loading state
-    userInfoDiv.classList.remove('hidden');
-    userInfoDiv.innerHTML = '<div class="loading">Loading user information...</div>';
 
     try {
         console.log('About to fetch user data...');
@@ -935,8 +930,6 @@ async function handleSearch() {
             }
         }
         
-        console.log('Calling displayUserInfo...');
-        displayUserInfo(userData);
         console.log('Calling updateProgressBars...');
         updateProgressBars(userData);
         console.log('Calling updateStatus...');
@@ -1749,11 +1742,10 @@ function createInfoItem(label, value) {
 
 // Show error message
 function showError(message) {
-    const userInfoDiv = document.getElementById('userInfo');
     const progressSection = document.getElementById('progressBarsSection');
     progressSection.classList.add('hidden');
-    userInfoDiv.classList.remove('hidden');
-    userInfoDiv.innerHTML = `<div class="error-message">${message}</div>`;
+    console.error('Error:', message);
+    alert(message);
     stopAutoRefresh();
     currentUserId = null;
 }

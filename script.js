@@ -380,8 +380,24 @@ function setupTabs() {
                         }, 100);
                     }
                     
-                    // Load user status (username and status.description)
-                    loadUserStatus();
+                    // Function to load faction data (either my faction or specified faction ID)
+                    const loadFactionData = () => {
+                        const factionIdInput = document.getElementById('factionIdInput');
+                        const factionId = factionIdInput ? factionIdInput.value.trim() : '';
+                        
+                        if (factionId && /^\d+$/.test(factionId)) {
+                            // Faction ID is set, load that faction
+                            console.log('Loading faction data for ID:', factionId);
+                            loadFactionMembersById(factionId);
+                        } else {
+                            // No faction ID set, load my faction
+                            console.log('Loading my faction data');
+                            loadUserStatus();
+                        }
+                    };
+                    
+                    // Load faction data when world map tab is opened
+                    loadFactionData();
                     
                     // Set up automatic refresh every 1 minute (60000 milliseconds)
                     // Clear any existing interval first
@@ -392,7 +408,7 @@ function setupTabs() {
                     // Refresh every minute
                     worldMapUpdateInterval = setInterval(() => {
                         console.log('Auto-refreshing world map data...');
-                        loadUserStatus();
+                        loadFactionData();
                     }, 60000); // 60000ms = 1 minute
                     
                     console.log('World map auto-refresh started (every 1 minute)');

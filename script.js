@@ -190,6 +190,11 @@ let worldMapUpdateInterval = null;
 // Track last API fetch time for each user to ensure we only call once per minute
 let userLastFetchTime = {};
 
+// Global variable to store stock names mapping (stock_id -> name)
+let stockNamesMap = {};
+// Global array to store stock names with IDs [{id: '1', name: 'Stock Name'}, ...]
+let stockNamesArray = [];
+
 // Torn travel cities with coordinates (only actual travelable destinations in Torn)
 const tornCities = [
     { name: 'United Kingdom', coords: [51.5074, -0.1278] }, // London
@@ -3446,6 +3451,68 @@ function stopWorldMapUpdates() {
     }
 }
 
+// Fetch and store stock names from Torn API
+async function fetchStockNames() {
+    console.log('=== fetchStockNames() called ===');
+    
+    // If we already have stock names, don't fetch again
+    if (Object.keys(stockNamesMap).length > 0) {
+        console.log('Stock names already loaded, skipping fetch');
+        return;
+    }
+    
+    const apiKey = getApiKey();
+    if (!apiKey) {
+        console.error('API key not configured, cannot fetch stock names');
+        return;
+    }
+    
+    try {
+        const stocksUrl = `${API_BASE_URL}/torn/?selections=stocks&key=${apiKey}`;
+        console.log('Fetching stock names from URL:', stocksUrl.replace(apiKey, 'KEY_HIDDEN'));
+        
+        const stocksResponse = await fetch(stocksUrl);
+        
+        if (!stocksResponse.ok) {
+            throw new Error(`HTTP error! status: ${stocksResponse.status}`);
+        }
+        
+        const stocksData = await stocksResponse.json();
+        
+        console.log('Stock names API response status:', stocksResponse.status);
+        console.log('Stock names API response data:', stocksData);
+        
+        if (stocksData.error) {
+            console.error('Error fetching stock names:', stocksData.error);
+            return;
+        }
+        
+        // Populate stockNamesMap and stockNamesArray with stock_id -> name mapping
+        const stocks = stocksData.stocks || {};
+        stockNamesArray = [];
+        Object.keys(stocks).forEach(stockId => {
+            const stock = stocks[stockId];
+            if (stock.name) {
+                stockNamesMap[stockId] = stock.name;
+                stockNamesArray.push({
+                    id: stockId,
+                    name: stock.name
+                });
+            }
+        });
+        
+        // Sort array by name for easier browsing
+        stockNamesArray.sort((a, b) => a.name.localeCompare(b.name));
+        
+        console.log(`Loaded ${Object.keys(stockNamesMap).length} stock names`);
+        console.log('Stock names map:', stockNamesMap);
+        console.log('Stock names array:', stockNamesArray);
+        
+    } catch (error) {
+        console.error('Error fetching stock names:', error);
+    }
+}
+
 // Load and display stock data from Torn API
 async function loadStocksData() {
     console.log('=== loadStocksData() called ===');
@@ -3466,8 +3533,17 @@ async function loadStocksData() {
         return;
     }
     
+    // Check if user is selected
+    if (!currentUserId) {
+        stocksDisplay.innerHTML = '<p style="color: #ff6b6b;">Please search for a user first to view their stock portfolio.</p>';
+        return;
+    }
+    
     try {
-        const stocksUrl = `${API_BASE_URL}/torn/?selections=stocks&key=${apiKey}`;
+        // First, ensure we have stock names loaded
+        await fetchStockNames();
+        
+        const stocksUrl = `${API_BASE_URL}/user/${currentUserId}?selections=stocks&key=${apiKey}`;
         console.log('Fetching stocks data from URL:', stocksUrl.replace(apiKey, 'KEY_HIDDEN'));
         
         const stocksResponse = await fetch(stocksUrl);
@@ -3494,50 +3570,90 @@ async function loadStocksData() {
         const stockIds = Object.keys(stocks);
         
         if (stockIds.length === 0) {
-            html = '<p style="color: #c0c0c0; font-style: italic;">No stock data found</p>';
+            html = '<p style="color: #c0c0c0; font-style: italic;">No stock data found. This user does not own any stocks.</p>';
         } else {
-            // Convert stocks object to array and sort by name
-            const stocksArray = stockIds.map(id => ({
-                id: id,
-                ...stocks[id]
-            })).sort((a, b) => {
-                const nameA = (a.name || '').toLowerCase();
-                const nameB = (b.name || '').toLowerCase();
-                return nameA.localeCompare(nameB);
+            // Convert stocks object to array and add stock names from stockNamesMap
+            const stocksArray = stockIds.map(id => {
+                const stockData = {
+                    stock_id: id,
+                    ...stocks[id]
+                };
+                // Add stock name from our mapping if available
+                if (stockNamesMap[id]) {
+                    stockData.name = stockNamesMap[id];
+                }
+                return stockData;
             });
             
+            // Get all unique keys from all stocks to create comprehensive table headers
+            const allKeys = new Set();
+            stocksArray.forEach(stock => {
+                Object.keys(stock).forEach(key => allKeys.add(key));
+            });
+            
+            // Define column order (most important first, then alphabetical for the rest)
+            const priorityKeys = ['stock_id', 'name', 'shares', 'bought_price', 'current_price', 'total_cost', 'total_value', 'profit', 'profit_percent'];
+            const orderedKeys = [];
+            priorityKeys.forEach(key => {
+                if (allKeys.has(key)) {
+                    orderedKeys.push(key);
+                    allKeys.delete(key);
+                }
+            });
+            const remainingKeys = Array.from(allKeys).sort();
+            const finalKeys = [...orderedKeys, ...remainingKeys];
+            
             // Create table
-            html += '<table style="width: 100%; border-collapse: collapse;">';
+            html += '<table style="width: 100%; border-collapse: collapse; margin-top: 10px;">';
             html += '<thead>';
             html += '<tr style="border-bottom: 2px solid rgba(212, 175, 55, 0.3);">';
-            html += '<th style="padding: 12px; text-align: left; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Stock Name</th>';
-            html += '<th style="padding: 12px; text-align: right; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Current Price</th>';
-            html += '<th style="padding: 12px; text-align: right; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Total Shares</th>';
-            html += '<th style="padding: 12px; text-align: right; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Investors</th>';
-            html += '<th style="padding: 12px; text-align: right; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Market Cap</th>';
+            
+            // Create header row
+            finalKeys.forEach(key => {
+                const headerLabel = key.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+                const isNumeric = ['shares', 'bought_price', 'current_price', 'total_cost', 'total_value', 'profit', 'profit_percent', 'stock_id'].includes(key);
+                const align = isNumeric ? 'right' : 'left';
+                html += `<th style="padding: 12px; text-align: ${align}; color: #d4af37; font-weight: 600; font-size: 1.1rem;">${headerLabel}</th>`;
+            });
+            
             html += '</tr>';
             html += '</thead>';
             html += '<tbody>';
             
             stocksArray.forEach(stock => {
-                const name = stock.name || `Stock ${stock.id || 'Unknown'}`;
-                const currentPrice = stock.current_price !== undefined ? `$${Number(stock.current_price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-';
-                const totalShares = stock.total_shares !== undefined ? Number(stock.total_shares).toLocaleString('en-US') : '-';
-                const investors = stock.investors !== undefined ? Number(stock.investors).toLocaleString('en-US') : '-';
-                
-                // Calculate market cap (price * total shares)
-                let marketCap = '-';
-                if (stock.current_price !== undefined && stock.total_shares !== undefined) {
-                    const cap = Number(stock.current_price) * Number(stock.total_shares);
-                    marketCap = `$${cap.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-                }
-                
                 html += '<tr style="border-bottom: 1px solid rgba(212, 175, 55, 0.1);">';
-                html += `<td style="padding: 12px; color: #f4e4bc; font-size: 1rem; font-weight: 500;">${name}</td>`;
-                html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem; text-align: right;">${currentPrice}</td>`;
-                html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem; text-align: right;">${totalShares}</td>`;
-                html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem; text-align: right;">${investors}</td>`;
-                html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem; text-align: right;">${marketCap}</td>`;
+                
+                finalKeys.forEach(key => {
+                    const value = stock[key];
+                    const isNumeric = ['shares', 'bought_price', 'current_price', 'total_cost', 'total_value', 'profit', 'profit_percent', 'stock_id'].includes(key);
+                    const align = isNumeric ? 'right' : 'left';
+                    let displayValue = '-';
+                    
+                    if (value !== undefined && value !== null) {
+                        if (typeof value === 'number') {
+                            if (key.includes('price') || key.includes('cost') || key.includes('value') || key.includes('profit')) {
+                                displayValue = `$${Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                            } else if (key === 'profit_percent') {
+                                displayValue = `${Number(value).toFixed(2)}%`;
+                            } else if (key === 'shares') {
+                                displayValue = Number(value).toLocaleString('en-US');
+                            } else {
+                                displayValue = Number(value).toLocaleString('en-US');
+                            }
+                        } else if (typeof value === 'boolean') {
+                            displayValue = value ? 'Yes' : 'No';
+                        } else {
+                            displayValue = String(value);
+                        }
+                    }
+                    
+                    const textColor = key === 'profit' || key === 'profit_percent' 
+                        ? (value > 0 ? '#4ade80' : value < 0 ? '#ff6b6b' : '#c0c0c0')
+                        : '#c0c0c0';
+                    
+                    html += `<td style="padding: 12px; color: ${textColor}; font-size: 0.95rem; text-align: ${align};">${displayValue}</td>`;
+                });
+                
                 html += '</tr>';
             });
             

@@ -303,6 +303,23 @@
         <div id="worldMapTab" class="tab-content">
             <div class="world-map-section">
                 <h2>World Map</h2>
+                <div style="margin-bottom: 20px; display: flex; gap: 10px; align-items: center;">
+                    <label for="factionIdInput" style="color: #d4af37; font-weight: 600;">Faction ID:</label>
+                    <input 
+                        type="text" 
+                        id="factionIdInput" 
+                        placeholder="Enter Faction ID"
+                        style="padding: 8px 12px; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(212, 175, 55, 0.3); border-radius: 6px; color: #f4e4bc; font-size: 1rem; min-width: 200px;"
+                    >
+                    <button 
+                        id="loadFactionBtn" 
+                        style="padding: 8px 20px; background: linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, rgba(212, 175, 55, 0.1) 100%); border: 1px solid rgba(212, 175, 55, 0.4); border-radius: 6px; color: #d4af37; font-weight: 600; cursor: pointer; transition: all 0.3s ease;"
+                        onmouseover="this.style.background='linear-gradient(135deg, rgba(212, 175, 55, 0.3) 0%, rgba(212, 175, 55, 0.2) 100%)'; this.style.borderColor='rgba(212, 175, 55, 0.6)';"
+                        onmouseout="this.style.background='linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, rgba(212, 175, 55, 0.1) 100%)'; this.style.borderColor='rgba(212, 175, 55, 0.4)';"
+                    >
+                        Load Faction
+                    </button>
+                </div>
                 <div class="world-map-wrapper">
                     <div id="worldMap" class="world-map-container"></div>
                     <!-- Online Players in Torn Window -->

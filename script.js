@@ -3628,9 +3628,7 @@ async function loadBountiesData() {
             html += '<tr style="border-bottom: 2px solid rgba(212, 175, 55, 0.3);">';
             html += '<th style="padding: 12px; text-align: left; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Target</th>';
             html += '<th style="padding: 12px; text-align: center; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Level</th>';
-            html += '<th style="padding: 12px; text-align: left; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Placed By</th>';
             html += '<th style="padding: 12px; text-align: right; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Reward</th>';
-            html += '<th style="padding: 12px; text-align: center; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Time Left</th>';
             html += '</tr>';
             html += '</thead>';
             html += '<tbody>';
@@ -3639,32 +3637,12 @@ async function loadBountiesData() {
                 const targetId = bounty.target_id || 'Unknown';
                 const targetName = bounty.target_name || `User ${targetId}`;
                 const targetLevel = bounty.target_level !== undefined ? bounty.target_level : '-';
-                const placedById = bounty.placed_by_id || 'Unknown';
-                const placedByName = bounty.placed_by_name || `User ${placedById}`;
                 const rewardAmount = bounty.reward !== undefined ? `$${Number(bounty.reward).toLocaleString('en-US')}` : '-';
-                
-                // Calculate time left
-                let timeLeft = '-';
-                if (bounty.time_left !== undefined) {
-                    const seconds = bounty.time_left;
-                    const hours = Math.floor(seconds / 3600);
-                    const minutes = Math.floor((seconds % 3600) / 60);
-                    const secs = seconds % 60;
-                    if (hours > 0) {
-                        timeLeft = `${hours}h ${minutes}m`;
-                    } else if (minutes > 0) {
-                        timeLeft = `${minutes}m ${secs}s`;
-                    } else {
-                        timeLeft = `${secs}s`;
-                    }
-                }
                 
                 html += '<tr style="border-bottom: 1px solid rgba(212, 175, 55, 0.1);">';
                 html += `<td style="padding: 12px; color: #f4e4bc; font-size: 1rem; font-weight: 500;">${targetName} <span style="color: #c0c0c0; font-size: 0.85rem;">(${targetId})</span></td>`;
                 html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem; text-align: center;">${targetLevel}</td>`;
-                html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem;">${placedByName} <span style="color: #888; font-size: 0.85rem;">(${placedById})</span></td>`;
                 html += `<td style="padding: 12px; color: #d4af37; font-size: 0.95rem; text-align: right; font-weight: 600;">${rewardAmount}</td>`;
-                html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem; text-align: center;">${timeLeft}</td>`;
                 html += '</tr>';
             });
             

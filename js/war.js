@@ -1,5 +1,5 @@
 // War Module - War-related functions
-// Depends on: config.js, api.js
+// Depends on: config.js, api.js, worldmap.js
 
 // Check for upcoming wars and update button styling
 async function checkUpcomingWars() {
@@ -189,6 +189,24 @@ async function loadWarData() {
         console.log('Opponent faction ID:', opponentFactionId);
         console.log('Opponent faction name:', opponentFactionName);
         
+        // Store opponent faction ID for map updates
+        State.warOpponentFactionId = opponentFactionId;
+        
+        // Initialize war map if not already initialized
+        if (!State.warMap) {
+            await initializeWarMap();
+        } else {
+            // Invalidate map size if it already exists
+            setTimeout(() => {
+                if (State.warMap) {
+                    State.warMap.invalidateSize();
+                }
+            }, 100);
+        }
+        
+        // Load and display enemy faction members on map
+        await loadEnemyFactionMembers(opponentFactionId);
+        
         // Fetch opponent faction members
         const membersUrl = `${API_BASE_URL}/faction/${opponentFactionId}/members?key=${apiKey}`;
         console.log('Fetching opponent faction members from URL:', membersUrl.replace(apiKey, 'KEY_HIDDEN'));
@@ -219,7 +237,7 @@ async function loadWarData() {
         }
         
         // Convert members object to array
-        const membersArray = memberIds.map(id => ({
+        let membersArray = memberIds.map(id => ({
             id: id,
             ...members[id]
         }));
@@ -272,6 +290,25 @@ async function loadWarData() {
             }
         }
         
+        // Sort members by fair_fight value (ascending - lowest to highest)
+        membersArray.sort((a, b) => {
+            const statsA = battlestatsMap[String(a.id)] || {};
+            const statsB = battlestatsMap[String(b.id)] || {};
+            const fairFightA = statsA.fair_fight;
+            const fairFightB = statsB.fair_fight;
+            
+            // Handle missing values - put them at the end
+            if (fairFightA === undefined || fairFightA === null) {
+                return 1; // Move A to end
+            }
+            if (fairFightB === undefined || fairFightB === null) {
+                return -1; // Move B to end
+            }
+            
+            // Sort ascending (lowest to highest)
+            return fairFightA - fairFightB;
+        });
+        
         // Create table
         let html = '<table style="width: 100%; border-collapse: collapse;">';
         html += '<thead>';
@@ -282,6 +319,7 @@ async function loadWarData() {
         html += '<th style="padding: 12px; text-align: left; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Last Action</th>';
         html += '<th style="padding: 12px; text-align: center; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Fair Fight</th>';
         html += '<th style="padding: 12px; text-align: right; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Battle Stats</th>';
+        html += '<th style="padding: 12px; text-align: center; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Attack</th>';
         html += '</tr>';
         html += '</thead>';
         html += '<tbody>';
@@ -291,6 +329,7 @@ async function loadWarData() {
             const level = member.level !== undefined ? member.level : '-';
             const status = member.status ? (member.status.state || member.status.description || '-') : '-';
             const lastAction = member.last_action ? (member.last_action.status || member.last_action.relative || '-') : '-';
+            const attackUrl = `https://www.torn.com/loader.php?sid=attack&user2ID=${member.id}`;
             
             // Get fair_fight and bs_estimate_human from FFScouter data
             const stats = battlestatsMap[String(member.id)] || {};
@@ -313,6 +352,7 @@ async function loadWarData() {
             html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem;">${lastAction}</td>`;
             html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem; text-align: center;">${formatFairFight(fairFight)}</td>`;
             html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem; text-align: right;">${bsEstimateHuman}</td>`;
+            html += `<td style="padding: 12px; text-align: center;"><a href="${attackUrl}" target="_blank" rel="noopener noreferrer" style="color: #ff6b6b; font-size: 1.5rem; text-decoration: none; cursor: pointer; display: inline-block; transition: transform 0.2s;" title="Attack ${name}" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">⚔️</a></td>`;
             html += '</tr>';
         });
         
@@ -327,6 +367,310 @@ async function loadWarData() {
     }
 }
 
-// Make loadWarData available globally for tab activation
+// Initialize war map with Leaflet
+async function initializeWarMap() {
+    if (State.warMap) {
+        return; // Map already initialized
+    }
+    
+    const mapContainer = document.getElementById('warMap');
+    
+    if (!mapContainer) {
+        console.error('War map container not found');
+        return;
+    }
+    
+    try {
+        // Wait a bit for DOM to be ready
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Check if Leaflet is loaded
+        if (typeof L === 'undefined') {
+            throw new Error('Leaflet library not loaded');
+        }
+        
+        // Initialize Leaflet map with dark theme
+        State.warMap = L.map('warMap', {
+            center: [0, 0],
+            zoom: 2,
+            zoomControl: true,
+            attributionControl: false,
+            minZoom: 2,
+            maxZoom: 10,
+            scrollWheelZoom: true,
+            doubleClickZoom: true,
+            boxZoom: true,
+            keyboard: true,
+            dragging: true
+        });
+        
+        // Add dark theme tile layer (CartoDB Dark Matter)
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '',
+            subdomains: 'abcd',
+            maxZoom: 19
+        }).addTo(State.warMap);
+        
+        // Wait for map to be ready, then invalidate size
+        State.warMap.whenReady(() => {
+            setTimeout(() => {
+                if (State.warMap) {
+                    State.warMap.invalidateSize();
+                }
+            }, 100);
+        });
+        
+        // Add Torn city markers and lines (reuse functions from worldmap.js)
+        if (typeof addTornCityMarkers === 'function') {
+            // Temporarily set worldMap to warMap to reuse functions
+            const originalMap = State.worldMap;
+            State.worldMap = State.warMap;
+            addTornCityMarkers();
+            addTornCityLines();
+            State.worldMap = originalMap;
+        }
+        
+        console.log('War map initialized successfully');
+    } catch (error) {
+        console.error('Error initializing war map:', error);
+    }
+}
+
+// Load enemy faction members and display on war map
+async function loadEnemyFactionMembers(opponentFactionId) {
+    if (!State.warMap || !opponentFactionId) {
+        return;
+    }
+    
+    const apiKey = getApiKey();
+    if (!apiKey) {
+        console.error('API key not configured');
+        return;
+    }
+    
+    try {
+        // Fetch enemy faction members
+        const membersUrl = `${API_BASE_URL}/faction/${opponentFactionId}/members?key=${apiKey}`;
+        console.log('Fetching enemy faction members for war map from URL:', membersUrl.replace(apiKey, 'KEY_HIDDEN'));
+        
+        const membersResponse = await fetch(membersUrl);
+        
+        if (!membersResponse.ok) {
+            throw new Error(`HTTP error! status: ${membersResponse.status}`);
+        }
+        
+        const membersData = await membersResponse.json();
+        
+        if (membersData.error) {
+            console.error('Error fetching enemy faction members:', membersData.error);
+            return;
+        }
+        
+        // Process members data
+        const members = membersData.members || {};
+        const memberIds = Object.keys(members);
+        
+        if (memberIds.length === 0) {
+            console.log('No enemy faction members found');
+            return;
+        }
+        
+        // Convert to array format
+        const membersArray = memberIds.map(id => {
+            const member = members[id];
+            return {
+                id: id,
+                name: member.name || `User ${id}`,
+                status: member.status || {}
+            };
+        });
+        
+        // Create markers on war map
+        createWarMapMarkers(membersArray);
+        
+        // Update online players in Torn window
+        updateWarOnlinePlayersInTorn(membersArray);
+        
+    } catch (error) {
+        console.error('Error loading enemy faction members for war map:', error);
+    }
+}
+
+// Create markers on war map from members array
+function createWarMapMarkers(membersArray) {
+    if (!State.warMap || !membersArray || membersArray.length === 0) {
+        return;
+    }
+    
+    // Clear existing markers
+    if (State.warMapMarkers && State.warMapMarkers.length > 0) {
+        State.warMapMarkers.forEach(marker => {
+            if (State.warMap.hasLayer(marker)) {
+                State.warMap.removeLayer(marker);
+            }
+        });
+        State.warMapMarkers = [];
+    }
+    
+    // Remove existing Torn count marker
+    if (State.warTornCountMarker) {
+        if (State.warMap.hasLayer(State.warTornCountMarker)) {
+            State.warMap.removeLayer(State.warTornCountMarker);
+        }
+        State.warTornCountMarker = null;
+    }
+    
+    // Get Torn city coordinates (reuse function from worldmap.js)
+    const tornCoords = typeof getCityCoordinates === 'function' ? getCityCoordinates('Torn') : null;
+    if (!tornCoords) {
+        console.error('Could not find Torn city coordinates');
+        return;
+    }
+    
+    let usersInTorn = 0;
+    let usersNotInTorn = [];
+    
+    // Separate users by status
+    membersArray.forEach(member => {
+        const username = member.name || `User ${member.id || 'Unknown'}`;
+        
+        let statusDescription = '';
+        if (member.status) {
+            if (typeof member.status === 'string') {
+                statusDescription = member.status;
+            } else if (typeof member.status === 'object' && member.status.description) {
+                statusDescription = member.status.description;
+            }
+        }
+        
+        // Check if user is in Torn
+        const statusLower = (statusDescription || '').toLowerCase();
+        if (statusDescription === 'Okay' || 
+            statusLower === 'hospitalized' || 
+            statusLower.includes('in hospital')) {
+            usersInTorn++;
+        } else {
+            usersNotInTorn.push({ member, username, statusDescription });
+        }
+    });
+    
+    // Create count marker at Torn city if there are users in Torn
+    if (usersInTorn > 0) {
+        const countIcon = L.divIcon({
+            className: 'faction-member-marker',
+            html: `
+                <div class="marker-container">
+                    <div class="marker-dot" style="background: #dc143c; border-color: #ff6b6b; box-shadow: 0 0 10px rgba(220, 20, 60, 0.8), 0 0 20px rgba(220, 20, 60, 0.5);"></div>
+                    <div class="marker-label">${usersInTorn} in Torn</div>
+                </div>
+            `,
+            iconSize: [100, 30],
+            iconAnchor: [50, 15]
+        });
+        
+        State.warTornCountMarker = L.marker(tornCoords, { icon: countIcon })
+            .addTo(State.warMap)
+            .bindPopup(`
+                <div class="marker-popup">
+                    <strong>Enemy Players in Torn</strong><br>
+                    <span>${usersInTorn} player${usersInTorn !== 1 ? 's' : ''} currently in Torn City</span>
+                </div>
+            `);
+    }
+    
+    // Create individual markers for users NOT in Torn (reuse logic from worldmap.js)
+    // Temporarily set worldMap to warMap to reuse marker creation functions
+    const originalMap = State.worldMap;
+    const originalMarkers = State.factionMarkers;
+    State.worldMap = State.warMap;
+    State.factionMarkers = [];
+    
+    // Use the same marker creation logic
+    if (typeof createMarkersFromMembers === 'function') {
+        createMarkersFromMembers(membersArray);
+        State.warMapMarkers = State.factionMarkers;
+    }
+    
+    // Restore original map and markers
+    State.worldMap = originalMap;
+    State.factionMarkers = originalMarkers;
+}
+
+// Update online players in Torn window for war map
+function updateWarOnlinePlayersInTorn(membersArray) {
+    const onlinePlayersList = document.getElementById('warOnlinePlayersList');
+    if (!onlinePlayersList) {
+        return;
+    }
+    
+    if (!membersArray || membersArray.length === 0) {
+        onlinePlayersList.innerHTML = '<div class="online-player-item">No players found</div>';
+        return;
+    }
+    
+    // Filter players in Torn
+    const playersInTorn = membersArray.filter(member => {
+        let statusDescription = '';
+        if (member.status) {
+            if (typeof member.status === 'string') {
+                statusDescription = member.status;
+            } else if (typeof member.status === 'object' && member.status.description) {
+                statusDescription = member.status.description;
+            }
+        }
+        
+        const statusLower = (statusDescription || '').toLowerCase();
+        return statusDescription === 'Okay' || 
+               statusLower === 'hospitalized' || 
+               statusLower.includes('in hospital');
+    });
+    
+    if (playersInTorn.length === 0) {
+        onlinePlayersList.innerHTML = '<div class="online-player-item">No players in Torn</div>';
+        return;
+    }
+    
+    // Display players
+    let html = '';
+    playersInTorn.forEach(member => {
+        const username = member.name || `User ${member.id || 'Unknown'}`;
+        html += `<div class="online-player-item">${username}</div>`;
+    });
+    
+    onlinePlayersList.innerHTML = html;
+}
+
+// Start war map auto-refresh (every 5 seconds)
+function startWarMapUpdates() {
+    // Clear any existing interval
+    if (State.warMapUpdateInterval) {
+        clearInterval(State.warMapUpdateInterval);
+    }
+    
+    // Refresh every 5 seconds
+    State.warMapUpdateInterval = setInterval(async () => {
+        if (State.warOpponentFactionId) {
+            console.log('Auto-refreshing war map data...');
+            await loadEnemyFactionMembers(State.warOpponentFactionId);
+        }
+    }, 5000); // 5 seconds
+    
+    console.log('War map auto-refresh started (every 5 seconds)');
+}
+
+// Stop war map auto-refresh
+function stopWarMapUpdates() {
+    if (State.warMapUpdateInterval) {
+        clearInterval(State.warMapUpdateInterval);
+        State.warMapUpdateInterval = null;
+        console.log('War map auto-refresh stopped');
+    }
+}
+
+// Make functions available globally
 window.loadWarData = loadWarData;
+window.initializeWarMap = initializeWarMap;
+window.loadEnemyFactionMembers = loadEnemyFactionMembers;
+window.startWarMapUpdates = startWarMapUpdates;
+window.stopWarMapUpdates = stopWarMapUpdates;
 

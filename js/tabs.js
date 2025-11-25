@@ -135,11 +135,24 @@ function setupTabs() {
                 if (warTab) {
                     warTab.classList.add('active');
                     console.log('War tab activated');
+                    
+                    // Invalidate map size when tab becomes visible
+                    setTimeout(() => {
+                        if (State.warMap) {
+                            State.warMap.invalidateSize();
+                        }
+                    }, 100);
+                    
                     // Load war data when tab is activated
                     loadWarData();
+                    // Start war map auto-refresh
+                    startWarMapUpdates();
                 } else {
                     console.error('War tab element not found');
                 }
+            } else {
+                // Stop war map updates when switching away from war tab
+                stopWarMapUpdates();
             }
         });
     });

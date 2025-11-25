@@ -119,6 +119,8 @@ async function loadBountiesData() {
         html += '<th style="padding: 12px; text-align: left; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Target</th>';
         html += '<th style="padding: 12px; text-align: center; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Level</th>';
         html += '<th style="padding: 12px; text-align: right; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Reward</th>';
+        html += '<th style="padding: 12px; text-align: right; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Battlestats</th>';
+        html += '<th style="padding: 12px; text-align: right; color: #d4af37; font-weight: 600; font-size: 1.1rem;">BS Estimate</th>';
         html += '<th style="padding: 12px; text-align: right; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Total</th>';
         html += '<th style="padding: 12px; text-align: center; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Fair</th>';
         html += '<th style="padding: 12px; text-align: center; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Attack</th>';
@@ -139,6 +141,8 @@ async function loadBountiesData() {
             
             // The FFScouter API returns: player_id, fair_fight, bs_estimate, bs_estimate_human, bss_public, last_updated
             const fairFight = stats.fair_fight !== undefined && stats.fair_fight !== null ? stats.fair_fight : '-';
+            const bsEstimateHuman = stats.bs_estimate_human !== undefined && stats.bs_estimate_human !== null ? stats.bs_estimate_human : '-';
+            const bsEstimate = stats.bs_estimate !== undefined && stats.bs_estimate !== null ? stats.bs_estimate : '-';
             
             // Use bss_public as the total battlestats
             let total = '-';
@@ -155,10 +159,21 @@ async function loadBountiesData() {
                 return String(value);
             };
             
+            // Format bs_estimate value (it's a large number)
+            const formatBsEstimate = (value) => {
+                if (value === '-' || value === null || value === undefined) return '-';
+                if (typeof value === 'number') {
+                    return Number(value).toLocaleString('en-US');
+                }
+                return String(value);
+            };
+            
             html += '<tr style="border-bottom: 1px solid rgba(212, 175, 55, 0.1);">';
             html += `<td style="padding: 12px; color: #f4e4bc; font-size: 1rem; font-weight: 500;">${targetName} <span style="color: #c0c0c0; font-size: 0.85rem;">(${targetId})</span></td>`;
             html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem; text-align: center;">${targetLevel}</td>`;
             html += `<td style="padding: 12px; color: #d4af37; font-size: 0.95rem; text-align: right; font-weight: 600;">${rewardAmount}</td>`;
+            html += `<td style="padding: 12px; color: #d4af37; font-size: 0.95rem; text-align: right; font-weight: 600;">${bsEstimateHuman}</td>`;
+            html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem; text-align: right;">${formatBsEstimate(bsEstimate)}</td>`;
             html += `<td style="padding: 12px; color: #d4af37; font-size: 0.95rem; text-align: right; font-weight: 600;">${total}</td>`;
             html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem; text-align: center;">${formatFairFight(fairFight)}</td>`;
             html += `<td style="padding: 12px; text-align: center;"><a href="${attackUrl}" target="_blank" rel="noopener noreferrer" style="color: #ff6b6b; font-size: 1.5rem; text-decoration: none; cursor: pointer; display: inline-block; transition: transform 0.2s;" title="Attack ${targetName}" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">⚔️</a></td>`;

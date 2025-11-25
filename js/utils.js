@@ -217,22 +217,29 @@ function setupTravelDataToggle() {
 // Setup API key storage in localStorage
 function setupApiKeyStorage() {
     const apiKeyInput = document.getElementById('apiKeyInput');
+    const ffscouterApiKeyInput = document.getElementById('ffscouterApiKeyInput');
     const saveApiKeyBtn = document.getElementById('saveApiKeyBtn');
     
-    if (!apiKeyInput || !saveApiKeyBtn) {
-        console.error('API key input or save button not found');
+    if (!apiKeyInput || !ffscouterApiKeyInput || !saveApiKeyBtn) {
+        console.error('API key inputs or save button not found');
         return;
     }
     
-    // Load API key from localStorage on page load
-    const savedApiKey = localStorage.getItem('torn_api_key');
-    if (savedApiKey) {
-        apiKeyInput.value = savedApiKey;
-        window.API_KEY = savedApiKey; // Keep window.API_KEY in sync for backward compatibility
-        console.log('API key loaded from localStorage');
+    // Load API keys from localStorage on page load
+    const savedTornApiKey = localStorage.getItem('torn_api_key');
+    if (savedTornApiKey) {
+        apiKeyInput.value = savedTornApiKey;
+        window.API_KEY = savedTornApiKey; // Keep window.API_KEY in sync for backward compatibility
+        console.log('Torn API key loaded from localStorage');
     }
     
-    // Update API key in real-time as user types (so it's available for API calls immediately)
+    const savedFfscouterApiKey = localStorage.getItem('ffscouter_api_key');
+    if (savedFfscouterApiKey) {
+        ffscouterApiKeyInput.value = savedFfscouterApiKey;
+        console.log('FFScouter API key loaded from localStorage');
+    }
+    
+    // Update Torn API key in real-time as user types (so it's available for API calls immediately)
     apiKeyInput.addEventListener('input', (e) => {
         const apiKey = e.target.value.trim();
         if (apiKey) {
@@ -244,35 +251,53 @@ function setupApiKeyStorage() {
         }
     });
     
-    // Save API key to localStorage when button is clicked
+    // Save both API keys to localStorage when button is clicked
     saveApiKeyBtn.addEventListener('click', () => {
-        const apiKey = apiKeyInput.value.trim();
+        const tornApiKey = apiKeyInput.value.trim();
+        const ffscouterApiKey = ffscouterApiKeyInput.value.trim();
         
-        if (apiKey) {
-            localStorage.setItem('torn_api_key', apiKey);
-            window.API_KEY = apiKey;
-            console.log('API key saved to localStorage');
-            
-            // Visual feedback
-            saveApiKeyBtn.textContent = 'Saved!';
-            saveApiKeyBtn.style.background = 'linear-gradient(135deg, rgba(0, 255, 0, 0.2) 0%, rgba(0, 255, 0, 0.1) 100%)';
-            saveApiKeyBtn.style.borderColor = 'rgba(0, 255, 0, 0.4)';
-            
-            setTimeout(() => {
-                saveApiKeyBtn.textContent = 'Save';
-                saveApiKeyBtn.style.background = 'linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, rgba(212, 175, 55, 0.1) 100%)';
-                saveApiKeyBtn.style.borderColor = 'rgba(212, 175, 55, 0.4)';
-            }, 2000);
+        // Save Torn API key
+        if (tornApiKey) {
+            localStorage.setItem('torn_api_key', tornApiKey);
+            window.API_KEY = tornApiKey;
+            console.log('Torn API key saved to localStorage');
         } else {
-            // Clear API key if input is empty
+            // Clear Torn API key if input is empty
             localStorage.removeItem('torn_api_key');
             window.API_KEY = null;
-            console.log('API key cleared from localStorage');
+            console.log('Torn API key cleared from localStorage');
+        }
+        
+        // Save FFScouter API key
+        if (ffscouterApiKey) {
+            localStorage.setItem('ffscouter_api_key', ffscouterApiKey);
+            console.log('FFScouter API key saved to localStorage');
+        } else {
+            // Clear FFScouter API key if input is empty
+            localStorage.removeItem('ffscouter_api_key');
+            console.log('FFScouter API key cleared from localStorage');
+        }
+        
+        // Visual feedback
+        saveApiKeyBtn.textContent = 'Saved!';
+        saveApiKeyBtn.style.background = 'linear-gradient(135deg, rgba(0, 255, 0, 0.2) 0%, rgba(0, 255, 0, 0.1) 100%)';
+        saveApiKeyBtn.style.borderColor = 'rgba(0, 255, 0, 0.4)';
+        
+        setTimeout(() => {
+            saveApiKeyBtn.textContent = 'Save All';
+            saveApiKeyBtn.style.background = 'linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, rgba(212, 175, 55, 0.1) 100%)';
+            saveApiKeyBtn.style.borderColor = 'rgba(212, 175, 55, 0.4)';
+        }, 2000);
+    });
+    
+    // Also allow saving with Enter key in either input
+    apiKeyInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            saveApiKeyBtn.click();
         }
     });
     
-    // Also allow saving with Enter key
-    apiKeyInput.addEventListener('keypress', (e) => {
+    ffscouterApiKeyInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
             saveApiKeyBtn.click();
         }

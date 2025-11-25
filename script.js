@@ -3751,6 +3751,7 @@ async function loadBountiesData() {
             html += '<th style="padding: 12px; text-align: left; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Target</th>';
             html += '<th style="padding: 12px; text-align: center; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Level</th>';
             html += '<th style="padding: 12px; text-align: right; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Reward</th>';
+            html += '<th style="padding: 12px; text-align: center; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Attack</th>';
             html += '</tr>';
             html += '</thead>';
             html += '<tbody>';
@@ -3760,11 +3761,13 @@ async function loadBountiesData() {
                 const targetName = bounty.target_name || `User ${targetId}`;
                 const targetLevel = bounty.target_level !== undefined ? bounty.target_level : '-';
                 const rewardAmount = bounty.reward !== undefined ? `$${Number(bounty.reward).toLocaleString('en-US')}` : '-';
+                const attackUrl = `https://www.torn.com/loader.php?sid=attack&user2ID=${targetId}`;
                 
                 html += '<tr style="border-bottom: 1px solid rgba(212, 175, 55, 0.1);">';
                 html += `<td style="padding: 12px; color: #f4e4bc; font-size: 1rem; font-weight: 500;">${targetName} <span style="color: #c0c0c0; font-size: 0.85rem;">(${targetId})</span></td>`;
                 html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem; text-align: center;">${targetLevel}</td>`;
                 html += `<td style="padding: 12px; color: #d4af37; font-size: 0.95rem; text-align: right; font-weight: 600;">${rewardAmount}</td>`;
+                html += `<td style="padding: 12px; text-align: center;"><a href="${attackUrl}" target="_blank" rel="noopener noreferrer" style="color: #ff6b6b; font-size: 1.5rem; text-decoration: none; cursor: pointer; display: inline-block; transition: transform 0.2s;" title="Attack ${targetName}" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">⚔️</a></td>`;
                 html += '</tr>';
             });
             

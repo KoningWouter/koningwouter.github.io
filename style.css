@@ -2398,6 +2398,8 @@ header h1 {
         0 0 30px rgba(220, 20, 60, 0.7),
         inset 0 2px 8px rgba(255, 255, 255, 0.2),
         inset 0 -2px 8px rgba(0, 0, 0, 0.6);
+    transition: none !important; /* Remove transition to prevent animation */
+    animation: none !important; /* Remove any animations */
 }
 
 #lifeBarCard:hover {
@@ -2407,6 +2409,12 @@ header h1 {
         0 0 0 1px rgba(220, 20, 60, 0.4),
         inset 0 1px 0 rgba(255, 255, 255, 0.1),
         0 0 30px rgba(220, 20, 60, 0.3);
+}
+
+/* Disable shine animation on life bar */
+#lifeBar .progress-bar-shine {
+    animation: none !important;
+    display: none; /* Hide the shine element completely */
 }
 
 /* Energy Bar - Green */
@@ -2420,6 +2428,8 @@ header h1 {
         0 0 30px rgba(34, 139, 34, 0.7),
         inset 0 2px 8px rgba(255, 255, 255, 0.2),
         inset 0 -2px 8px rgba(0, 0, 0, 0.6);
+    transition: none !important; /* Remove transition to prevent animation */
+    animation: none !important; /* Remove any animations */
 }
 
 #energyBarCard:hover {
@@ -2429,6 +2439,12 @@ header h1 {
         0 0 0 1px rgba(34, 139, 34, 0.4),
         inset 0 1px 0 rgba(255, 255, 255, 0.1),
         0 0 30px rgba(34, 139, 34, 0.3);
+}
+
+/* Disable shine animation on energy bar */
+#energyBar .progress-bar-shine {
+    animation: none !important;
+    display: none; /* Hide the shine element completely */
 }
 
 /* Nerve Bar - Gold */

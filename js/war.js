@@ -291,18 +291,25 @@ async function loadWarData() {
         }
         
         // Sort members by fair_fight value (ascending - lowest to highest)
+        // Put missing values (dash) at the top as they are weaker targets
         membersArray.sort((a, b) => {
             const statsA = battlestatsMap[String(a.id)] || {};
             const statsB = battlestatsMap[String(b.id)] || {};
             const fairFightA = statsA.fair_fight;
             const fairFightB = statsB.fair_fight;
             
-            // Handle missing values - put them at the end
-            if (fairFightA === undefined || fairFightA === null) {
-                return 1; // Move A to end
+            // Handle missing values - put them at the top (they are weaker)
+            const aIsMissing = fairFightA === undefined || fairFightA === null;
+            const bIsMissing = fairFightB === undefined || fairFightB === null;
+            
+            if (aIsMissing && bIsMissing) {
+                return 0; // Both missing, keep order
             }
-            if (fairFightB === undefined || fairFightB === null) {
-                return -1; // Move B to end
+            if (aIsMissing) {
+                return -1; // Move A to top
+            }
+            if (bIsMissing) {
+                return 1; // Move B to top
             }
             
             // Sort ascending (lowest to highest)

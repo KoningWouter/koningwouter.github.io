@@ -281,6 +281,7 @@ async function loadWarData() {
         html += '<th style="padding: 12px; text-align: left; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Status</th>';
         html += '<th style="padding: 12px; text-align: left; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Last Action</th>';
         html += '<th style="padding: 12px; text-align: center; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Fair Fight</th>';
+        html += '<th style="padding: 12px; text-align: right; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Battle Stats</th>';
         html += '</tr>';
         html += '</thead>';
         html += '<tbody>';
@@ -291,9 +292,10 @@ async function loadWarData() {
             const status = member.status ? (member.status.state || member.status.description || '-') : '-';
             const lastAction = member.last_action ? (member.last_action.status || member.last_action.relative || '-') : '-';
             
-            // Get fair_fight from FFScouter data
+            // Get fair_fight and bs_estimate_human from FFScouter data
             const stats = battlestatsMap[String(member.id)] || {};
             const fairFight = stats.fair_fight !== undefined && stats.fair_fight !== null ? stats.fair_fight : '-';
+            const bsEstimateHuman = stats.bs_estimate_human !== undefined && stats.bs_estimate_human !== null ? stats.bs_estimate_human : '-';
             
             // Format fair_fight value
             const formatFairFight = (value) => {
@@ -310,6 +312,7 @@ async function loadWarData() {
             html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem;">${status}</td>`;
             html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem;">${lastAction}</td>`;
             html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem; text-align: center;">${formatFairFight(fairFight)}</td>`;
+            html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem; text-align: right;">${bsEstimateHuman}</td>`;
             html += '</tr>';
         });
         

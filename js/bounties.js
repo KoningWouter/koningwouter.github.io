@@ -1,9 +1,17 @@
 // Bounties Module - Bounties-related functions
 // Depends on: config.js, api.js
 
-// Load bounties data from API
-async function loadBountiesData() {
+// Load bounties data from API with pagination
+async function loadBountiesData(page = null) {
     console.log('=== loadBountiesData() called ===');
+    
+    // Use provided page or current page from state
+    if (page !== null) {
+        State.bountiesCurrentPage = page;
+    }
+    const currentPage = State.bountiesCurrentPage;
+    const limit = State.bountiesLimit;
+    const offset = (currentPage - 1) * limit; // offset should be as large as limit for page 2, 2*limit for page 3, etc.
     
     const bountiesDisplay = document.getElementById('bountiesDisplay');
     if (!bountiesDisplay) {
@@ -22,7 +30,7 @@ async function loadBountiesData() {
     }
     
     try {
-        const bountiesUrl = `${API_BASE_URL}/torn/bounties?key=${apiKey}`;
+        const bountiesUrl = `${API_BASE_URL}/torn/bounties?key=${apiKey}&limit=${limit}&offset=${offset}`;
         console.log('Fetching bounties data from URL:', bountiesUrl.replace(apiKey, 'KEY_HIDDEN'));
         
         const bountiesResponse = await fetch(bountiesUrl);
@@ -53,6 +61,22 @@ async function loadBountiesData() {
             bountiesDisplay.innerHTML = html;
             return;
         }
+        
+        // Get total count if available (for pagination)
+        // If total is not in response, estimate based on current page and results
+        let totalBounties = bountiesData.total;
+        if (!totalBounties) {
+            // If we got a full page of results, estimate there might be more
+            if (bountyIds.length === limit) {
+                // Assume there are more pages (we'll show "Page X" without total)
+                totalBounties = (currentPage * limit) + 1; // Estimate: at least one more
+            } else {
+                // This is likely the last page
+                totalBounties = (currentPage - 1) * limit + bountyIds.length;
+            }
+        }
+        State.bountiesTotal = totalBounties;
+        const totalPages = Math.ceil(totalBounties / limit);
         
         // Convert bounties object to array and sort by reward amount (descending)
         const bountiesArray = bountyIds.map(id => ({
@@ -183,6 +207,28 @@ async function loadBountiesData() {
         html += '</tbody>';
         html += '</table>';
         
+        // Add pagination controls
+        html += '<div style="margin-top: 20px; display: flex; justify-content: center; align-items: center; gap: 10px; flex-wrap: wrap;">';
+        
+        // Previous button
+        if (currentPage > 1) {
+            html += `<button onclick="loadBountiesData(${currentPage - 1})" style="padding: 8px 16px; background: linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, rgba(212, 175, 55, 0.1) 100%); border: 1px solid rgba(212, 175, 55, 0.4); border-radius: 6px; color: #d4af37; cursor: pointer; font-size: 0.95rem; font-weight: 600; transition: all 0.2s;" onmouseover="this.style.background='linear-gradient(135deg, rgba(212, 175, 55, 0.3) 0%, rgba(212, 175, 55, 0.2) 100%)'" onmouseout="this.style.background='linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, rgba(212, 175, 55, 0.1) 100%)'">Previous</button>`;
+        } else {
+            html += `<button disabled style="padding: 8px 16px; background: rgba(192, 192, 192, 0.1); border: 1px solid rgba(192, 192, 192, 0.2); border-radius: 6px; color: #666; cursor: not-allowed; font-size: 0.95rem; font-weight: 600;">Previous</button>`;
+        }
+        
+        // Page numbers
+        html += `<span style="color: #c0c0c0; font-size: 0.95rem; padding: 0 10px;">Page ${currentPage} of ${totalPages}</span>`;
+        
+        // Next button
+        if (currentPage < totalPages) {
+            html += `<button onclick="loadBountiesData(${currentPage + 1})" style="padding: 8px 16px; background: linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, rgba(212, 175, 55, 0.1) 100%); border: 1px solid rgba(212, 175, 55, 0.4); border-radius: 6px; color: #d4af37; cursor: pointer; font-size: 0.95rem; font-weight: 600; transition: all 0.2s;" onmouseover="this.style.background='linear-gradient(135deg, rgba(212, 175, 55, 0.3) 0%, rgba(212, 175, 55, 0.2) 100%)'" onmouseout="this.style.background='linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, rgba(212, 175, 55, 0.1) 100%)'">Next</button>`;
+        } else {
+            html += `<button disabled style="padding: 8px 16px; background: rgba(192, 192, 192, 0.1); border: 1px solid rgba(192, 192, 192, 0.2); border-radius: 6px; color: #666; cursor: not-allowed; font-size: 0.95rem; font-weight: 600;">Next</button>`;
+        }
+        
+        html += '</div>';
+        
         bountiesDisplay.innerHTML = html;
         console.log('Bounties data loaded and displayed successfully');
     } catch (error) {
@@ -190,5 +236,8 @@ async function loadBountiesData() {
         bountiesDisplay.innerHTML = `<p style="color: #ff6b6b;">Error loading bounties data: ${error.message}</p>`;
     }
 }
+
+// Make loadBountiesData available globally for onclick handlers
+window.loadBountiesData = loadBountiesData;
 
 

@@ -153,6 +153,27 @@ async function loadBountiesData(page = null) {
             }
         }
         
+        // Sort bounties by fair_fight value (ascending - lowest to highest)
+        finalBountiesArray.sort((a, b) => {
+            const targetIdA = String(a.target_id || 'Unknown');
+            const targetIdB = String(b.target_id || 'Unknown');
+            const statsA = battlestatsMap[targetIdA] || {};
+            const statsB = battlestatsMap[targetIdB] || {};
+            const fairFightA = statsA.fair_fight;
+            const fairFightB = statsB.fair_fight;
+            
+            // Handle missing values - put them at the end
+            if (fairFightA === undefined || fairFightA === null) {
+                return 1; // Move A to end
+            }
+            if (fairFightB === undefined || fairFightB === null) {
+                return -1; // Move B to end
+            }
+            
+            // Sort ascending (lowest to highest)
+            return fairFightA - fairFightB;
+        });
+        
         // Collect all fair_fight values to determine min/max for color coding
         const fairFightValues = [];
         finalBountiesArray.forEach(bounty => {

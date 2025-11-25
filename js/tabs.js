@@ -130,6 +130,15 @@ function setupTabs() {
                 } else {
                     console.error('Bounties tab element not found');
                 }
+            } else if (targetTab === 'war') {
+                const warTab = document.getElementById('warTab');
+                if (warTab) {
+                    warTab.classList.add('active');
+                    console.log('War tab activated');
+                    // War tab functionality can be added here
+                } else {
+                    console.error('War tab element not found');
+                }
             }
         });
     });

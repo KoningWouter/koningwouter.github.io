@@ -99,6 +99,12 @@ async function loadStocksData() {
                 finalKeys.unshift('price');
             }
             
+            // Insert "Total Value" column right after "price"
+            const priceIndex = finalKeys.indexOf('price');
+            if (priceIndex >= 0) {
+                finalKeys.splice(priceIndex + 1, 0, 'total_value_calculated');
+            }
+            
             // Create table
             html += '<table style="width: 100%; border-collapse: collapse; margin-top: 10px;">';
             html += '<thead>';
@@ -113,8 +119,15 @@ async function loadStocksData() {
             
             // Create header row
             finalKeys.forEach(key => {
-                const headerLabel = key === 'price' ? 'Price' : key.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-                const isNumeric = ['shares', 'bought_price', 'current_price', 'total_cost', 'total_value', 'profit', 'profit_percent', 'price'].includes(key);
+                let headerLabel;
+                if (key === 'price') {
+                    headerLabel = 'Price';
+                } else if (key === 'total_value_calculated') {
+                    headerLabel = 'Total Value';
+                } else {
+                    headerLabel = key.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+                }
+                const isNumeric = ['shares', 'bought_price', 'current_price', 'total_cost', 'total_value', 'profit', 'profit_percent', 'price', 'total_value_calculated'].includes(key);
                 const align = isNumeric ? 'right' : 'left';
                 html += `<th style="padding: 12px; text-align: ${align}; vertical-align: top; color: #d4af37; font-weight: 600; font-size: 1.1rem;">${headerLabel}</th>`;
             });
@@ -162,6 +175,21 @@ async function loadStocksData() {
                             ? `$${Number(currentPrice).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` 
                             : '-';
                         html += `<td style="padding: 12px; color: #d4af37; font-size: 0.95rem; text-align: right; vertical-align: top; font-weight: 600;" class="stock-price-cell" data-stock-id="${stockId}">${displayValue}</td>`;
+                        return;
+                    }
+                    
+                    // Special handling for Total Value column (price * total_shares)
+                    if (key === 'total_value_calculated') {
+                        const currentPrice = State.stockPricesMap[stockId];
+                        const totalShares = stock.total_shares !== undefined ? Number(stock.total_shares) : 0;
+                        let displayValue = '-';
+                        
+                        if (currentPrice !== undefined && totalShares > 0) {
+                            const totalValue = currentPrice * totalShares;
+                            displayValue = `$${Number(totalValue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                        }
+                        
+                        html += `<td style="padding: 12px; color: #d4af37; font-size: 0.95rem; text-align: right; vertical-align: top; font-weight: 600;" class="stock-total-value-cell" data-stock-id="${stockId}" data-total-shares="${totalShares}">${displayValue}</td>`;
                         return;
                     }
                     
@@ -282,7 +310,10 @@ async function loadStocksData() {
                         ? 'word-wrap: break-word; white-space: pre-wrap; font-family: monospace; font-size: 0.85rem; max-width: 400px;' 
                         : '';
                     
-                    html += `<td style="padding: 12px; color: ${textColor}; font-size: 0.95rem; text-align: ${align}; vertical-align: top; ${jsonStyle}">${displayValue}</td>`;
+                    // Add data attribute for shares column to help with Total Value updates
+                    const dataAttribute = key === 'shares' && typeof value === 'number' ? ` data-shares="${value}"` : '';
+                    
+                    html += `<td style="padding: 12px; color: ${textColor}; font-size: 0.95rem; text-align: ${align}; vertical-align: top; ${jsonStyle}"${dataAttribute}>${displayValue}</td>`;
                 });
                 
                 html += '</tr>';

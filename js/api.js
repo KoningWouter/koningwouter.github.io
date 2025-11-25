@@ -217,9 +217,10 @@ async function updateStockPrices() {
             }
         });
         
-        // Update the Price column in the table if it exists
+        // Update the Price and Total Value columns in the table if it exists
         const stocksDisplay = document.getElementById('stocksDisplay');
         if (stocksDisplay) {
+            // Update Price column
             const priceCells = stocksDisplay.querySelectorAll('.stock-price-cell');
             priceCells.forEach(cell => {
                 const stockId = cell.getAttribute('data-stock-id');
@@ -227,6 +228,25 @@ async function updateStockPrices() {
                     const price = State.stockPricesMap[stockId];
                     const formattedPrice = `$${Number(price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
                     cell.textContent = formattedPrice;
+                }
+            });
+            
+            // Update Total Value column (price * total_shares)
+            const totalValueCells = stocksDisplay.querySelectorAll('.stock-total-value-cell');
+            totalValueCells.forEach(cell => {
+                const stockId = cell.getAttribute('data-stock-id');
+                if (stockId && State.stockPricesMap[stockId] !== undefined) {
+                    // Get total_shares from the data attribute on the cell itself
+                    const totalShares = parseFloat(cell.getAttribute('data-total-shares') || '0');
+                    
+                    if (!isNaN(totalShares) && totalShares > 0) {
+                        const price = State.stockPricesMap[stockId];
+                        const totalValue = price * totalShares;
+                        const formattedTotalValue = `$${Number(totalValue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                        cell.textContent = formattedTotalValue;
+                    } else {
+                        cell.textContent = '-';
+                    }
                 }
             });
         }

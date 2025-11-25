@@ -194,6 +194,10 @@ let userLastFetchTime = {};
 let stockNamesMap = {};
 // Global array to store stock names with IDs [{id: '1', name: 'Stock Name'}, ...]
 let stockNamesArray = [];
+// Global variable to store current stock prices (stock_id -> current_price)
+let stockPricesMap = {};
+// Global variable for stock price update interval
+let stockPriceUpdateInterval = null;
 
 // Torn travel cities with coordinates (only actual travelable destinations in Torn)
 const tornCities = [
@@ -346,6 +350,15 @@ function setupTabs() {
             // Stop world map updates when switching away from world map tab
             if (targetTab !== 'world-map') {
                 stopWorldMapUpdates();
+            }
+            
+            // Stop stock price updates when switching away from stocks tab
+            if (targetTab !== 'stocks') {
+                if (stockPriceUpdateInterval) {
+                    clearInterval(stockPriceUpdateInterval);
+                    stockPriceUpdateInterval = null;
+                    console.log('Stock price auto-update stopped');
+                }
             }
             
             // Add active class to clicked button and corresponding content
@@ -3487,7 +3500,7 @@ async function fetchStockNames() {
             return;
         }
         
-        // Populate stockNamesMap and stockNamesArray with stock_id -> name mapping
+        // Populate stockNamesMap, stockNamesArray, and stockPricesMap
         const stocks = stocksData.stocks || {};
         stockNamesArray = [];
         Object.keys(stocks).forEach(stockId => {
@@ -3498,6 +3511,10 @@ async function fetchStockNames() {
                     id: stockId,
                     name: stock.name
                 });
+            }
+            // Store current price if available
+            if (stock.current_price !== undefined) {
+                stockPricesMap[stockId] = stock.current_price;
             }
         });
         
@@ -3510,6 +3527,58 @@ async function fetchStockNames() {
         
     } catch (error) {
         console.error('Error fetching stock names:', error);
+    }
+}
+
+// Update stock prices and refresh the Price column in the table
+async function updateStockPrices() {
+    const apiKey = getApiKey();
+    if (!apiKey) {
+        console.error('API key not configured for stock price update');
+        return;
+    }
+    
+    try {
+        const stocksUrl = `${API_BASE_URL}/torn/?selections=stocks&key=${apiKey}`;
+        const stocksResponse = await fetch(stocksUrl);
+        
+        if (!stocksResponse.ok) {
+            throw new Error(`HTTP error! status: ${stocksResponse.status}`);
+        }
+        
+        const stocksData = await stocksResponse.json();
+        
+        if (stocksData.error) {
+            console.error('Error updating stock prices:', stocksData.error);
+            return;
+        }
+        
+        // Update stock prices map
+        const stocks = stocksData.stocks || {};
+        Object.keys(stocks).forEach(stockId => {
+            const stock = stocks[stockId];
+            if (stock.current_price !== undefined) {
+                stockPricesMap[stockId] = stock.current_price;
+            }
+        });
+        
+        // Update the Price column in the table if it exists
+        const stocksDisplay = document.getElementById('stocksDisplay');
+        if (stocksDisplay) {
+            const priceCells = stocksDisplay.querySelectorAll('.stock-price-cell');
+            priceCells.forEach(cell => {
+                const stockId = cell.getAttribute('data-stock-id');
+                if (stockId && stockPricesMap[stockId] !== undefined) {
+                    const price = stockPricesMap[stockId];
+                    const formattedPrice = `$${Number(price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                    cell.textContent = formattedPrice;
+                }
+            });
+        }
+        
+        console.log('Stock prices updated');
+    } catch (error) {
+        console.error('Error updating stock prices:', error);
     }
 }
 
@@ -3592,7 +3661,7 @@ async function loadStocksData() {
             });
             
             // Define column order (most important first, then alphabetical for the rest)
-            const priorityKeys = ['stock_id', 'name', 'shares', 'bought_price', 'current_price', 'total_cost', 'total_value', 'profit', 'profit_percent'];
+            const priorityKeys = ['name', 'shares', 'bought_price', 'current_price', 'total_cost', 'total_value', 'profit', 'profit_percent'];
             const orderedKeys = [];
             priorityKeys.forEach(key => {
                 if (allKeys.has(key)) {
@@ -3601,19 +3670,31 @@ async function loadStocksData() {
                 }
             });
             const remainingKeys = Array.from(allKeys).sort();
-            const finalKeys = [...orderedKeys, ...remainingKeys];
+            const finalKeys = [...orderedKeys, ...remainingKeys].filter(key => key !== 'stock_id');
+            
+            // Insert "Price" column right after "name"
+            const nameIndex = finalKeys.indexOf('name');
+            if (nameIndex >= 0) {
+                finalKeys.splice(nameIndex + 1, 0, 'price');
+            } else {
+                finalKeys.unshift('price');
+            }
             
             // Create table
             html += '<table style="width: 100%; border-collapse: collapse; margin-top: 10px;">';
             html += '<thead>';
             html += '<tr style="border-bottom: 2px solid rgba(212, 175, 55, 0.3);">';
             
+            // Add expand/collapse column header
+            html += '<th style="padding: 12px; text-align: center; vertical-align: top; color: #d4af37; font-weight: 600; font-size: 1.1rem; width: 50px;">';
+            html += '</th>';
+            
             // Create header row
             finalKeys.forEach(key => {
-                const headerLabel = key.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-                const isNumeric = ['shares', 'bought_price', 'current_price', 'total_cost', 'total_value', 'profit', 'profit_percent', 'stock_id'].includes(key);
+                const headerLabel = key === 'price' ? 'Price' : key.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+                const isNumeric = ['shares', 'bought_price', 'current_price', 'total_cost', 'total_value', 'profit', 'profit_percent', 'price'].includes(key);
                 const align = isNumeric ? 'right' : 'left';
-                html += `<th style="padding: 12px; text-align: ${align}; color: #d4af37; font-weight: 600; font-size: 1.1rem;">${headerLabel}</th>`;
+                html += `<th style="padding: 12px; text-align: ${align}; vertical-align: top; color: #d4af37; font-weight: 600; font-size: 1.1rem;">${headerLabel}</th>`;
             });
             
             html += '</tr>';
@@ -3621,23 +3702,124 @@ async function loadStocksData() {
             html += '<tbody>';
             
             stocksArray.forEach(stock => {
-                html += '<tr style="border-bottom: 1px solid rgba(212, 175, 55, 0.1);">';
+                const stockId = stock.stock_id;
+                const hasTransactions = stock.transactions && (
+                    (Array.isArray(stock.transactions) && stock.transactions.length > 0) ||
+                    (typeof stock.transactions === 'object' && !Array.isArray(stock.transactions) && Object.keys(stock.transactions).length > 0)
+                );
+                
+                html += `<tr style="border-bottom: 1px solid rgba(212, 175, 55, 0.1);" data-stock-id="${stockId}">`;
+                
+                // Add expand/collapse icon cell
+                if (hasTransactions) {
+                    html += `<td style="padding: 12px; text-align: center; vertical-align: top; cursor: pointer;" class="expand-collapse-icon" data-stock-id="${stockId}" onclick="toggleTransactions('${stockId}')">`;
+                    html += `<span id="icon-${stockId}" style="color: #d4af37; font-size: 1.2rem; user-select: none;">▶</span>`;
+                    html += '</td>';
+                } else {
+                    html += '<td style="padding: 12px; text-align: center; vertical-align: top;"></td>';
+                }
                 
                 finalKeys.forEach(key => {
+                    // Special handling for Price column
+                    if (key === 'price') {
+                        const currentPrice = stockPricesMap[stockId];
+                        const displayValue = currentPrice !== undefined 
+                            ? `$${Number(currentPrice).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` 
+                            : '-';
+                        html += `<td style="padding: 12px; color: #d4af37; font-size: 0.95rem; text-align: right; vertical-align: top; font-weight: 600;" class="stock-price-cell" data-stock-id="${stockId}">${displayValue}</td>`;
+                        return;
+                    }
+                    
                     const value = stock[key];
                     
                     // Keys that should be displayed as JSON strings if they are objects
-                    const jsonStringifyKeys = ['benefit', 'dividend', 'transactions'];
+                    const jsonStringifyKeys = ['benefit', 'dividend'];
                     const shouldStringify = jsonStringifyKeys.includes(key.toLowerCase());
                     
-                    const isNumeric = ['shares', 'bought_price', 'current_price', 'total_cost', 'total_value', 'profit', 'profit_percent', 'stock_id'].includes(key);
+                    const isNumeric = ['shares', 'bought_price', 'current_price', 'total_cost', 'total_value', 'profit', 'profit_percent'].includes(key);
                     // JSON columns should always be left-aligned
                     const align = shouldStringify ? 'left' : (isNumeric ? 'right' : 'left');
                     let displayValue = '-';
                     
-                    if (value !== undefined && value !== null) {
+                    // Special handling for transactions column - create nested table (collapsible)
+                    if (key.toLowerCase() === 'transactions' && value !== undefined && value !== null) {
+                        const hasTransactions = (Array.isArray(value) && value.length > 0) || 
+                                               (typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length > 0);
+                        
+                        if (hasTransactions) {
+                            // Wrap transactions table in a collapsible div (hidden by default)
+                            displayValue = `<div id="transactions-${stockId}" style="display: none;">`;
+                            
+                            if (Array.isArray(value) && value.length > 0) {
+                                // Create nested table for transactions
+                                displayValue += '<table style="width: 100%; border-collapse: collapse; margin: 0;">';
+                                displayValue += '<thead>';
+                                displayValue += '<tr style="border-bottom: 1px solid rgba(212, 175, 55, 0.2);">';
+                                displayValue += '<th style="padding: 6px 8px; text-align: right; color: #d4af37; font-weight: 600; font-size: 0.85rem;">Shares</th>';
+                                displayValue += '<th style="padding: 6px 8px; text-align: right; color: #d4af37; font-weight: 600; font-size: 0.85rem;">Bought Price</th>';
+                                displayValue += '<th style="padding: 6px 8px; text-align: left; color: #d4af37; font-weight: 600; font-size: 0.85rem;">Time Bought</th>';
+                                displayValue += '</tr>';
+                                displayValue += '</thead>';
+                                displayValue += '<tbody>';
+                                
+                                value.forEach(transaction => {
+                                    const shares = transaction.shares !== undefined ? Number(transaction.shares).toLocaleString('en-US') : '-';
+                                    const boughtPrice = transaction.bought_price !== undefined 
+                                        ? `$${Number(transaction.bought_price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` 
+                                        : '-';
+                                    const timeBought = transaction.time_bought !== undefined 
+                                        ? new Date(transaction.time_bought * 1000).toLocaleString() 
+                                        : '-';
+                                    
+                                    displayValue += '<tr style="border-bottom: 1px solid rgba(212, 175, 55, 0.1);">';
+                                    displayValue += `<td style="padding: 6px 8px; color: #c0c0c0; font-size: 0.85rem; text-align: right;">${shares}</td>`;
+                                    displayValue += `<td style="padding: 6px 8px; color: #c0c0c0; font-size: 0.85rem; text-align: right;">${boughtPrice}</td>`;
+                                    displayValue += `<td style="padding: 6px 8px; color: #c0c0c0; font-size: 0.85rem; text-align: left;">${timeBought}</td>`;
+                                    displayValue += '</tr>';
+                                });
+                                
+                                displayValue += '</tbody>';
+                                displayValue += '</table>';
+                            } else if (typeof value === 'object' && !Array.isArray(value)) {
+                                // Handle case where transactions might be an object instead of array
+                                const transactionsArray = Object.values(value);
+                                if (transactionsArray.length > 0) {
+                                    displayValue += '<table style="width: 100%; border-collapse: collapse; margin: 0;">';
+                                    displayValue += '<thead>';
+                                    displayValue += '<tr style="border-bottom: 1px solid rgba(212, 175, 55, 0.2);">';
+                                    displayValue += '<th style="padding: 6px 8px; text-align: right; color: #d4af37; font-weight: 600; font-size: 0.85rem;">Shares</th>';
+                                    displayValue += '<th style="padding: 6px 8px; text-align: right; color: #d4af37; font-weight: 600; font-size: 0.85rem;">Bought Price</th>';
+                                    displayValue += '<th style="padding: 6px 8px; text-align: left; color: #d4af37; font-weight: 600; font-size: 0.85rem;">Time Bought</th>';
+                                    displayValue += '</tr>';
+                                    displayValue += '</thead>';
+                                    displayValue += '<tbody>';
+                                    
+                                    transactionsArray.forEach(transaction => {
+                                        const shares = transaction.shares !== undefined ? Number(transaction.shares).toLocaleString('en-US') : '-';
+                                        const boughtPrice = transaction.bought_price !== undefined 
+                                            ? `$${Number(transaction.bought_price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` 
+                                            : '-';
+                                        const timeBought = transaction.time_bought !== undefined 
+                                            ? new Date(transaction.time_bought * 1000).toLocaleString() 
+                                            : '-';
+                                        
+                                        displayValue += '<tr style="border-bottom: 1px solid rgba(212, 175, 55, 0.1);">';
+                                        displayValue += `<td style="padding: 6px 8px; color: #c0c0c0; font-size: 0.85rem; text-align: right;">${shares}</td>`;
+                                        displayValue += `<td style="padding: 6px 8px; color: #c0c0c0; font-size: 0.85rem; text-align: right;">${boughtPrice}</td>`;
+                                        displayValue += `<td style="padding: 6px 8px; color: #c0c0c0; font-size: 0.85rem; text-align: left;">${timeBought}</td>`;
+                                        displayValue += '</tr>';
+                                    });
+                                    
+                                    displayValue += '</tbody>';
+                                    displayValue += '</table>';
+                                }
+                            }
+                            
+                            displayValue += '</div>';
+                        }
+                    } else if (value !== undefined && value !== null) {
                         if (typeof value === 'object' && shouldStringify) {
-                            // Stringify objects for benefit, dividend, and transactions
+                            // Stringify objects for benefit and dividend
                             displayValue = JSON.stringify(value, null, 2);
                         } else if (typeof value === 'number') {
                             if (key.includes('price') || key.includes('cost') || key.includes('value') || key.includes('profit')) {
@@ -3660,12 +3842,12 @@ async function loadStocksData() {
                         ? (value > 0 ? '#4ade80' : value < 0 ? '#ff6b6b' : '#c0c0c0')
                         : '#c0c0c0';
                     
-                    // Special styling for JSON stringified columns
-                    const jsonStyle = shouldStringify && typeof value === 'object' 
+                    // Special styling for JSON stringified columns (but not transactions)
+                    const jsonStyle = shouldStringify && typeof value === 'object' && key.toLowerCase() !== 'transactions'
                         ? 'word-wrap: break-word; white-space: pre-wrap; font-family: monospace; font-size: 0.85rem; max-width: 400px;' 
                         : '';
                     
-                    html += `<td style="padding: 12px; color: ${textColor}; font-size: 0.95rem; text-align: ${align}; ${jsonStyle}">${displayValue}</td>`;
+                    html += `<td style="padding: 12px; color: ${textColor}; font-size: 0.95rem; text-align: ${align}; vertical-align: top; ${jsonStyle}">${displayValue}</td>`;
                 });
                 
                 html += '</tr>';
@@ -3678,11 +3860,37 @@ async function loadStocksData() {
         stocksDisplay.innerHTML = html;
         console.log('Stock data loaded and displayed successfully');
         
+        // Clear any existing stock price update interval
+        if (stockPriceUpdateInterval) {
+            clearInterval(stockPriceUpdateInterval);
+        }
+        
+        // Set up interval to update stock prices every 10 seconds
+        stockPriceUpdateInterval = setInterval(async () => {
+            await updateStockPrices();
+        }, 10000);
+        
     } catch (error) {
         console.error('Error loading stocks data:', error);
         stocksDisplay.innerHTML = `<p style="color: #ff6b6b;">Error loading stock data: ${error.message}</p>`;
     }
 }
+
+// Toggle transactions visibility for a specific stock
+window.toggleTransactions = function(stockId) {
+    const transactionsDiv = document.getElementById(`transactions-${stockId}`);
+    const iconSpan = document.getElementById(`icon-${stockId}`);
+    
+    if (transactionsDiv && iconSpan) {
+        if (transactionsDiv.style.display === 'none') {
+            transactionsDiv.style.display = 'block';
+            iconSpan.textContent = '▼';
+        } else {
+            transactionsDiv.style.display = 'none';
+            iconSpan.textContent = '▶';
+        }
+    }
+};
 
 // Load bounties data from API
 async function loadBountiesData() {

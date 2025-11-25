@@ -88,8 +88,25 @@ async function loadBountiesData(page = null) {
             return rewardB - rewardA;
         });
         
+        // Remove duplicate bounties (same target_id) - keep the one with highest reward
+        const seenTargetIds = new Set();
+        const uniqueBountiesArray = bountiesArray.filter(bounty => {
+            const targetId = bounty.target_id;
+            if (!targetId || targetId === 'Unknown') {
+                return true; // Keep entries without valid target_id
+            }
+            if (seenTargetIds.has(targetId)) {
+                return false; // Skip duplicate
+            }
+            seenTargetIds.add(targetId);
+            return true; // Keep first occurrence (already sorted by reward descending)
+        });
+        
+        // Use the deduplicated array
+        const finalBountiesArray = uniqueBountiesArray;
+        
         // Collect all target IDs for FFScouter API call
-        const targetIds = bountiesArray
+        const targetIds = finalBountiesArray
             .map(bounty => bounty.target_id)
             .filter(id => id && id !== 'Unknown');
         
@@ -138,7 +155,7 @@ async function loadBountiesData(page = null) {
         
         // Collect all fair_fight values to determine min/max for color coding
         const fairFightValues = [];
-        bountiesArray.forEach(bounty => {
+        finalBountiesArray.forEach(bounty => {
             const targetId = bounty.target_id || 'Unknown';
             const stats = battlestatsMap[String(targetId)] || {};
             const fairFight = stats.fair_fight;
@@ -173,6 +190,35 @@ async function loadBountiesData(page = null) {
             return `rgb(${red}, ${green}, ${blue})`;
         };
         
+        // Function to generate pagination controls HTML
+        const generatePaginationHTML = (isTop = false) => {
+            const marginStyle = isTop ? 'margin-bottom: 20px;' : 'margin-top: 20px;';
+            let paginationHTML = `<div style="${marginStyle} display: flex; justify-content: center; align-items: center; gap: 10px; flex-wrap: wrap;">`;
+            
+            // Previous button
+            if (currentPage > 1) {
+                paginationHTML += `<button onclick="loadBountiesData(${currentPage - 1})" style="padding: 8px 16px; background: linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, rgba(212, 175, 55, 0.1) 100%); border: 1px solid rgba(212, 175, 55, 0.4); border-radius: 6px; color: #d4af37; cursor: pointer; font-size: 0.95rem; font-weight: 600; transition: all 0.2s;" onmouseover="this.style.background='linear-gradient(135deg, rgba(212, 175, 55, 0.3) 0%, rgba(212, 175, 55, 0.2) 100%)'" onmouseout="this.style.background='linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, rgba(212, 175, 55, 0.1) 100%)'">Previous</button>`;
+            } else {
+                paginationHTML += `<button disabled style="padding: 8px 16px; background: rgba(192, 192, 192, 0.1); border: 1px solid rgba(192, 192, 192, 0.2); border-radius: 6px; color: #666; cursor: not-allowed; font-size: 0.95rem; font-weight: 600;">Previous</button>`;
+            }
+            
+            // Page numbers
+            paginationHTML += `<span style="color: #c0c0c0; font-size: 0.95rem; padding: 0 10px;">Page ${currentPage} of ${totalPages}</span>`;
+            
+            // Next button
+            if (currentPage < totalPages) {
+                paginationHTML += `<button onclick="loadBountiesData(${currentPage + 1})" style="padding: 8px 16px; background: linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, rgba(212, 175, 55, 0.1) 100%); border: 1px solid rgba(212, 175, 55, 0.4); border-radius: 6px; color: #d4af37; cursor: pointer; font-size: 0.95rem; font-weight: 600; transition: all 0.2s;" onmouseover="this.style.background='linear-gradient(135deg, rgba(212, 175, 55, 0.3) 0%, rgba(212, 175, 55, 0.2) 100%)'" onmouseout="this.style.background='linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, rgba(212, 175, 55, 0.1) 100%)'">Next</button>`;
+            } else {
+                paginationHTML += `<button disabled style="padding: 8px 16px; background: rgba(192, 192, 192, 0.1); border: 1px solid rgba(192, 192, 192, 0.2); border-radius: 6px; color: #666; cursor: not-allowed; font-size: 0.95rem; font-weight: 600;">Next</button>`;
+            }
+            
+            paginationHTML += '</div>';
+            return paginationHTML;
+        };
+        
+        // Add pagination controls at the top
+        html += generatePaginationHTML(true);
+        
         // Create table
         html += '<table style="width: 100%; border-collapse: collapse;">';
         html += '<thead>';
@@ -189,7 +235,7 @@ async function loadBountiesData(page = null) {
         html += '</thead>';
         html += '<tbody>';
         
-        bountiesArray.forEach(bounty => {
+        finalBountiesArray.forEach(bounty => {
             const targetId = bounty.target_id || 'Unknown';
             const targetName = bounty.target_name || `User ${targetId}`;
             const targetLevel = bounty.target_level !== undefined ? bounty.target_level : '-';
@@ -246,27 +292,8 @@ async function loadBountiesData(page = null) {
         html += '</tbody>';
         html += '</table>';
         
-        // Add pagination controls
-        html += '<div style="margin-top: 20px; display: flex; justify-content: center; align-items: center; gap: 10px; flex-wrap: wrap;">';
-        
-        // Previous button
-        if (currentPage > 1) {
-            html += `<button onclick="loadBountiesData(${currentPage - 1})" style="padding: 8px 16px; background: linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, rgba(212, 175, 55, 0.1) 100%); border: 1px solid rgba(212, 175, 55, 0.4); border-radius: 6px; color: #d4af37; cursor: pointer; font-size: 0.95rem; font-weight: 600; transition: all 0.2s;" onmouseover="this.style.background='linear-gradient(135deg, rgba(212, 175, 55, 0.3) 0%, rgba(212, 175, 55, 0.2) 100%)'" onmouseout="this.style.background='linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, rgba(212, 175, 55, 0.1) 100%)'">Previous</button>`;
-        } else {
-            html += `<button disabled style="padding: 8px 16px; background: rgba(192, 192, 192, 0.1); border: 1px solid rgba(192, 192, 192, 0.2); border-radius: 6px; color: #666; cursor: not-allowed; font-size: 0.95rem; font-weight: 600;">Previous</button>`;
-        }
-        
-        // Page numbers
-        html += `<span style="color: #c0c0c0; font-size: 0.95rem; padding: 0 10px;">Page ${currentPage} of ${totalPages}</span>`;
-        
-        // Next button
-        if (currentPage < totalPages) {
-            html += `<button onclick="loadBountiesData(${currentPage + 1})" style="padding: 8px 16px; background: linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, rgba(212, 175, 55, 0.1) 100%); border: 1px solid rgba(212, 175, 55, 0.4); border-radius: 6px; color: #d4af37; cursor: pointer; font-size: 0.95rem; font-weight: 600; transition: all 0.2s;" onmouseover="this.style.background='linear-gradient(135deg, rgba(212, 175, 55, 0.3) 0%, rgba(212, 175, 55, 0.2) 100%)'" onmouseout="this.style.background='linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, rgba(212, 175, 55, 0.1) 100%)'">Next</button>`;
-        } else {
-            html += `<button disabled style="padding: 8px 16px; background: rgba(192, 192, 192, 0.1); border: 1px solid rgba(192, 192, 192, 0.2); border-radius: 6px; color: #666; cursor: not-allowed; font-size: 0.95rem; font-weight: 600;">Next</button>`;
-        }
-        
-        html += '</div>';
+        // Add pagination controls at the bottom
+        html += generatePaginationHTML();
         
         bountiesDisplay.innerHTML = html;
         console.log('Bounties data loaded and displayed successfully');

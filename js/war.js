@@ -224,6 +224,54 @@ async function loadWarData() {
             ...members[id]
         }));
         
+        // Collect all member IDs for FFScouter API call
+        const memberIdsForFFScouter = membersArray
+            .map(member => member.id)
+            .filter(id => id && id !== 'Unknown');
+        
+        // Fetch battlestats from FFScouter API if we have member IDs and API key
+        let battlestatsMap = {};
+        if (memberIdsForFFScouter.length > 0) {
+            const ffscouterApiKey = localStorage.getItem('ffscouter_api_key');
+            if (ffscouterApiKey) {
+                try {
+                    const targetsParam = memberIdsForFFScouter.join(',');
+                    const ffscouterUrl = `https://ffscouter.com/api/v1/get-stats?key=${ffscouterApiKey}&targets=${targetsParam}`;
+                    console.log('Fetching battlestats from FFScouter API for war members...');
+                    
+                    const statsResponse = await fetch(ffscouterUrl);
+                    
+                    if (statsResponse.ok) {
+                        const statsData = await statsResponse.json();
+                        console.log('FFScouter API response:', statsData);
+                        
+                        // Map the response data by player ID
+                        // The API returns an array with player_id as the key
+                        if (Array.isArray(statsData)) {
+                            statsData.forEach(stat => {
+                                if (stat.player_id) {
+                                    const userId = String(stat.player_id);
+                                    battlestatsMap[userId] = stat;
+                                }
+                            });
+                        } else if (typeof statsData === 'object') {
+                            // If it's an object, use the keys as user IDs
+                            Object.keys(statsData).forEach(userId => {
+                                battlestatsMap[userId] = statsData[userId];
+                            });
+                        }
+                    } else {
+                        console.warn('FFScouter API request failed:', statsResponse.status);
+                    }
+                } catch (error) {
+                    console.error('Error fetching battlestats from FFScouter:', error);
+                    // Continue without battlestats if there's an error
+                }
+            } else {
+                console.log('FFScouter API key not configured, skipping battlestats fetch');
+            }
+        }
+        
         // Create table
         let html = '<table style="width: 100%; border-collapse: collapse;">';
         html += '<thead>';
@@ -232,6 +280,7 @@ async function loadWarData() {
         html += '<th style="padding: 12px; text-align: left; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Level</th>';
         html += '<th style="padding: 12px; text-align: left; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Status</th>';
         html += '<th style="padding: 12px; text-align: left; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Last Action</th>';
+        html += '<th style="padding: 12px; text-align: center; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Fair Fight</th>';
         html += '</tr>';
         html += '</thead>';
         html += '<tbody>';
@@ -242,11 +291,25 @@ async function loadWarData() {
             const status = member.status ? (member.status.state || member.status.description || '-') : '-';
             const lastAction = member.last_action ? (member.last_action.status || member.last_action.relative || '-') : '-';
             
+            // Get fair_fight from FFScouter data
+            const stats = battlestatsMap[String(member.id)] || {};
+            const fairFight = stats.fair_fight !== undefined && stats.fair_fight !== null ? stats.fair_fight : '-';
+            
+            // Format fair_fight value
+            const formatFairFight = (value) => {
+                if (value === '-' || value === null || value === undefined) return '-';
+                if (typeof value === 'number') {
+                    return value.toFixed(2);
+                }
+                return String(value);
+            };
+            
             html += '<tr style="border-bottom: 1px solid rgba(212, 175, 55, 0.1);">';
             html += `<td style="padding: 12px; color: #f4e4bc; font-size: 1rem; font-weight: 500;">${name} <span style="color: #c0c0c0; font-size: 0.85rem;">(${member.id})</span></td>`;
             html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem;">${level}</td>`;
             html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem;">${status}</td>`;
             html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem;">${lastAction}</td>`;
+            html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem; text-align: center;">${formatFairFight(fairFight)}</td>`;
             html += '</tr>';
         });
         

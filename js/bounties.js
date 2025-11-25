@@ -136,6 +136,43 @@ async function loadBountiesData(page = null) {
             }
         }
         
+        // Collect all fair_fight values to determine min/max for color coding
+        const fairFightValues = [];
+        bountiesArray.forEach(bounty => {
+            const targetId = bounty.target_id || 'Unknown';
+            const stats = battlestatsMap[String(targetId)] || {};
+            const fairFight = stats.fair_fight;
+            if (fairFight !== undefined && fairFight !== null && typeof fairFight === 'number') {
+                fairFightValues.push(fairFight);
+            }
+        });
+        
+        // Calculate min and max fair_fight values
+        const minFairFight = fairFightValues.length > 0 ? Math.min(...fairFightValues) : 0;
+        const maxFairFight = fairFightValues.length > 0 ? Math.max(...fairFightValues) : 1;
+        const fairFightRange = maxFairFight - minFairFight;
+        
+        // Function to get color based on fair_fight value (green for min/0, red for max)
+        const getFairFightColor = (value) => {
+            if (value === '-' || value === null || value === undefined || typeof value !== 'number') {
+                return '#c0c0c0'; // Default gray for missing values
+            }
+            
+            if (fairFightRange === 0) {
+                return '#00ff00'; // All same value, return green
+            }
+            
+            // Normalize value to 0-1 range (0 = min, 1 = max)
+            const normalized = (value - minFairFight) / fairFightRange;
+            
+            // Interpolate between green (0, 255, 0) and red (255, 0, 0)
+            const red = Math.round(normalized * 255);
+            const green = Math.round((1 - normalized) * 255);
+            const blue = 0;
+            
+            return `rgb(${red}, ${green}, ${blue})`;
+        };
+        
         // Create table
         html += '<table style="width: 100%; border-collapse: collapse;">';
         html += '<thead>';
@@ -199,7 +236,9 @@ async function loadBountiesData(page = null) {
             html += `<td style="padding: 12px; color: #d4af37; font-size: 0.95rem; text-align: right; font-weight: 600;">${bsEstimateHuman}</td>`;
             html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem; text-align: right;">${formatBsEstimate(bsEstimate)}</td>`;
             html += `<td style="padding: 12px; color: #d4af37; font-size: 0.95rem; text-align: right; font-weight: 600;">${total}</td>`;
-            html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem; text-align: center;">${formatFairFight(fairFight)}</td>`;
+            // Apply color coding to Fair column (green for min/0, red for max)
+            const fairFightColor = getFairFightColor(fairFight);
+            html += `<td style="padding: 12px; color: ${fairFightColor}; font-size: 0.95rem; text-align: center; font-weight: 600;">${formatFairFight(fairFight)}</td>`;
             html += `<td style="padding: 12px; text-align: center;"><a href="${attackUrl}" target="_blank" rel="noopener noreferrer" style="color: #ff6b6b; font-size: 1.5rem; text-decoration: none; cursor: pointer; display: inline-block; transition: transform 0.2s;" title="Attack ${targetName}" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">⚔️</a></td>`;
             html += '</tr>';
         });

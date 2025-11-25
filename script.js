@@ -1142,6 +1142,36 @@ function updateProgressBars(data) {
         // City bank is at: data.money.city_bank.amount
         if (data.money.city_bank && typeof data.money.city_bank === 'object' && data.money.city_bank.amount !== undefined) {
             cityBankValue = data.money.city_bank.amount;
+            
+            // Calculate days remaining until city bank investment is released
+            if (data.money.city_bank.until !== undefined) {
+                const untilTimestamp = data.money.city_bank.until;
+                const now = Math.floor(Date.now() / 1000); // Current time in seconds
+                const secondsRemaining = untilTimestamp - now;
+                const daysRemaining = Math.ceil(secondsRemaining / (24 * 60 * 60)); // Convert to days and round up
+                
+                // Update City Bank label with days remaining
+                const cityBankLabel = document.querySelector('#cityBankValue')?.previousElementSibling;
+                if (cityBankLabel && cityBankLabel.classList.contains('money-label')) {
+                    if (daysRemaining > 0) {
+                        cityBankLabel.textContent = `City Bank (${daysRemaining} day${daysRemaining !== 1 ? 's' : ''} left)`;
+                    } else {
+                        cityBankLabel.textContent = 'City Bank';
+                    }
+                }
+            } else {
+                // Reset label if no until timestamp
+                const cityBankLabel = document.querySelector('#cityBankValue')?.previousElementSibling;
+                if (cityBankLabel && cityBankLabel.classList.contains('money-label')) {
+                    cityBankLabel.textContent = 'City Bank';
+                }
+            }
+        } else {
+            // Reset label if no city bank data
+            const cityBankLabel = document.querySelector('#cityBankValue')?.previousElementSibling;
+            if (cityBankLabel && cityBankLabel.classList.contains('money-label')) {
+                cityBankLabel.textContent = 'City Bank';
+            }
         }
         // Cayman bank is at: data.money.cayman_bank
         if (data.money.cayman_bank !== undefined) {

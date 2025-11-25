@@ -135,7 +135,8 @@ function setupTabs() {
                 if (warTab) {
                     warTab.classList.add('active');
                     console.log('War tab activated');
-                    // War tab functionality can be added here
+                    // Load war data when tab is activated
+                    loadWarData();
                 } else {
                     console.error('War tab element not found');
                 }

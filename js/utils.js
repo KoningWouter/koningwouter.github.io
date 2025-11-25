@@ -123,6 +123,11 @@ async function handleSearch() {
         
         console.log('Final currentFactionId:', State.currentFactionId);
         
+        // Check for upcoming wars if we have a faction ID
+        if (State.currentFactionId) {
+            checkUpcomingWars();
+        }
+        
         // Fetch faction details if we have a faction ID but no name
         if (State.currentFactionId && (!userData.faction || typeof userData.faction !== 'object' || !userData.faction.faction_name)) {
             console.log('Fetching faction details for display...');
@@ -569,11 +574,36 @@ function startAutoRefresh() {
             ]);
             updateProgressBars(barsData);
             updateStatus(statusData);
+            
+            // Also check for upcoming wars if we have a faction ID
+            if (State.currentFactionId) {
+                checkUpcomingWars();
+            }
         } catch (error) {
             console.error('Error refreshing data:', error);
             // Don't show error to user, just log it
         }
     }, 5000); // 5 seconds
+    
+    // Also check for wars periodically (every 30 seconds)
+    if (State.currentFactionId) {
+        // Clear any existing war check interval
+        if (State.warCheckInterval) {
+            clearInterval(State.warCheckInterval);
+        }
+        
+        State.warCheckInterval = setInterval(() => {
+            if (State.currentFactionId) {
+                checkUpcomingWars();
+            } else {
+                // Clear interval if no faction ID
+                if (State.warCheckInterval) {
+                    clearInterval(State.warCheckInterval);
+                    State.warCheckInterval = null;
+                }
+            }
+        }, 30000); // 30 seconds
+    }
 }
 
 // Stop auto-refresh
@@ -581,6 +611,10 @@ function stopAutoRefresh() {
     if (State.refreshInterval) {
         clearInterval(State.refreshInterval);
         State.refreshInterval = null;
+    }
+    if (State.warCheckInterval) {
+        clearInterval(State.warCheckInterval);
+        State.warCheckInterval = null;
     }
     stopTravelCountdown();
 }

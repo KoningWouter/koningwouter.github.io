@@ -569,6 +569,155 @@ header h1 {
     filter: drop-shadow(0 0 10px rgba(0, 0, 0, 0.5));
 }
 
+/* War button highlight when upcoming war exists */
+/* When button is active AND has upcoming war, use war styling */
+.tab-button.active.war-upcoming {
+    background: linear-gradient(135deg, rgba(255, 69, 0, 0.4) 0%, rgba(255, 140, 0, 0.4) 50%, rgba(255, 69, 0, 0.4) 100%);
+    background-size: 200% 200%;
+    border-color: rgba(255, 69, 0, 0.8);
+    color: #ffd700;
+    box-shadow: 
+        0 8px 25px rgba(255, 69, 0, 0.6),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.3),
+        0 0 35px rgba(255, 69, 0, 0.7),
+        0 0 70px rgba(255, 140, 0, 0.5);
+    text-shadow: 
+        0 0 10px rgba(255, 215, 0, 0.9),
+        0 0 20px rgba(255, 140, 0, 0.7);
+    animation: warPulse 2s ease-in-out infinite, goldShimmer 3s ease-in-out infinite;
+    position: relative;
+}
+
+.tab-button.active.war-upcoming:hover {
+    transform: translateY(-2px);
+    box-shadow: 
+        0 10px 35px rgba(255, 69, 0, 0.8),
+        inset 0 1px 0 rgba(255, 255, 255, 0.4),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.3),
+        0 0 45px rgba(255, 69, 0, 0.9),
+        0 0 90px rgba(255, 140, 0, 0.7);
+}
+
+.tab-button.active.war-upcoming .tab-icon {
+    filter: drop-shadow(0 0 15px rgba(255, 215, 0, 1)) drop-shadow(0 0 25px rgba(255, 140, 0, 0.8));
+    animation: iconPulse 1.5s ease-in-out infinite;
+}
+
+.tab-button.active.war-upcoming::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(45deg, 
+        rgba(255, 69, 0, 0.8) 0%, 
+        rgba(255, 140, 0, 0.8) 25%,
+        rgba(255, 215, 0, 0.8) 50%,
+        rgba(255, 140, 0, 0.8) 75%,
+        rgba(255, 69, 0, 0.8) 100%);
+    background-size: 300% 300%;
+    border-radius: 12px;
+    z-index: -1;
+    animation: warShine 3s linear infinite;
+    filter: blur(8px);
+    opacity: 0.7;
+}
+
+.tab-button.war-upcoming {
+    background: linear-gradient(135deg, rgba(255, 69, 0, 0.3) 0%, rgba(255, 140, 0, 0.3) 50%, rgba(255, 69, 0, 0.3) 100%);
+    background-size: 200% 200%;
+    border-color: rgba(255, 69, 0, 0.6);
+    color: #ffd700;
+    box-shadow: 
+        0 8px 25px rgba(255, 69, 0, 0.5),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.3),
+        0 0 30px rgba(255, 69, 0, 0.6),
+        0 0 60px rgba(255, 140, 0, 0.4);
+    text-shadow: 
+        0 0 10px rgba(255, 215, 0, 0.8),
+        0 0 20px rgba(255, 140, 0, 0.6);
+    animation: warPulse 2s ease-in-out infinite, goldShimmer 3s ease-in-out infinite;
+    position: relative;
+}
+
+.tab-button.war-upcoming::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(45deg, 
+        rgba(255, 69, 0, 0.8) 0%, 
+        rgba(255, 140, 0, 0.8) 25%,
+        rgba(255, 215, 0, 0.8) 50%,
+        rgba(255, 140, 0, 0.8) 75%,
+        rgba(255, 69, 0, 0.8) 100%);
+    background-size: 300% 300%;
+    border-radius: 12px;
+    z-index: -1;
+    animation: warShine 3s linear infinite;
+    filter: blur(8px);
+    opacity: 0.7;
+}
+
+.tab-button.war-upcoming:hover {
+    transform: translateY(-2px);
+    box-shadow: 
+        0 10px 35px rgba(255, 69, 0, 0.7),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.3),
+        0 0 40px rgba(255, 69, 0, 0.8),
+        0 0 80px rgba(255, 140, 0, 0.6);
+}
+
+.tab-button.war-upcoming .tab-icon {
+    filter: drop-shadow(0 0 15px rgba(255, 215, 0, 1)) drop-shadow(0 0 25px rgba(255, 140, 0, 0.8));
+    animation: iconPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes warPulse {
+    0%, 100% {
+        box-shadow: 
+            0 8px 25px rgba(255, 69, 0, 0.5),
+            inset 0 1px 0 rgba(255, 255, 255, 0.2),
+            inset 0 -1px 0 rgba(0, 0, 0, 0.3),
+            0 0 30px rgba(255, 69, 0, 0.6),
+            0 0 60px rgba(255, 140, 0, 0.4);
+    }
+    50% {
+        box-shadow: 
+            0 8px 25px rgba(255, 69, 0, 0.7),
+            inset 0 1px 0 rgba(255, 255, 255, 0.3),
+            inset 0 -1px 0 rgba(0, 0, 0, 0.3),
+            0 0 40px rgba(255, 69, 0, 0.8),
+            0 0 80px rgba(255, 140, 0, 0.6);
+    }
+}
+
+@keyframes warShine {
+    0% {
+        background-position: 0% 50%;
+    }
+    100% {
+        background-position: 200% 50%;
+    }
+}
+
+@keyframes iconPulse {
+    0%, 100% {
+        transform: scale(1);
+        filter: drop-shadow(0 0 15px rgba(255, 215, 0, 1)) drop-shadow(0 0 25px rgba(255, 140, 0, 0.8));
+    }
+    50% {
+        transform: scale(1.1);
+        filter: drop-shadow(0 0 20px rgba(255, 215, 0, 1.2)) drop-shadow(0 0 35px rgba(255, 140, 0, 1));
+    }
+}
+
 .tab-label {
     font-weight: 700;
 }

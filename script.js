@@ -3670,7 +3670,7 @@ async function loadStocksData() {
                 }
             });
             const remainingKeys = Array.from(allKeys).sort();
-            const finalKeys = [...orderedKeys, ...remainingKeys].filter(key => key !== 'stock_id');
+            const finalKeys = [...orderedKeys, ...remainingKeys].filter(key => key !== 'stock_id' && key !== 'dividend' && key !== 'benefit');
             
             // Insert "Price" column right after "name"
             const nameIndex = finalKeys.indexOf('name');
@@ -3688,6 +3688,9 @@ async function loadStocksData() {
             // Add expand/collapse column header
             html += '<th style="padding: 12px; text-align: center; vertical-align: top; color: #d4af37; font-weight: 600; font-size: 1.1rem; width: 50px;">';
             html += '</th>';
+            
+            // Add "Ready" column header
+            html += '<th style="padding: 12px; text-align: center; vertical-align: top; color: #d4af37; font-weight: 600; font-size: 1.1rem; width: 80px;">Ready</th>';
             
             // Create header row
             finalKeys.forEach(key => {
@@ -3718,6 +3721,19 @@ async function loadStocksData() {
                 } else {
                     html += '<td style="padding: 12px; text-align: center; vertical-align: top;"></td>';
                 }
+                
+                // Add "Ready" column cell - check if benefit or dividend has a value
+                const hasBenefit = stock.benefit !== undefined && stock.benefit !== null && 
+                    (typeof stock.benefit === 'object' ? Object.keys(stock.benefit).length > 0 : stock.benefit !== '');
+                const hasDividend = stock.dividend !== undefined && stock.dividend !== null && 
+                    (typeof stock.dividend === 'object' ? Object.keys(stock.dividend).length > 0 : stock.dividend !== '');
+                const isReady = hasBenefit || hasDividend;
+                
+                const readyIcon = isReady 
+                    ? '<span style="color: #4ade80; font-size: 1.2rem;" title="Active">✓</span>' 
+                    : '<span style="color: #ff6b6b; font-size: 1.2rem;" title="Inactive">✗</span>';
+                
+                html += `<td style="padding: 12px; text-align: center; vertical-align: top;">${readyIcon}</td>`;
                 
                 finalKeys.forEach(key => {
                     // Special handling for Price column

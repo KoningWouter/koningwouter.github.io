@@ -102,14 +102,6 @@ function setupTabs() {
                 } else {
                     console.error('Settings tab element not found');
                 }
-            } else if (targetTab === 'docs') {
-                const docsTab = document.getElementById('docsTab');
-                if (docsTab) {
-                    docsTab.classList.add('active');
-                    console.log('Docs tab activated');
-                } else {
-                    console.error('Docs tab element not found');
-                }
             } else if (targetTab === 'stocks') {
                 const stocksTab = document.getElementById('stocksTab');
                 if (stocksTab) {

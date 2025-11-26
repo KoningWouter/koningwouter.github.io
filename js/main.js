@@ -3,7 +3,6 @@
 
 // Initialize the page
 document.addEventListener('DOMContentLoaded', () => {
-    displayEndpoints();
     setupSearch();
     setupTabs();
     setupTravelDataToggle();

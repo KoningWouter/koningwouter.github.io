@@ -3,7 +3,6 @@
 
 // Initialize the page
 document.addEventListener('DOMContentLoaded', () => {
-    setupSearch();
     setupTabs();
     setupTravelDataToggle();
     setupApiKeyStorage();
@@ -13,16 +12,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize world map immediately
     initializeFactionMap();
     
-    // Auto-fill input with default user ID and trigger search
-    const userIdInput = document.getElementById('userIdInput');
-    if (userIdInput) {
-        userIdInput.value = '3883628';
-        
-        // Auto-trigger search after a short delay
-        setTimeout(() => {
-            handleSearch();
-        }, 500);
-    }
+    // Initialize current user based on API key (no manual search needed)
+    initializeCurrentUserFromApiKey();
 });
 
 

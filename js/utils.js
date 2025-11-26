@@ -1,64 +1,12 @@
 // Utils Module - Utility functions (search, animations, etc.)
 // Depends on: config.js, api.js, ui.js
 
-// Setup search functionality
-function setupSearch() {
-    console.log('=== setupSearch() called ===');
-    const searchBtn = document.getElementById('searchBtn');
-    const userIdInput = document.getElementById('userIdInput');
-
-    console.log('Search button element:', searchBtn);
-    console.log('User ID input element:', userIdInput);
-
-    if (!searchBtn) {
-        console.error('Search button not found!');
-        return;
-    }
-
-    if (!userIdInput) {
-        console.error('User ID input not found!');
-        return;
-    }
-
-    searchBtn.addEventListener('click', () => {
-        console.log('Search button clicked!');
-        handleSearch();
-    });
-    
-    userIdInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            console.log('Enter key pressed in input!');
-            handleSearch();
-        }
-    });
-    
-    console.log('Search event listeners attached');
-}
-
-// Handle search
-async function handleSearch() {
-    console.log('=== handleSearch() called ===');
-    const userIdInput = document.getElementById('userIdInput');
-    const userId = userIdInput ? userIdInput.value.trim() : '';
-
-    console.log('User ID entered:', userId);
-
-    if (!userId) {
-        console.log('No user ID entered');
-        showError('Please enter a user ID');
-        return;
-    }
-
-    if (!/^\d+$/.test(userId)) {
-        console.log('Invalid user ID format');
-        showError('User ID must be a number');
-        return;
-    }
-
-    console.log('Starting search for user ID:', userId);
+// Core loader: fetch user data for a given userId and initialize UI + auto-refresh
+async function loadAndDisplayUser(userId) {
+    console.log('=== loadAndDisplayUser() called with userId:', userId, '===');
 
     try {
-        console.log('About to fetch user data...');
+        console.log('About to fetch user data for userId:', userId);
         const userData = await fetchUserData(userId);
         console.log('=== USER DATA RECEIVED ===');
         console.log('Full userData object:', userData);
@@ -167,21 +115,71 @@ async function handleSearch() {
             }
         }
         
-        // Switch to Player Info tab after successful search
-        console.log('Search completed successfully, switching to Player Info tab');
+        // Switch to Player Info tab after successful load
+        console.log('User data loaded successfully, switching to Player Info tab');
         const playerInfoTabButton = document.querySelector('[data-tab="player-info"]');
         if (playerInfoTabButton) {
             playerInfoTabButton.click();
         }
-        console.log('=== handleSearch() COMPLETED ===');
+        console.log('=== loadAndDisplayUser() COMPLETED ===');
     } catch (error) {
-        console.error('=== ERROR in handleSearch() ===');
+        console.error('=== ERROR in loadAndDisplayUser() ===');
         console.error('Error:', error);
         console.error('Error message:', error.message);
         console.error('Error stack:', error.stack);
-        showError(error.message || 'Failed to fetch user information. Please check the user ID and try again.');
+        showError(error.message || 'Failed to fetch user information for the current user.');
         stopAutoRefresh();
-        console.log('=== handleSearch() ENDED WITH ERROR ===');
+        console.log('=== loadAndDisplayUser() ENDED WITH ERROR ===');
+    }
+}
+
+// Initialize current user based on the Torn API key (uses /user?selections=basic)
+async function initializeCurrentUserFromApiKey() {
+    console.log('=== initializeCurrentUserFromApiKey() called ===');
+
+    // Always use the Torn API key from settings (NOT the FFScouter key)
+    const apiKey = getApiKey();
+    if (!apiKey) {
+        showError('API key is not configured. Please enter your API key in the Settings tab.');
+        return;
+    }
+
+    try {
+        const basicUrl = `${API_BASE_URL}/user/?selections=basic&key=${apiKey}`;
+        console.log('Fetching basic user data from URL:', basicUrl.replace(apiKey, 'KEY_HIDDEN'));
+
+        const response = await fetch(basicUrl);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const basicData = await response.json();
+        console.log('Basic user API response:', basicData);
+
+        if (basicData.error) {
+            throw new Error(basicData.error.error || JSON.stringify(basicData.error));
+        }
+
+        // In the basic user response, the correct identifier is profile.id
+        let playerId = null;
+        if (basicData.profile && typeof basicData.profile === 'object' && basicData.profile.id) {
+            playerId = basicData.profile.id;
+        } else {
+            // Fallbacks, just in case, but primary is profile.id
+            playerId = basicData.player_id || basicData.user_id || basicData.id;
+        }
+
+        if (!playerId) {
+            throw new Error('Could not determine profile.id from /user?selections=basic response.');
+        }
+
+        console.log('Determined playerId from basic endpoint (using profile.id when available):', playerId);
+
+        // Load full user info and start auto-refresh using this playerId
+        await loadAndDisplayUser(playerId);
+    } catch (error) {
+        console.error('Error initializing current user from API key:', error);
+        showError(error.message || 'Failed to initialize current user from API key.');
     }
 }
 

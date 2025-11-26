@@ -31,15 +31,7 @@ function setupTabs() {
             // Add active class to clicked button and corresponding content
             button.classList.add('active');
             
-            if (targetTab === 'search') {
-                document.getElementById('searchTab').classList.add('active');
-                // Stop world map refresh when switching to another tab
-                if (State.worldMapUpdateInterval) {
-                    clearInterval(State.worldMapUpdateInterval);
-                    State.worldMapUpdateInterval = null;
-                    console.log('World map auto-refresh stopped');
-                }
-            } else if (targetTab === 'player-info') {
+            if (targetTab === 'player-info') {
                 document.getElementById('playerInfoTab').classList.add('active');
                 // Stop world map refresh when switching to another tab
                 if (State.worldMapUpdateInterval) {

@@ -296,8 +296,10 @@ async function loadBountiesData(page = null) {
                 return String(value);
             };
             
+            const profileUrl = `https://www.torn.com/profiles.php?XID=${targetId}`;
+            
             html += '<tr style="border-bottom: 1px solid rgba(212, 175, 55, 0.1);">';
-            html += `<td style="padding: 12px; color: #f4e4bc; font-size: 1rem; font-weight: 500;">${targetName} <span style="color: #c0c0c0; font-size: 0.85rem;">(${targetId})</span></td>`;
+            html += `<td style="padding: 12px; color: #f4e4bc; font-size: 1rem; font-weight: 500;"><a href="${profileUrl}" target="_blank" rel="noopener noreferrer" style="color: #f4e4bc; text-decoration: none; cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#d4af37'" onmouseout="this.style.color='#f4e4bc'">${targetName}</a> <span style="color: #c0c0c0; font-size: 0.85rem;">(${targetId})</span></td>`;
             html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem; text-align: center;">${targetLevel}</td>`;
             html += `<td style="padding: 12px; color: #d4af37; font-size: 0.95rem; text-align: right; font-weight: 600;">${rewardAmount}</td>`;
             html += `<td style="padding: 12px; color: #d4af37; font-size: 0.95rem; text-align: right; font-weight: 600;">${bsEstimateHuman}</td>`;

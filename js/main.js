@@ -24,15 +24,6 @@ document.addEventListener('DOMContentLoaded', () => {
             handleSearch();
         }, 500);
     }
-    
-    // Add button event listener for Rock Announcement
-    const announceBtn = document.getElementById('announceBtn');
-    if (announceBtn) {
-        announceBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            playWelcomeAnnouncement();
-        });
-    }
 });
 
 

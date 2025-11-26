@@ -322,14 +322,31 @@ async function loadWarData() {
         html += '<tr style="border-bottom: 2px solid rgba(212, 175, 55, 0.3);">';
         html += '<th style="padding: 12px; text-align: left; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Name</th>';
         html += '<th style="padding: 12px; text-align: left; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Level</th>';
-        html += '<th style="padding: 12px; text-align: left; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Status</th>';
         html += '<th style="padding: 12px; text-align: left; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Last Action</th>';
         html += '<th style="padding: 12px; text-align: center; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Fair Fight</th>';
         html += '<th style="padding: 12px; text-align: right; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Battle Stats</th>';
+        html += '<th style="padding: 12px; text-align: left; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Status</th>';
         html += '<th style="padding: 12px; text-align: center; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Attack</th>';
         html += '</tr>';
         html += '</thead>';
         html += '<tbody>';
+        
+        // Helper function to get status color class
+        const getStatusColorClass = (status) => {
+            if (!status || status === '-') return '';
+            const statusLower = String(status).toLowerCase();
+            if (statusLower === 'okay') {
+                return 'status-okay';
+            } else if (statusLower === 'hospital' || statusLower.includes('hospital')) {
+                return 'status-hospital';
+            } else if (statusLower === 'traveling' || statusLower.includes('traveling') || 
+                       statusLower === 'abroad' || statusLower.includes('abroad')) {
+                return 'status-travelling';
+            } else if (statusLower === 'federal' || statusLower.includes('federal')) {
+                return 'status-federal';
+            }
+            return '';
+        };
         
         membersArray.forEach(member => {
             const name = member.name || `User ${member.id}`;
@@ -352,13 +369,16 @@ async function loadWarData() {
                 return String(value);
             };
             
+            // Get status color class
+            const statusColorClass = getStatusColorClass(status);
+            
             html += '<tr style="border-bottom: 1px solid rgba(212, 175, 55, 0.1);">';
             html += `<td style="padding: 12px; color: #f4e4bc; font-size: 1rem; font-weight: 500;">${name} <span style="color: #c0c0c0; font-size: 0.85rem;">(${member.id})</span></td>`;
             html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem;">${level}</td>`;
-            html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem;">${status}</td>`;
             html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem;">${lastAction}</td>`;
             html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem; text-align: center;">${formatFairFight(fairFight)}</td>`;
             html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem; text-align: right;">${bsEstimateHuman}</td>`;
+            html += `<td style="padding: 12px; font-size: 0.95rem;" class="${statusColorClass}">${status}</td>`;
             html += `<td style="padding: 12px; text-align: center;"><a href="${attackUrl}" target="_blank" rel="noopener noreferrer" style="color: #ff6b6b; font-size: 1.5rem; text-decoration: none; cursor: pointer; display: inline-block; transition: transform 0.2s;" title="Attack ${name}" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">⚔️</a></td>`;
             html += '</tr>';
         });

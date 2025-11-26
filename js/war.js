@@ -667,6 +667,199 @@ function updateWarOnlinePlayersInTorn(membersArray) {
     onlinePlayersList.innerHTML = html;
 }
 
+// Refresh war data (table and map) using stored opponent faction ID
+async function refreshWarData() {
+    if (!State.warOpponentFactionId) {
+        console.log('No opponent faction ID stored, cannot refresh war data');
+        return;
+    }
+    
+    const warDisplay = document.getElementById('warDisplay');
+    if (!warDisplay) {
+        console.error('War display element not found in DOM');
+        return;
+    }
+    
+    const apiKey = getApiKey();
+    if (!apiKey) {
+        console.error('API key not configured');
+        return;
+    }
+    
+    try {
+        const opponentFactionId = State.warOpponentFactionId;
+        
+        // Refresh map markers
+        await loadEnemyFactionMembers(opponentFactionId);
+        
+        // Fetch opponent faction members for table
+        const membersUrl = `${API_BASE_URL}/faction/${opponentFactionId}/members?key=${apiKey}`;
+        console.log('Refreshing opponent faction members from URL:', membersUrl.replace(apiKey, 'KEY_HIDDEN'));
+        
+        const membersResponse = await fetch(membersUrl);
+        
+        if (!membersResponse.ok) {
+            throw new Error(`HTTP error! status: ${membersResponse.status}`);
+        }
+        
+        const membersData = await membersResponse.json();
+        
+        if (membersData.error) {
+            console.error('Error fetching opponent members:', membersData.error);
+            return;
+        }
+        
+        // Display members in a table
+        const members = membersData.members || {};
+        const memberIds = Object.keys(members);
+        
+        if (memberIds.length === 0) {
+            warDisplay.innerHTML = '<p style="color: #c0c0c0; font-style: italic;">No members found in opponent faction.</p>';
+            return;
+        }
+        
+        // Convert members object to array
+        let membersArray = memberIds.map(id => ({
+            id: id,
+            ...members[id]
+        }));
+        
+        // Collect all member IDs for FFScouter API call
+        const memberIdsForFFScouter = membersArray
+            .map(member => member.id)
+            .filter(id => id && id !== 'Unknown');
+        
+        // Fetch battlestats from FFScouter API if we have member IDs and API key
+        let battlestatsMap = {};
+        if (memberIdsForFFScouter.length > 0) {
+            const ffscouterApiKey = localStorage.getItem('ffscouter_api_key');
+            if (ffscouterApiKey) {
+                try {
+                    const targetsParam = memberIdsForFFScouter.join(',');
+                    const ffscouterUrl = `https://ffscouter.com/api/v1/get-stats?key=${ffscouterApiKey}&targets=${targetsParam}`;
+                    
+                    const statsResponse = await fetch(ffscouterUrl);
+                    
+                    if (statsResponse.ok) {
+                        const statsData = await statsResponse.json();
+                        
+                        // Map the response data by player ID
+                        if (Array.isArray(statsData)) {
+                            statsData.forEach(stat => {
+                                if (stat.player_id) {
+                                    const userId = String(stat.player_id);
+                                    battlestatsMap[userId] = stat;
+                                }
+                            });
+                        } else if (typeof statsData === 'object') {
+                            Object.keys(statsData).forEach(userId => {
+                                battlestatsMap[userId] = statsData[userId];
+                            });
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error fetching battlestats from FFScouter:', error);
+                }
+            }
+        }
+        
+        // Sort members by fair_fight value (ascending - lowest to highest)
+        membersArray.sort((a, b) => {
+            const statsA = battlestatsMap[String(a.id)] || {};
+            const statsB = battlestatsMap[String(b.id)] || {};
+            const fairFightA = statsA.fair_fight;
+            const fairFightB = statsB.fair_fight;
+            
+            const aIsMissing = fairFightA === undefined || fairFightA === null;
+            const bIsMissing = fairFightB === undefined || fairFightB === null;
+            
+            if (aIsMissing && bIsMissing) {
+                return 0;
+            }
+            if (aIsMissing) {
+                return -1;
+            }
+            if (bIsMissing) {
+                return 1;
+            }
+            
+            return fairFightA - fairFightB;
+        });
+        
+        // Create table (reuse the same table generation logic from loadWarData)
+        let html = '<table style="width: 100%; border-collapse: collapse;">';
+        html += '<thead>';
+        html += '<tr style="border-bottom: 2px solid rgba(212, 175, 55, 0.3);">';
+        html += '<th style="padding: 12px; text-align: left; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Name</th>';
+        html += '<th style="padding: 12px; text-align: left; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Level</th>';
+        html += '<th style="padding: 12px; text-align: left; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Last Action</th>';
+        html += '<th style="padding: 12px; text-align: center; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Fair Fight</th>';
+        html += '<th style="padding: 12px; text-align: right; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Battle Stats</th>';
+        html += '<th style="padding: 12px; text-align: left; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Status</th>';
+        html += '<th style="padding: 12px; text-align: center; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Attack</th>';
+        html += '</tr>';
+        html += '</thead>';
+        html += '<tbody>';
+        
+        // Helper function to get status color class
+        const getStatusColorClass = (status) => {
+            if (!status || status === '-') return '';
+            const statusLower = String(status).toLowerCase();
+            if (statusLower === 'okay') {
+                return 'status-okay';
+            } else if (statusLower === 'hospital' || statusLower.includes('hospital')) {
+                return 'status-hospital';
+            } else if (statusLower === 'traveling' || statusLower.includes('traveling') || 
+                       statusLower === 'abroad' || statusLower.includes('abroad')) {
+                return 'status-travelling';
+            } else if (statusLower === 'federal' || statusLower.includes('federal')) {
+                return 'status-federal';
+            }
+            return '';
+        };
+        
+        membersArray.forEach(member => {
+            const name = member.name || `User ${member.id}`;
+            const level = member.level !== undefined ? member.level : '-';
+            const status = member.status ? (member.status.state || member.status.description || '-') : '-';
+            const lastAction = member.last_action ? (member.last_action.status || member.last_action.relative || '-') : '-';
+            const attackUrl = `https://www.torn.com/loader.php?sid=attack&user2ID=${member.id}`;
+            
+            const stats = battlestatsMap[String(member.id)] || {};
+            const fairFight = stats.fair_fight !== undefined && stats.fair_fight !== null ? stats.fair_fight : '-';
+            const bsEstimateHuman = stats.bs_estimate_human !== undefined && stats.bs_estimate_human !== null ? stats.bs_estimate_human : '-';
+            
+            const formatFairFight = (value) => {
+                if (value === '-' || value === null || value === undefined) return '-';
+                if (typeof value === 'number') {
+                    return value.toFixed(2);
+                }
+                return String(value);
+            };
+            
+            const statusColorClass = getStatusColorClass(status);
+            
+            html += '<tr style="border-bottom: 1px solid rgba(212, 175, 55, 0.1);">';
+            html += `<td style="padding: 12px; color: #f4e4bc; font-size: 1rem; font-weight: 500;">${name} <span style="color: #c0c0c0; font-size: 0.85rem;">(${member.id})</span></td>`;
+            html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem;">${level}</td>`;
+            html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem;">${lastAction}</td>`;
+            html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem; text-align: center;">${formatFairFight(fairFight)}</td>`;
+            html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem; text-align: right;">${bsEstimateHuman}</td>`;
+            html += `<td style="padding: 12px; font-size: 0.95rem;" class="${statusColorClass}">${status}</td>`;
+            html += `<td style="padding: 12px; text-align: center;"><a href="${attackUrl}" target="_blank" rel="noopener noreferrer" style="color: #ff6b6b; font-size: 1.5rem; text-decoration: none; cursor: pointer; display: inline-block; transition: transform 0.2s;" title="Attack ${name}" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">⚔️</a></td>`;
+            html += '</tr>';
+        });
+        
+        html += '</tbody>';
+        html += '</table>';
+        
+        warDisplay.innerHTML = html;
+        console.log('War data refreshed successfully');
+    } catch (error) {
+        console.error('Error refreshing war data:', error);
+    }
+}
+
 // Start war map auto-refresh (every 5 seconds)
 function startWarMapUpdates() {
     // Clear any existing interval
@@ -674,15 +867,15 @@ function startWarMapUpdates() {
         clearInterval(State.warMapUpdateInterval);
     }
     
-    // Refresh every 5 seconds
+    // Refresh both table and map every 5 seconds
     State.warMapUpdateInterval = setInterval(async () => {
         if (State.warOpponentFactionId) {
-            console.log('Auto-refreshing war map data...');
-            await loadEnemyFactionMembers(State.warOpponentFactionId);
+            console.log('Auto-refreshing war data (table and map)...');
+            await refreshWarData();
         }
     }, 5000); // 5 seconds
     
-    console.log('War map auto-refresh started (every 5 seconds)');
+    console.log('War data auto-refresh started (every 5 seconds)');
 }
 
 // Stop war map auto-refresh

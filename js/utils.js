@@ -138,6 +138,14 @@ async function handleSearch() {
         updateProgressBars(userData);
         console.log('Calling updateStatus...');
         updateStatus(userData);
+        // Update total stocks value in the Money card
+        try {
+            if (typeof updateStocksTotalInMoneyCard === 'function') {
+                updateStocksTotalInMoneyCard();
+            }
+        } catch (stocksError) {
+            console.error('Error updating stocks total in Money card after search:', stocksError);
+        }
         console.log('Calling startAutoRefresh...');
         startAutoRefresh();
         console.log('All display functions called');
@@ -559,6 +567,15 @@ function startAutoRefresh() {
             ]);
             updateProgressBars(barsData);
             updateStatus(statusData);
+            
+            // Also refresh total stocks value in the Money card
+            try {
+                if (typeof updateStocksTotalInMoneyCard === 'function') {
+                    await updateStocksTotalInMoneyCard();
+                }
+            } catch (stocksError) {
+                console.error('Error updating stocks total in Money card during auto-refresh:', stocksError);
+            }
             
             // Also check for upcoming wars if we have a faction ID
             if (State.currentFactionId) {

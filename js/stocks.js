@@ -1,6 +1,125 @@
 // Stocks Module - Stocks-related functions
 // Depends on: config.js, api.js
 
+// Calculate and display total current value of all stocks in the Money card
+async function updateStocksTotalInMoneyCard() {
+    console.log('=== updateStocksTotalInMoneyCard() called ===');
+
+    const stocksTotalElement = document.getElementById('stocksTotalValue');
+    if (!stocksTotalElement) {
+        console.warn('stocksTotalValue element not found in DOM');
+        return;
+    }
+
+    const apiKey = getApiKey();
+    if (!apiKey) {
+        console.error('API key not configured, cannot fetch stocks total');
+        stocksTotalElement.textContent = '-';
+        return;
+    }
+
+    if (!State.currentUserId) {
+        console.warn('No current user selected, cannot fetch stocks total');
+        stocksTotalElement.textContent = '-';
+        return;
+    }
+
+    try {
+        // Ensure we have current stock prices loaded
+        await fetchStockNames();
+
+        const stocksUrl = `${API_BASE_URL}/user/${State.currentUserId}?selections=stocks&key=${apiKey}`;
+        console.log('Fetching user stocks for Money card from URL:', stocksUrl.replace(apiKey, 'KEY_HIDDEN'));
+
+        const response = await fetch(stocksUrl);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log('User stocks API response status:', response.status);
+        console.log('User stocks API response data:', data);
+
+        if (data.error) {
+            console.error('Error fetching user stocks for Money card:', data.error);
+            stocksTotalElement.textContent = '-';
+            return;
+        }
+
+        const stocks = data.stocks || {};
+        const stockIds = Object.keys(stocks);
+
+        if (stockIds.length === 0) {
+            // User has no stocks
+            stocksTotalElement.textContent = '$0';
+            return;
+        }
+
+        let totalCurrentValue = 0;
+
+        stockIds.forEach(stockId => {
+            const stock = stocks[stockId] || {};
+
+            // Determine total number of shares for this stock
+            let totalShares = 0;
+            if (stock.total_shares !== undefined && stock.total_shares !== null) {
+                totalShares = Number(stock.total_shares) || 0;
+            } else if (stock.transactions) {
+                // Fallback: sum shares from transactions if total_shares is not present
+                if (Array.isArray(stock.transactions)) {
+                    stock.transactions.forEach(tx => {
+                        if (tx && tx.shares !== undefined && tx.shares !== null) {
+                            totalShares += Number(tx.shares) || 0;
+                        }
+                    });
+                } else if (typeof stock.transactions === 'object') {
+                    Object.values(stock.transactions).forEach(tx => {
+                        if (tx && tx.shares !== undefined && tx.shares !== null) {
+                            totalShares += Number(tx.shares) || 0;
+                        }
+                    });
+                }
+            }
+
+            if (totalShares <= 0) {
+                return;
+            }
+
+            // Get current price for this stock
+            let currentPrice = State.stockPricesMap[stockId];
+            if (currentPrice === undefined && stock.current_price !== undefined) {
+                currentPrice = stock.current_price;
+            }
+
+            if (currentPrice === undefined || currentPrice === null) {
+                return;
+            }
+
+            const currentValue = Number(currentPrice) * totalShares;
+            if (!isNaN(currentValue) && currentValue > 0) {
+                totalCurrentValue += currentValue;
+            }
+        });
+
+        // Format and display total current value
+        const formatTotal = (value) => {
+            if (typeof value === 'number' && !isNaN(value)) {
+                return '$' + value.toLocaleString('en-US', {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0
+                });
+            }
+            return '-';
+        };
+
+        stocksTotalElement.textContent = formatTotal(totalCurrentValue);
+        console.log('Total stocks value for Money card:', totalCurrentValue);
+    } catch (error) {
+        console.error('Error calculating total stocks value for Money card:', error);
+        stocksTotalElement.textContent = '-';
+    }
+}
+
 // Load and display stock data from Torn API
 async function loadStocksData() {
     console.log('=== loadStocksData() called ===');

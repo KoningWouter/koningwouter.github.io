@@ -500,7 +500,7 @@ header h1 {
     border-radius: 12px;
     color: #c0c0c0;
     font-family: 'Cinzel', serif;
-    font-size: 0.95rem;
+    font-size: 0.7125rem;
     font-weight: 600;
     letter-spacing: 1.5px;
     text-transform: uppercase;
@@ -1671,7 +1671,7 @@ header h1 {
 
 .search-button {
     padding: 14px 35px;
-    font-size: 0.95rem;
+    font-size: 0.7125rem;
     font-weight: 700;
     background: linear-gradient(135deg, #d4af37 0%, #b8941f 50%, #d4af37 100%);
     background-size: 200% 200%;
@@ -2035,7 +2035,7 @@ header h1 {
     border: 1px solid rgba(212, 175, 55, 0.4);
     border-radius: 8px;
     color: #f4e4bc;
-    font-size: 1rem;
+    font-size: 0.75rem;
     font-family: 'Cinzel', serif;
     font-weight: 600;
     letter-spacing: 1px;

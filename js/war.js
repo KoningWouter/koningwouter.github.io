@@ -316,6 +316,42 @@ async function loadWarData() {
             return fairFightA - fairFightB;
         });
         
+        // Collect all fair_fight values to determine min/max for color coding
+        const fairFightValues = [];
+        membersArray.forEach(member => {
+            const stats = battlestatsMap[String(member.id)] || {};
+            const fairFight = stats.fair_fight;
+            if (fairFight !== undefined && fairFight !== null && typeof fairFight === 'number') {
+                fairFightValues.push(fairFight);
+            }
+        });
+        
+        // Calculate min and max fair_fight values
+        const minFairFight = fairFightValues.length > 0 ? Math.min(...fairFightValues) : 0;
+        const maxFairFight = fairFightValues.length > 0 ? Math.max(...fairFightValues) : 1;
+        const fairFightRange = maxFairFight - minFairFight;
+        
+        // Function to get color based on fair_fight value (green for min/0, red for max)
+        const getFairFightColor = (value) => {
+            if (value === '-' || value === null || value === undefined || typeof value !== 'number') {
+                return '#c0c0c0'; // Default gray for missing values
+            }
+            
+            if (fairFightRange === 0) {
+                return '#00ff00'; // All same value, return green
+            }
+            
+            // Normalize value to 0-1 range (0 = min, 1 = max)
+            const normalized = (value - minFairFight) / fairFightRange;
+            
+            // Interpolate between green (0, 255, 0) and red (255, 0, 0)
+            const red = Math.round(normalized * 255);
+            const green = Math.round((1 - normalized) * 255);
+            const blue = 0;
+            
+            return `rgb(${red}, ${green}, ${blue})`;
+        };
+        
         // Create table
         let html = '<table style="width: 100%; border-collapse: collapse;">';
         html += '<thead>';
@@ -371,13 +407,15 @@ async function loadWarData() {
             
             // Get status color class
             const statusColorClass = getStatusColorClass(status);
-            const profileUrl = `https://www.torn.com/profiles.php?XID=${member.id}`;
+            
+            // Get color for Fair Fight column
+            const fairFightColor = getFairFightColor(fairFight);
             
             html += '<tr style="border-bottom: 1px solid rgba(212, 175, 55, 0.1);">';
-            html += `<td style="padding: 12px; color: #f4e4bc; font-size: 1rem; font-weight: 500;"><a href="${profileUrl}" target="_blank" rel="noopener noreferrer" style="color: #f4e4bc; text-decoration: none; cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#d4af37'" onmouseout="this.style.color='#f4e4bc'">${name}</a> <span style="color: #c0c0c0; font-size: 0.85rem;">(${member.id})</span></td>`;
+            html += `<td style="padding: 12px; color: #f4e4bc; font-size: 1rem; font-weight: 500;">${name} <span style="color: #c0c0c0; font-size: 0.85rem;">(${member.id})</span></td>`;
             html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem;">${level}</td>`;
             html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem;">${lastAction}</td>`;
-            html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem; text-align: center;">${formatFairFight(fairFight)}</td>`;
+            html += `<td style="padding: 12px; color: ${fairFightColor}; font-size: 0.95rem; text-align: center; font-weight: 600;">${formatFairFight(fairFight)}</td>`;
             html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem; text-align: right;">${bsEstimateHuman}</td>`;
             html += `<td style="padding: 12px; font-size: 0.95rem;" class="${statusColorClass}">${status}</td>`;
             html += `<td style="padding: 12px; text-align: center;"><a href="${attackUrl}" target="_blank" rel="noopener noreferrer" style="color: #ff6b6b; font-size: 1.5rem; text-decoration: none; cursor: pointer; display: inline-block; transition: transform 0.2s;" title="Attack ${name}" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">⚔️</a></td>`;
@@ -787,6 +825,42 @@ async function refreshWarData() {
             return fairFightA - fairFightB;
         });
         
+        // Collect all fair_fight values to determine min/max for color coding
+        const fairFightValues = [];
+        membersArray.forEach(member => {
+            const stats = battlestatsMap[String(member.id)] || {};
+            const fairFight = stats.fair_fight;
+            if (fairFight !== undefined && fairFight !== null && typeof fairFight === 'number') {
+                fairFightValues.push(fairFight);
+            }
+        });
+        
+        // Calculate min and max fair_fight values
+        const minFairFight = fairFightValues.length > 0 ? Math.min(...fairFightValues) : 0;
+        const maxFairFight = fairFightValues.length > 0 ? Math.max(...fairFightValues) : 1;
+        const fairFightRange = maxFairFight - minFairFight;
+        
+        // Function to get color based on fair_fight value (green for min/0, red for max)
+        const getFairFightColor = (value) => {
+            if (value === '-' || value === null || value === undefined || typeof value !== 'number') {
+                return '#c0c0c0'; // Default gray for missing values
+            }
+            
+            if (fairFightRange === 0) {
+                return '#00ff00'; // All same value, return green
+            }
+            
+            // Normalize value to 0-1 range (0 = min, 1 = max)
+            const normalized = (value - minFairFight) / fairFightRange;
+            
+            // Interpolate between green (0, 255, 0) and red (255, 0, 0)
+            const red = Math.round(normalized * 255);
+            const green = Math.round((1 - normalized) * 255);
+            const blue = 0;
+            
+            return `rgb(${red}, ${green}, ${blue})`;
+        };
+        
         // Create table (reuse the same table generation logic from loadWarData)
         let html = '<table style="width: 100%; border-collapse: collapse;">';
         html += '<thead>';
@@ -839,13 +913,15 @@ async function refreshWarData() {
             };
             
             const statusColorClass = getStatusColorClass(status);
-            const profileUrl = `https://www.torn.com/profiles.php?XID=${member.id}`;
+            
+            // Get color for Fair Fight column
+            const fairFightColor = getFairFightColor(fairFight);
             
             html += '<tr style="border-bottom: 1px solid rgba(212, 175, 55, 0.1);">';
-            html += `<td style="padding: 12px; color: #f4e4bc; font-size: 1rem; font-weight: 500;"><a href="${profileUrl}" target="_blank" rel="noopener noreferrer" style="color: #f4e4bc; text-decoration: none; cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#d4af37'" onmouseout="this.style.color='#f4e4bc'">${name}</a> <span style="color: #c0c0c0; font-size: 0.85rem;">(${member.id})</span></td>`;
+            html += `<td style="padding: 12px; color: #f4e4bc; font-size: 1rem; font-weight: 500;">${name} <span style="color: #c0c0c0; font-size: 0.85rem;">(${member.id})</span></td>`;
             html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem;">${level}</td>`;
             html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem;">${lastAction}</td>`;
-            html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem; text-align: center;">${formatFairFight(fairFight)}</td>`;
+            html += `<td style="padding: 12px; color: ${fairFightColor}; font-size: 0.95rem; text-align: center; font-weight: 600;">${formatFairFight(fairFight)}</td>`;
             html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem; text-align: right;">${bsEstimateHuman}</td>`;
             html += `<td style="padding: 12px; font-size: 0.95rem;" class="${statusColorClass}">${status}</td>`;
             html += `<td style="padding: 12px; text-align: center;"><a href="${attackUrl}" target="_blank" rel="noopener noreferrer" style="color: #ff6b6b; font-size: 1.5rem; text-decoration: none; cursor: pointer; display: inline-block; transition: transform 0.2s;" title="Attack ${name}" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">⚔️</a></td>`;

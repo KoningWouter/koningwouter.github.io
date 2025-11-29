@@ -1,5 +1,6 @@
 # Code Refactoring Guide
 # test
+# test 2
 
 ## Overview
 The `script.js` file (4295 lines) is being refactored into multiple modular files for better maintainability and readability.

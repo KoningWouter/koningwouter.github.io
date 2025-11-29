@@ -3,7 +3,7 @@
 
 // Update progress bars
 function updateProgressBars(data) {
-    console.log('=== updateProgressBars called ===');
+    console.log('=== updateProgressBars called ====');
     console.log('Data received:', data);
     console.log('data.bars:', data.bars);
     console.log('data.life:', data.life);

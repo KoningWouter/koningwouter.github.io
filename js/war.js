@@ -102,7 +102,14 @@ function formatElapsedTime(seconds) {
 // Update war clock display
 function updateWarClock() {
     const warClock = document.getElementById('warClock');
-    if (!warClock || !State.warStartTime) {
+    if (!warClock) {
+        console.warn('War clock element not found');
+        return;
+    }
+    
+    if (!State.warStartTime) {
+        console.warn('No war start time set, cannot update clock');
+        warClock.textContent = '⏱️ 00:00:00';
         return;
     }
     
@@ -111,6 +118,11 @@ function updateWarClock() {
     const formattedTime = formatElapsedTime(elapsed);
     
     warClock.textContent = `⏱️ ${formattedTime}`;
+    
+    // Debug log every 10 seconds to verify it's updating
+    if (elapsed % 10 === 0) {
+        console.log('War clock update - elapsed:', elapsed, 'formatted:', formattedTime, 'startTime:', State.warStartTime, 'now:', now);
+    }
 }
 
 // Start war clock
@@ -118,23 +130,32 @@ function startWarClock(startTimestamp) {
     // Stop any existing clock
     stopWarClock();
     
-    if (!startTimestamp) {
-        console.log('No start timestamp provided for war clock');
+    if (!startTimestamp || startTimestamp === 0) {
+        console.log('No valid start timestamp provided for war clock:', startTimestamp);
         return;
     }
     
     // Store start time (convert to seconds if it's in milliseconds)
     State.warStartTime = startTimestamp > 10000000000 ? Math.floor(startTimestamp / 1000) : startTimestamp;
     
+    console.log('Starting war clock - startTimestamp:', startTimestamp, 'stored as:', State.warStartTime);
+    
     // Update immediately
     updateWarClock();
+    
+    // Check if clock element exists
+    const warClock = document.getElementById('warClock');
+    if (!warClock) {
+        console.error('War clock element not found in DOM');
+        return;
+    }
     
     // Update every second
     State.warClockInterval = setInterval(() => {
         updateWarClock();
     }, 1000);
     
-    console.log('War clock started with start time:', State.warStartTime);
+    console.log('War clock started successfully with start time:', State.warStartTime, 'interval ID:', State.warClockInterval);
 }
 
 // Stop war clock
@@ -167,6 +188,9 @@ function updateWarScoreDisplay(warsData) {
     }
     
     try {
+        // Log the full warsData structure for debugging
+        console.log('=== updateWarScoreDisplay - Full warsData ===', warsData);
+        
         let teamA = null;
         let teamB = null;
         let scoreA = null;
@@ -175,6 +199,7 @@ function updateWarScoreDisplay(warsData) {
         
         // Try to find war data with factions and scores
         if (warsData && warsData.wars) {
+            console.log('warsData.wars structure:', warsData.wars);
             // Check ranked wars first
             if (warsData.wars.ranked && warsData.wars.ranked.factions && Array.isArray(warsData.wars.ranked.factions)) {
                 const ranked = warsData.wars.ranked;
@@ -184,9 +209,16 @@ function updateWarScoreDisplay(warsData) {
                     teamB = factions[1].name || 'Team B';
                     scoreA = factions[0].score !== undefined ? factions[0].score : null;
                     scoreB = factions[1].score !== undefined ? factions[1].score : null;
-                    // Get start time from ranked war
-                    if (ranked.start !== undefined && ranked.start !== null) {
+                    // Get start time from ranked war - check multiple possible locations
+                    if (ranked.start !== undefined && ranked.start !== null && ranked.start !== 0) {
                         startTime = ranked.start;
+                        console.log('Found start time in ranked.start:', startTime);
+                    } else if (ranked.start_time !== undefined && ranked.start_time !== null && ranked.start_time !== 0) {
+                        startTime = ranked.start_time;
+                        console.log('Found start time in ranked.start_time:', startTime);
+                    } else {
+                        console.warn('No start time found in ranked war data. Available keys:', Object.keys(ranked));
+                        console.log('Full ranked object:', ranked);
                     }
                 }
             }
@@ -235,13 +267,17 @@ function updateWarScoreDisplay(warsData) {
             warScoreTeamBScore.textContent = scoreBStr;
             
             // Start/update the clock if we have a start time
-            if (startTime) {
+            if (startTime && startTime !== 0) {
                 // Only restart clock if start time changed or clock isn't running
                 const startTimeSeconds = startTime > 10000000000 ? Math.floor(startTime / 1000) : startTime;
+                console.log('Starting war clock with startTime:', startTime, 'converted to seconds:', startTimeSeconds);
                 if (State.warStartTime !== startTimeSeconds || !State.warClockInterval) {
                     startWarClock(startTime);
+                } else {
+                    console.log('Clock already running with same start time, skipping restart');
                 }
             } else {
+                console.warn('No valid start time found for war clock. startTime:', startTime);
                 stopWarClock();
             }
             

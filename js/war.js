@@ -90,6 +90,69 @@ function removeWarButtonHighlight() {
     }
 }
 
+// Format elapsed time as HH:MM:SS
+function formatElapsedTime(seconds) {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+}
+
+// Update war clock display
+function updateWarClock() {
+    const warClock = document.getElementById('warClock');
+    if (!warClock || !State.warStartTime) {
+        return;
+    }
+    
+    const now = Math.floor(Date.now() / 1000); // Current time in seconds
+    const elapsed = Math.max(0, now - State.warStartTime);
+    const formattedTime = formatElapsedTime(elapsed);
+    
+    warClock.textContent = `⏱️ ${formattedTime}`;
+}
+
+// Start war clock
+function startWarClock(startTimestamp) {
+    // Stop any existing clock
+    stopWarClock();
+    
+    if (!startTimestamp) {
+        console.log('No start timestamp provided for war clock');
+        return;
+    }
+    
+    // Store start time (convert to seconds if it's in milliseconds)
+    State.warStartTime = startTimestamp > 10000000000 ? Math.floor(startTimestamp / 1000) : startTimestamp;
+    
+    // Update immediately
+    updateWarClock();
+    
+    // Update every second
+    State.warClockInterval = setInterval(() => {
+        updateWarClock();
+    }, 1000);
+    
+    console.log('War clock started with start time:', State.warStartTime);
+}
+
+// Stop war clock
+function stopWarClock() {
+    if (State.warClockInterval) {
+        clearInterval(State.warClockInterval);
+        State.warClockInterval = null;
+    }
+    State.warStartTime = null;
+    
+    const warClock = document.getElementById('warClock');
+    if (warClock) {
+        warClock.textContent = '⏱️ 00:00:00';
+    }
+    
+    console.log('War clock stopped');
+}
+
 // Update war score display
 function updateWarScoreDisplay(warsData) {
     const warScoreTeamAName = document.getElementById('warScoreTeamAName');
@@ -108,17 +171,23 @@ function updateWarScoreDisplay(warsData) {
         let teamB = null;
         let scoreA = null;
         let scoreB = null;
+        let startTime = null;
         
         // Try to find war data with factions and scores
         if (warsData && warsData.wars) {
             // Check ranked wars first
             if (warsData.wars.ranked && warsData.wars.ranked.factions && Array.isArray(warsData.wars.ranked.factions)) {
-                const factions = warsData.wars.ranked.factions;
+                const ranked = warsData.wars.ranked;
+                const factions = ranked.factions;
                 if (factions.length >= 2) {
                     teamA = factions[0].name || 'Team A';
                     teamB = factions[1].name || 'Team B';
                     scoreA = factions[0].score !== undefined ? factions[0].score : null;
                     scoreB = factions[1].score !== undefined ? factions[1].score : null;
+                    // Get start time from ranked war
+                    if (ranked.start !== undefined && ranked.start !== null) {
+                        startTime = ranked.start;
+                    }
                 }
             }
             
@@ -130,6 +199,10 @@ function updateWarScoreDisplay(warsData) {
                     teamB = raid.factions[1].name || 'Team B';
                     scoreA = raid.factions[0].score !== undefined ? raid.factions[0].score : null;
                     scoreB = raid.factions[1].score !== undefined ? raid.factions[1].score : null;
+                    // Get start time from raid if available
+                    if (raid.start !== undefined && raid.start !== null) {
+                        startTime = raid.start;
+                    }
                 }
             }
             
@@ -141,6 +214,10 @@ function updateWarScoreDisplay(warsData) {
                     teamB = territoryWar.factions[1].name || 'Team B';
                     scoreA = territoryWar.factions[0].score !== undefined ? territoryWar.factions[0].score : null;
                     scoreB = territoryWar.factions[1].score !== undefined ? territoryWar.factions[1].score : null;
+                    // Get start time from territory war if available
+                    if (territoryWar.start !== undefined && territoryWar.start !== null) {
+                        startTime = territoryWar.start;
+                    }
                 }
             }
         }
@@ -157,17 +234,30 @@ function updateWarScoreDisplay(warsData) {
             const scoreBStr = scoreB !== null && scoreB !== undefined ? String(scoreB) : '-';
             warScoreTeamBScore.textContent = scoreBStr;
             
+            // Start/update the clock if we have a start time
+            if (startTime) {
+                // Only restart clock if start time changed or clock isn't running
+                const startTimeSeconds = startTime > 10000000000 ? Math.floor(startTime / 1000) : startTime;
+                if (State.warStartTime !== startTimeSeconds || !State.warClockInterval) {
+                    startWarClock(startTime);
+                }
+            } else {
+                stopWarClock();
+            }
+            
             // Show the cards container
             warScoreCardsContainer.style.display = 'block';
-            console.log('War score displayed:', { teamA, teamB, scoreA, scoreB });
+            console.log('War score displayed:', { teamA, teamB, scoreA, scoreB, startTime });
         } else {
             // Hide the cards container if no war data
             warScoreCardsContainer.style.display = 'none';
+            stopWarClock();
             console.log('No war score data found');
         }
     } catch (error) {
         console.error('Error updating war score display:', error);
         warScoreCardsContainer.style.display = 'none';
+        stopWarClock();
     }
 }
 
@@ -1212,6 +1302,8 @@ function stopWarMapUpdates() {
         State.warMapUpdateInterval = null;
         console.log('War map auto-refresh stopped');
     }
+    // Also stop the clock when stopping war updates
+    stopWarClock();
 }
 
 // Make functions available globally

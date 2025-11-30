@@ -222,7 +222,9 @@ const State = {
     warMapMarkers: [],
     warTornCountMarker: null,
     warMapUpdateInterval: null,
-    warOpponentFactionId: null
+    warOpponentFactionId: null,
+    warClockInterval: null,
+    warStartTime: null
 };
 
 const MAX_MAP_INIT_RETRIES = 10;

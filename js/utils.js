@@ -97,18 +97,26 @@ async function loadAndDisplayUser(userId) {
         
         // Fetch and display FFScouter battlestats
         try {
+            console.log('Fetching FFScouter battlestats for userId:', userId);
             const ffscouterStats = await fetchFFScouterBattlestats(userId);
+            console.log('FFScouter stats received:', ffscouterStats);
+            
             if (ffscouterStats && typeof updateFFScouterBattlestats === 'function') {
+                console.log('Calling updateFFScouterBattlestats with:', ffscouterStats);
                 updateFFScouterBattlestats(ffscouterStats);
             } else if (ffscouterStats === null) {
+                console.log('FFScouter stats is null, hiding card');
                 // API key not configured or no data, hide the card
                 const card = document.getElementById('ffscouterBattlestatsCard');
                 if (card) {
                     card.classList.add('hidden');
                 }
+            } else {
+                console.warn('FFScouter stats received but updateFFScouterBattlestats function not found or stats invalid');
             }
         } catch (ffscouterError) {
             console.error('Error fetching FFScouter battlestats:', ffscouterError);
+            console.error('Error stack:', ffscouterError.stack);
             // Hide the card on error
             const card = document.getElementById('ffscouterBattlestatsCard');
             if (card) {

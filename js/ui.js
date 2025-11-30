@@ -331,19 +331,30 @@ function updateBattleStats(data) {
 // Update FFScouter battlestats display
 function updateFFScouterBattlestats(statsData) {
     const card = document.getElementById('ffscouterBattlestatsCard');
-    if (!card) return;
+    if (!card) {
+        console.error('FFScouter battlestats card element not found');
+        return;
+    }
     
     // Show card if we have data, hide if we don't
     if (!statsData) {
+        console.log('No statsData provided, hiding FFScouter card');
         card.classList.add('hidden');
         return;
     }
+    
+    console.log('Updating FFScouter battlestats card with data:', statsData);
+    console.log('bs_estimate_human in statsData:', statsData.bs_estimate_human);
+    console.log('bs_estimate_human type:', typeof statsData.bs_estimate_human);
     
     card.classList.remove('hidden');
     
     // Format values
     const formatValue = (value) => {
-        if (value === null || value === undefined) return '-';
+        if (value === null || value === undefined) {
+            console.warn('formatValue received null/undefined:', value);
+            return '-';
+        }
         if (typeof value === 'number') {
             return value.toLocaleString('en-US', { 
                 minimumFractionDigits: 0, 
@@ -356,7 +367,11 @@ function updateFFScouterBattlestats(statsData) {
     // Update BS Estimate (Human)
     const bsEstimateHumanElement = document.getElementById('ffscouterBSEstimateHuman');
     if (bsEstimateHumanElement) {
-        bsEstimateHumanElement.textContent = formatValue(statsData.bs_estimate_human);
+        const formattedValue = formatValue(statsData.bs_estimate_human);
+        console.log('Setting bs_estimate_human to:', formattedValue);
+        bsEstimateHumanElement.textContent = formattedValue;
+    } else {
+        console.error('ffscouterBSEstimateHuman element not found');
     }
     
     console.log('FFScouter battlestats updated:', statsData);

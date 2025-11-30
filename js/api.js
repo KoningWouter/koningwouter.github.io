@@ -268,29 +268,69 @@ async function fetchFFScouterBattlestats(userId) {
     try {
         const ffscouterUrl = `https://ffscouter.com/api/v1/get-stats?key=${ffscouterApiKey}&targets=${userId}`;
         console.log('Fetching battlestats from FFScouter API for user:', userId);
+        console.log('FFScouter API URL:', ffscouterUrl.replace(ffscouterApiKey, 'KEY_HIDDEN'));
         
         const statsResponse = await fetch(ffscouterUrl);
         
         if (!statsResponse.ok) {
-            console.warn('FFScouter API request failed:', statsResponse.status);
+            console.warn('FFScouter API request failed:', statsResponse.status, statsResponse.statusText);
+            const errorText = await statsResponse.text();
+            console.warn('FFScouter API error response:', errorText);
             return null;
         }
         
         const statsData = await statsResponse.json();
         console.log('FFScouter API response:', statsData);
+        console.log('FFScouter API response type:', typeof statsData);
+        console.log('FFScouter API response is array:', Array.isArray(statsData));
         
         // The API returns an array, find the entry for this user
+        let userStats = null;
         if (Array.isArray(statsData)) {
-            const userStats = statsData.find(stat => stat.player_id == userId);
-            return userStats || null;
-        } else if (typeof statsData === 'object' && statsData[userId]) {
-            // If it's an object keyed by user ID
-            return statsData[userId];
+            console.log('FFScouter API returned array with', statsData.length, 'items');
+            // Try both string and number comparison for player_id
+            userStats = statsData.find(stat => {
+                const statPlayerId = stat.player_id;
+                return statPlayerId == userId || String(statPlayerId) === String(userId) || Number(statPlayerId) === Number(userId);
+            });
+            console.log('Found user stats in array:', userStats);
+            if (!userStats) {
+                console.log('Searching for userId:', userId, 'in array items:');
+                statsData.forEach((stat, index) => {
+                    console.log(`  [${index}] player_id:`, stat.player_id, 'type:', typeof stat.player_id);
+                });
+            }
+        } else if (typeof statsData === 'object' && statsData !== null) {
+            // If it's an object keyed by user ID, try both string and number keys
+            const userIdStr = String(userId);
+            const userIdNum = Number(userId);
+            if (statsData[userIdStr]) {
+                userStats = statsData[userIdStr];
+                console.log('Found user stats in object with string key:', userStats);
+            } else if (statsData[userIdNum]) {
+                userStats = statsData[userIdNum];
+                console.log('Found user stats in object with number key:', userStats);
+            } else if (statsData[userId]) {
+                userStats = statsData[userId];
+                console.log('Found user stats in object with direct key:', userStats);
+            } else {
+                console.log('User ID not found in response object. Available keys:', Object.keys(statsData));
+                console.log('Looking for userId:', userId, 'as string:', userIdStr, 'as number:', userIdNum);
+            }
         }
         
-        return null;
+        if (userStats) {
+            console.log('User stats found:', userStats);
+            console.log('bs_estimate_human value:', userStats.bs_estimate_human);
+            console.log('bs_estimate_human type:', typeof userStats.bs_estimate_human);
+        } else {
+            console.warn('No user stats found for userId:', userId);
+        }
+        
+        return userStats || null;
     } catch (error) {
         console.error('Error fetching battlestats from FFScouter:', error);
+        console.error('Error details:', error.message, error.stack);
         return null;
     }
 }

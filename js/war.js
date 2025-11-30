@@ -90,6 +90,87 @@ function removeWarButtonHighlight() {
     }
 }
 
+// Update war score display
+function updateWarScoreDisplay(warsData) {
+    const warScoreTeamAName = document.getElementById('warScoreTeamAName');
+    const warScoreTeamAScore = document.getElementById('warScoreTeamAScore');
+    const warScoreTeamBName = document.getElementById('warScoreTeamBName');
+    const warScoreTeamBScore = document.getElementById('warScoreTeamBScore');
+    const warScoreCardsContainer = document.getElementById('warScoreCardsContainer');
+    
+    if (!warScoreTeamAName || !warScoreTeamAScore || !warScoreTeamBName || !warScoreTeamBScore || !warScoreCardsContainer) {
+        console.error('War score display elements not found');
+        return;
+    }
+    
+    try {
+        let teamA = null;
+        let teamB = null;
+        let scoreA = null;
+        let scoreB = null;
+        
+        // Try to find war data with factions and scores
+        if (warsData && warsData.wars) {
+            // Check ranked wars first
+            if (warsData.wars.ranked && warsData.wars.ranked.factions && Array.isArray(warsData.wars.ranked.factions)) {
+                const factions = warsData.wars.ranked.factions;
+                if (factions.length >= 2) {
+                    teamA = factions[0].name || 'Team A';
+                    teamB = factions[1].name || 'Team B';
+                    scoreA = factions[0].score !== undefined ? factions[0].score : null;
+                    scoreB = factions[1].score !== undefined ? factions[1].score : null;
+                }
+            }
+            
+            // If not found in ranked, check raids
+            if (!teamA && warsData.wars.raids && Array.isArray(warsData.wars.raids) && warsData.wars.raids.length > 0) {
+                const raid = warsData.wars.raids[0];
+                if (raid.factions && Array.isArray(raid.factions) && raid.factions.length >= 2) {
+                    teamA = raid.factions[0].name || 'Team A';
+                    teamB = raid.factions[1].name || 'Team B';
+                    scoreA = raid.factions[0].score !== undefined ? raid.factions[0].score : null;
+                    scoreB = raid.factions[1].score !== undefined ? raid.factions[1].score : null;
+                }
+            }
+            
+            // If not found in raids, check territory
+            if (!teamA && warsData.wars.territory && Array.isArray(warsData.wars.territory) && warsData.wars.territory.length > 0) {
+                const territoryWar = warsData.wars.territory[0];
+                if (territoryWar.factions && Array.isArray(territoryWar.factions) && territoryWar.factions.length >= 2) {
+                    teamA = territoryWar.factions[0].name || 'Team A';
+                    teamB = territoryWar.factions[1].name || 'Team B';
+                    scoreA = territoryWar.factions[0].score !== undefined ? territoryWar.factions[0].score : null;
+                    scoreB = territoryWar.factions[1].score !== undefined ? territoryWar.factions[1].score : null;
+                }
+            }
+        }
+        
+        // Display the scores if we have the data
+        if (teamA && teamB) {
+            // Update Team A card (left)
+            warScoreTeamAName.textContent = teamA;
+            const scoreAStr = scoreA !== null && scoreA !== undefined ? String(scoreA) : '-';
+            warScoreTeamAScore.textContent = scoreAStr;
+            
+            // Update Team B card (right)
+            warScoreTeamBName.textContent = teamB;
+            const scoreBStr = scoreB !== null && scoreB !== undefined ? String(scoreB) : '-';
+            warScoreTeamBScore.textContent = scoreBStr;
+            
+            // Show the cards container
+            warScoreCardsContainer.style.display = 'block';
+            console.log('War score displayed:', { teamA, teamB, scoreA, scoreB });
+        } else {
+            // Hide the cards container if no war data
+            warScoreCardsContainer.style.display = 'none';
+            console.log('No war score data found');
+        }
+    } catch (error) {
+        console.error('Error updating war score display:', error);
+        warScoreCardsContainer.style.display = 'none';
+    }
+}
+
 // Load war data and display opponent faction members
 async function loadWarData() {
     console.log('=== loadWarData() called ===');
@@ -130,6 +211,9 @@ async function loadWarData() {
             warDisplay.innerHTML = `<p style="color: #ff6b6b;">Error: ${warsData.error.error || JSON.stringify(warsData.error)}</p>`;
             return;
         }
+        
+        // Update war score display
+        updateWarScoreDisplay(warsData);
         
         // Find the opponent faction - it's the faction with name other than "Embers HQ"
         // Structure: warsData.wars.ranked.factions (or warsData.wars.raids or warsData.wars.territory)
@@ -791,6 +875,9 @@ async function refreshWarData() {
     }
     
     try {
+        // Refresh scores (already handled by refreshWarScores in the interval, but refresh here too for immediate update)
+        await refreshWarScores();
+        
         const opponentFactionId = State.warOpponentFactionId;
         
         // Refresh map markers
@@ -1068,6 +1155,31 @@ async function refreshWarData() {
     }
 }
 
+// Refresh war scores only (independent of opponent faction ID)
+async function refreshWarScores() {
+    const apiKey = getApiKey();
+    if (!apiKey) {
+        console.error('API key not configured');
+        return;
+    }
+    
+    try {
+        // Fetch wars data to update score display
+        const warsUrl = `${API_BASE_URL}/faction/wars?key=${apiKey}`;
+        const warsResponse = await fetch(warsUrl);
+        
+        if (warsResponse.ok) {
+            const warsData = await warsResponse.json();
+            if (!warsData.error) {
+                updateWarScoreDisplay(warsData);
+                console.log('War scores refreshed');
+            }
+        }
+    } catch (error) {
+        console.error('Error refreshing war scores:', error);
+    }
+}
+
 // Start war map auto-refresh (every 5 seconds)
 function startWarMapUpdates() {
     // Clear any existing interval
@@ -1075,8 +1187,15 @@ function startWarMapUpdates() {
         clearInterval(State.warMapUpdateInterval);
     }
     
-    // Refresh both table and map every 5 seconds
+    // Refresh scores immediately on start
+    refreshWarScores();
+    
+    // Refresh both scores and table/map every 5 seconds
     State.warMapUpdateInterval = setInterval(async () => {
+        // Always refresh scores
+        await refreshWarScores();
+        
+        // Refresh table and map if we have opponent faction ID
         if (State.warOpponentFactionId) {
             console.log('Auto-refreshing war data (table and map)...');
             await refreshWarData();

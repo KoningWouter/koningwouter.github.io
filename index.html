@@ -394,6 +394,25 @@
         <div id="warTab" class="tab-content">
             <div class="world-map-section">
                 <h2>War</h2>
+                <!-- War Score Cards -->
+                <div id="warScoreCardsContainer" class="world-map-section" style="margin-bottom: 20px; display: none;">
+                    <div style="display: flex; gap: 20px; width: 100%;">
+                        <!-- Team A Card (Left) -->
+                        <div id="warScoreCardTeamA" style="flex: 1; background: rgba(0, 0, 0, 0.4); padding: 20px; border-radius: 12px; border: 1px solid rgba(212, 175, 55, 0.2);">
+                            <div style="color: #c0c0c0; font-family: 'Cormorant Garamond', serif; font-size: 1.1rem; line-height: 1.8; text-align: center;">
+                                <div id="warScoreTeamAName" style="color: #d4af37; font-weight: 600; margin-bottom: 10px;">-</div>
+                                <div id="warScoreTeamAScore" style="color: #f4e4bc; font-size: 1.3rem; font-weight: 700;">-</div>
+                            </div>
+                        </div>
+                        <!-- Team B Card (Right) -->
+                        <div id="warScoreCardTeamB" style="flex: 1; background: rgba(0, 0, 0, 0.4); padding: 20px; border-radius: 12px; border: 1px solid rgba(212, 175, 55, 0.2);">
+                            <div style="color: #c0c0c0; font-family: 'Cormorant Garamond', serif; font-size: 1.1rem; line-height: 1.8; text-align: center;">
+                                <div id="warScoreTeamBName" style="color: #d4af37; font-weight: 600; margin-bottom: 10px;">-</div>
+                                <div id="warScoreTeamBScore" style="color: #f4e4bc; font-size: 1.3rem; font-weight: 700;">-</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <div class="world-map-wrapper">
                     <div id="warMap" class="world-map-container"></div>
                     <!-- Online Players in Torn Window -->

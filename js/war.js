@@ -369,15 +369,24 @@ async function loadWarData() {
         
         // Helper function to get last action color
         const getLastActionColor = (lastAction) => {
-            if (!lastAction || lastAction === '-') return '#c0c0c0'; // Default gray
-            const actionLower = String(lastAction).toLowerCase();
+            if (!lastAction || lastAction === '-') {
+                console.log('getLastActionColor: No lastAction or is dash, returning gray');
+                return '#c0c0c0'; // Default gray
+            }
+            const actionLower = String(lastAction).toLowerCase().trim();
+            console.log('getLastActionColor: Checking lastAction:', lastAction, 'lowercase:', actionLower);
+            
             if (actionLower === 'online' || actionLower.includes('online')) {
+                console.log('getLastActionColor: Matched online, returning green');
                 return '#00ff00'; // Green
             } else if (actionLower === 'idle' || actionLower.includes('idle')) {
+                console.log('getLastActionColor: Matched idle, returning orange');
                 return '#ffa500'; // Orange
             } else if (actionLower === 'offline' || actionLower.includes('offline')) {
+                console.log('getLastActionColor: Matched offline, returning red');
                 return '#ff0000'; // Red
             }
+            console.log('getLastActionColor: No match, returning gray');
             return '#c0c0c0'; // Default gray for unknown status
         };
         
@@ -403,6 +412,7 @@ async function loadWarData() {
             const level = member.level !== undefined ? member.level : '-';
             const status = member.status ? (member.status.state || member.status.description || '-') : '-';
             const lastAction = member.last_action ? (member.last_action.status || member.last_action.relative || '-') : '-';
+            console.log('Member', member.id, 'lastAction:', lastAction, 'last_action object:', member.last_action);
             const attackUrl = `https://www.torn.com/loader.php?sid=attack&user2ID=${member.id}`;
             
             // Get fair_fight and bs_estimate_human from FFScouter data
@@ -895,15 +905,24 @@ async function refreshWarData() {
         
         // Helper function to get last action color
         const getLastActionColor = (lastAction) => {
-            if (!lastAction || lastAction === '-') return '#c0c0c0'; // Default gray
-            const actionLower = String(lastAction).toLowerCase();
+            if (!lastAction || lastAction === '-') {
+                console.log('getLastActionColor: No lastAction or is dash, returning gray');
+                return '#c0c0c0'; // Default gray
+            }
+            const actionLower = String(lastAction).toLowerCase().trim();
+            console.log('getLastActionColor: Checking lastAction:', lastAction, 'lowercase:', actionLower);
+            
             if (actionLower === 'online' || actionLower.includes('online')) {
+                console.log('getLastActionColor: Matched online, returning green');
                 return '#00ff00'; // Green
             } else if (actionLower === 'idle' || actionLower.includes('idle')) {
+                console.log('getLastActionColor: Matched idle, returning orange');
                 return '#ffa500'; // Orange
             } else if (actionLower === 'offline' || actionLower.includes('offline')) {
+                console.log('getLastActionColor: Matched offline, returning red');
                 return '#ff0000'; // Red
             }
+            console.log('getLastActionColor: No match, returning gray');
             return '#c0c0c0'; // Default gray for unknown status
         };
         
@@ -929,6 +948,7 @@ async function refreshWarData() {
             const level = member.level !== undefined ? member.level : '-';
             const status = member.status ? (member.status.state || member.status.description || '-') : '-';
             const lastAction = member.last_action ? (member.last_action.status || member.last_action.relative || '-') : '-';
+            console.log('Member', member.id, 'lastAction:', lastAction, 'last_action object:', member.last_action);
             const attackUrl = `https://www.torn.com/loader.php?sid=attack&user2ID=${member.id}`;
             
             const stats = battlestatsMap[String(member.id)] || {};

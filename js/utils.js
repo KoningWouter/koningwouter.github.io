@@ -94,6 +94,28 @@ async function loadAndDisplayUser(userId) {
         } catch (stocksError) {
             console.error('Error updating stocks total in Money card after search:', stocksError);
         }
+        
+        // Fetch and display FFScouter battlestats
+        try {
+            const ffscouterStats = await fetchFFScouterBattlestats(userId);
+            if (ffscouterStats && typeof updateFFScouterBattlestats === 'function') {
+                updateFFScouterBattlestats(ffscouterStats);
+            } else if (ffscouterStats === null) {
+                // API key not configured or no data, hide the card
+                const card = document.getElementById('ffscouterBattlestatsCard');
+                if (card) {
+                    card.classList.add('hidden');
+                }
+            }
+        } catch (ffscouterError) {
+            console.error('Error fetching FFScouter battlestats:', ffscouterError);
+            // Hide the card on error
+            const card = document.getElementById('ffscouterBattlestatsCard');
+            if (card) {
+                card.classList.add('hidden');
+            }
+        }
+        
         console.log('Calling startAutoRefresh...');
         startAutoRefresh();
         console.log('All display functions called');

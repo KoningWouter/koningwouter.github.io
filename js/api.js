@@ -257,4 +257,42 @@ async function updateStockPrices() {
     }
 }
 
+// Fetch battlestats from FFScouter API for a single user
+async function fetchFFScouterBattlestats(userId) {
+    const ffscouterApiKey = localStorage.getItem('ffscouter_api_key');
+    if (!ffscouterApiKey) {
+        console.log('FFScouter API key not configured, skipping battlestats fetch');
+        return null;
+    }
+
+    try {
+        const ffscouterUrl = `https://ffscouter.com/api/v1/get-stats?key=${ffscouterApiKey}&targets=${userId}`;
+        console.log('Fetching battlestats from FFScouter API for user:', userId);
+        
+        const statsResponse = await fetch(ffscouterUrl);
+        
+        if (!statsResponse.ok) {
+            console.warn('FFScouter API request failed:', statsResponse.status);
+            return null;
+        }
+        
+        const statsData = await statsResponse.json();
+        console.log('FFScouter API response:', statsData);
+        
+        // The API returns an array, find the entry for this user
+        if (Array.isArray(statsData)) {
+            const userStats = statsData.find(stat => stat.player_id == userId);
+            return userStats || null;
+        } else if (typeof statsData === 'object' && statsData[userId]) {
+            // If it's an object keyed by user ID
+            return statsData[userId];
+        }
+        
+        return null;
+    } catch (error) {
+        console.error('Error fetching battlestats from FFScouter:', error);
+        return null;
+    }
+}
+
 

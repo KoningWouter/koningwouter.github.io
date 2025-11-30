@@ -328,6 +328,40 @@ function updateBattleStats(data) {
     console.log('Speed modifiers:', battlestats.speed?.modifiers);
 }
 
+// Update FFScouter battlestats display
+function updateFFScouterBattlestats(statsData) {
+    const card = document.getElementById('ffscouterBattlestatsCard');
+    if (!card) return;
+    
+    // Show card if we have data, hide if we don't
+    if (!statsData) {
+        card.classList.add('hidden');
+        return;
+    }
+    
+    card.classList.remove('hidden');
+    
+    // Format values
+    const formatValue = (value) => {
+        if (value === null || value === undefined) return '-';
+        if (typeof value === 'number') {
+            return value.toLocaleString('en-US', { 
+                minimumFractionDigits: 0, 
+                maximumFractionDigits: 0 
+            });
+        }
+        return String(value);
+    };
+    
+    // Update BS Estimate (Human)
+    const bsEstimateHumanElement = document.getElementById('ffscouterBSEstimateHuman');
+    if (bsEstimateHumanElement) {
+        bsEstimateHumanElement.textContent = formatValue(statsData.bs_estimate_human);
+    }
+    
+    console.log('FFScouter battlestats updated:', statsData);
+}
+
 // Update status display
 function updateStatus(data) {
     const statusCard = document.getElementById('statusCard');

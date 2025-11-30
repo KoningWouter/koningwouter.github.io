@@ -384,20 +384,6 @@ async function loadWarData() {
             return '';
         };
         
-        // Helper function to get last action color
-        const getLastActionColor = (lastAction) => {
-            if (!lastAction || lastAction === '-') return '#c0c0c0'; // Default gray
-            const lastActionLower = String(lastAction).toLowerCase();
-            if (lastActionLower.includes('online')) {
-                return '#00ff00'; // Green
-            } else if (lastActionLower.includes('idle')) {
-                return '#ffa500'; // Orange
-            } else if (lastActionLower.includes('offline')) {
-                return '#ff0000'; // Red
-            }
-            return '#c0c0c0'; // Default gray
-        };
-        
         membersArray.forEach(member => {
             const name = member.name || `User ${member.id}`;
             const level = member.level !== undefined ? member.level : '-';
@@ -424,16 +410,12 @@ async function loadWarData() {
             
             // Get color for Fair Fight column
             const fairFightColor = getFairFightColor(fairFight);
-            
-            // Get color for Last Action column
-            const lastActionColor = getLastActionColor(lastAction);
-            
             const profileUrl = `https://www.torn.com/profiles.php?XID=${member.id}`;
             
             html += '<tr style="border-bottom: 1px solid rgba(212, 175, 55, 0.1);">';
             html += `<td style="padding: 12px; color: #f4e4bc; font-size: 1rem; font-weight: 500;"><a href="${profileUrl}" target="_blank" rel="noopener noreferrer" style="color: #f4e4bc; text-decoration: none; cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#d4af37'" onmouseout="this.style.color='#f4e4bc'">${name}</a> <span style="color: #c0c0c0; font-size: 0.85rem;">(${member.id})</span></td>`;
             html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem;">${level}</td>`;
-            html += `<td style="padding: 12px; color: ${lastActionColor}; font-size: 0.95rem; font-weight: 600;">${lastAction}</td>`;
+            html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem;">${lastAction}</td>`;
             html += `<td style="padding: 12px; color: ${fairFightColor}; font-size: 0.95rem; text-align: center; font-weight: 600;">${formatFairFight(fairFight)}</td>`;
             html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem; text-align: right;">${bsEstimateHuman}</td>`;
             html += `<td style="padding: 12px; font-size: 0.95rem;" class="${statusColorClass}">${status}</td>`;
@@ -912,20 +894,6 @@ async function refreshWarData() {
             return '';
         };
         
-        // Helper function to get last action color
-        const getLastActionColor = (lastAction) => {
-            if (!lastAction || lastAction === '-') return '#c0c0c0'; // Default gray
-            const lastActionLower = String(lastAction).toLowerCase();
-            if (lastActionLower.includes('online')) {
-                return '#00ff00'; // Green
-            } else if (lastActionLower.includes('idle')) {
-                return '#ffa500'; // Orange
-            } else if (lastActionLower.includes('offline')) {
-                return '#ff0000'; // Red
-            }
-            return '#c0c0c0'; // Default gray
-        };
-        
         membersArray.forEach(member => {
             const name = member.name || `User ${member.id}`;
             const level = member.level !== undefined ? member.level : '-';
@@ -949,16 +917,12 @@ async function refreshWarData() {
             
             // Get color for Fair Fight column
             const fairFightColor = getFairFightColor(fairFight);
-            
-            // Get color for Last Action column
-            const lastActionColor = getLastActionColor(lastAction);
-            
             const profileUrl = `https://www.torn.com/profiles.php?XID=${member.id}`;
             
             html += '<tr style="border-bottom: 1px solid rgba(212, 175, 55, 0.1);">';
             html += `<td style="padding: 12px; color: #f4e4bc; font-size: 1rem; font-weight: 500;"><a href="${profileUrl}" target="_blank" rel="noopener noreferrer" style="color: #f4e4bc; text-decoration: none; cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#d4af37'" onmouseout="this.style.color='#f4e4bc'">${name}</a> <span style="color: #c0c0c0; font-size: 0.85rem;">(${member.id})</span></td>`;
             html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem;">${level}</td>`;
-            html += `<td style="padding: 12px; color: ${lastActionColor}; font-size: 0.95rem; font-weight: 600;">${lastAction}</td>`;
+            html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem;">${lastAction}</td>`;
             html += `<td style="padding: 12px; color: ${fairFightColor}; font-size: 0.95rem; text-align: center; font-weight: 600;">${formatFairFight(fairFight)}</td>`;
             html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem; text-align: right;">${bsEstimateHuman}</td>`;
             html += `<td style="padding: 12px; font-size: 0.95rem;" class="${statusColorClass}">${status}</td>`;

@@ -367,26 +367,67 @@ async function loadWarData() {
         html += '</thead>';
         html += '<tbody>';
         
-        // Helper function to get last action color
+        // Helper function to get last action color and glow
         const getLastActionColor = (lastAction) => {
             try {
                 if (!lastAction || lastAction === '-' || lastAction === null || lastAction === undefined) {
-                    return '#c0c0c0'; // Default gray
+                    return { color: '#c0c0c0', glow: 'none' }; // Default gray
                 }
                 const actionStr = String(lastAction).toLowerCase().trim();
                 
                 if (actionStr.indexOf('online') !== -1) {
-                    return '#00ff00'; // Green
+                    return { 
+                        color: '#00ff00', 
+                        glow: '0 0 10px rgba(0, 255, 0, 0.6), 0 0 20px rgba(0, 255, 0, 0.4)' 
+                    }; // Green
                 } else if (actionStr.indexOf('idle') !== -1) {
-                    return '#ffa500'; // Orange
+                    return { 
+                        color: '#ffa500', 
+                        glow: '0 0 10px rgba(255, 165, 0, 0.6), 0 0 20px rgba(255, 165, 0, 0.4)' 
+                    }; // Orange
                 } else if (actionStr.indexOf('offline') !== -1) {
-                    return '#ff0000'; // Red
+                    return { 
+                        color: '#ff0000', 
+                        glow: '0 0 10px rgba(255, 0, 0, 0.6), 0 0 20px rgba(255, 0, 0, 0.4)' 
+                    }; // Red
                 }
-                return '#c0c0c0'; // Default gray for unknown status
+                return { color: '#c0c0c0', glow: 'none' }; // Default gray for unknown status
             } catch (e) {
                 console.error('Error in getLastActionColor:', e, 'lastAction:', lastAction);
-                return '#c0c0c0';
+                return { color: '#c0c0c0', glow: 'none' };
             }
+        };
+        
+        // Helper function to get fair fight glow based on color
+        const getFairFightGlow = (color) => {
+            if (!color || color === '#c0c0c0') return 'none';
+            try {
+                // Extract RGB values from color string
+                const rgbMatch = color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+                if (rgbMatch) {
+                    const r = parseInt(rgbMatch[1]);
+                    const g = parseInt(rgbMatch[2]);
+                    const b = parseInt(rgbMatch[3]);
+                    return `0 0 10px rgba(${r}, ${g}, ${b}, 0.6), 0 0 20px rgba(${r}, ${g}, ${b}, 0.4)`;
+                }
+                // Handle hex colors
+                if (color.startsWith('#')) {
+                    let hex = color.replace('#', '');
+                    // Handle 3-character hex codes
+                    if (hex.length === 3) {
+                        hex = hex.split('').map(char => char + char).join('');
+                    }
+                    if (hex.length === 6) {
+                        const r = parseInt(hex.substring(0, 2), 16);
+                        const g = parseInt(hex.substring(2, 4), 16);
+                        const b = parseInt(hex.substring(4, 6), 16);
+                        return `0 0 10px rgba(${r}, ${g}, ${b}, 0.6), 0 0 20px rgba(${r}, ${g}, ${b}, 0.4)`;
+                    }
+                }
+            } catch (e) {
+                console.error('Error parsing color for glow:', color, e);
+            }
+            return 'none';
         };
         
         // Helper function to get status color class
@@ -432,17 +473,16 @@ async function loadWarData() {
             
             // Get color for Fair Fight column
             const fairFightColor = getFairFightColor(fairFight);
-            // Get color for Last Action column
-            const lastActionColor = getLastActionColor(lastAction);
-            // Test: Force a color to verify the code is running
-            // const lastActionColor = '#00ff00'; // Uncomment to test if colors work at all
+            const fairFightGlow = getFairFightGlow(fairFightColor);
+            // Get color and glow for Last Action column
+            const lastActionStyle = getLastActionColor(lastAction);
             const profileUrl = `https://www.torn.com/profiles.php?XID=${member.id}`;
             
             html += '<tr style="border-bottom: 1px solid rgba(212, 175, 55, 0.1);">';
             html += `<td style="padding: 12px; color: #f4e4bc; font-size: 1rem; font-weight: 500;"><a href="${profileUrl}" target="_blank" rel="noopener noreferrer" style="color: #f4e4bc; text-decoration: none; cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#d4af37'" onmouseout="this.style.color='#f4e4bc'">${name}</a> <span style="color: #c0c0c0; font-size: 0.85rem;">(${member.id})</span></td>`;
             html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem;">${level}</td>`;
-            html += `<td style="padding: 12px; color: ${lastActionColor}; font-size: 0.95rem; font-weight: 600;">${lastAction}</td>`;
-            html += `<td style="padding: 12px; color: ${fairFightColor}; font-size: 0.95rem; text-align: center; font-weight: 600;">${formatFairFight(fairFight)}</td>`;
+            html += `<td style="padding: 12px; color: ${lastActionStyle.color}; font-size: 0.95rem; font-weight: 600; text-shadow: ${lastActionStyle.glow};">${lastAction}</td>`;
+            html += `<td style="padding: 12px; color: ${fairFightColor}; font-size: 0.95rem; text-align: center; font-weight: 600; text-shadow: ${fairFightGlow};">${formatFairFight(fairFight)}</td>`;
             html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem; text-align: right;">${bsEstimateHuman}</td>`;
             html += `<td style="padding: 12px; font-size: 0.95rem;" class="${statusColorClass}">${status}</td>`;
             html += `<td style="padding: 12px; text-align: center;"><a href="${attackUrl}" target="_blank" rel="noopener noreferrer" style="color: #ff6b6b; font-size: 1.5rem; text-decoration: none; cursor: pointer; display: inline-block; transition: transform 0.2s;" title="Attack ${name}" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">⚔️</a></td>`;
@@ -903,26 +943,67 @@ async function refreshWarData() {
         html += '</thead>';
         html += '<tbody>';
         
-        // Helper function to get last action color
+        // Helper function to get last action color and glow
         const getLastActionColor = (lastAction) => {
             try {
                 if (!lastAction || lastAction === '-' || lastAction === null || lastAction === undefined) {
-                    return '#c0c0c0'; // Default gray
+                    return { color: '#c0c0c0', glow: 'none' }; // Default gray
                 }
                 const actionStr = String(lastAction).toLowerCase().trim();
                 
                 if (actionStr.indexOf('online') !== -1) {
-                    return '#00ff00'; // Green
+                    return { 
+                        color: '#00ff00', 
+                        glow: '0 0 10px rgba(0, 255, 0, 0.6), 0 0 20px rgba(0, 255, 0, 0.4)' 
+                    }; // Green
                 } else if (actionStr.indexOf('idle') !== -1) {
-                    return '#ffa500'; // Orange
+                    return { 
+                        color: '#ffa500', 
+                        glow: '0 0 10px rgba(255, 165, 0, 0.6), 0 0 20px rgba(255, 165, 0, 0.4)' 
+                    }; // Orange
                 } else if (actionStr.indexOf('offline') !== -1) {
-                    return '#ff0000'; // Red
+                    return { 
+                        color: '#ff0000', 
+                        glow: '0 0 10px rgba(255, 0, 0, 0.6), 0 0 20px rgba(255, 0, 0, 0.4)' 
+                    }; // Red
                 }
-                return '#c0c0c0'; // Default gray for unknown status
+                return { color: '#c0c0c0', glow: 'none' }; // Default gray for unknown status
             } catch (e) {
                 console.error('Error in getLastActionColor:', e, 'lastAction:', lastAction);
-                return '#c0c0c0';
+                return { color: '#c0c0c0', glow: 'none' };
             }
+        };
+        
+        // Helper function to get fair fight glow based on color
+        const getFairFightGlow = (color) => {
+            if (!color || color === '#c0c0c0') return 'none';
+            try {
+                // Extract RGB values from color string
+                const rgbMatch = color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+                if (rgbMatch) {
+                    const r = parseInt(rgbMatch[1]);
+                    const g = parseInt(rgbMatch[2]);
+                    const b = parseInt(rgbMatch[3]);
+                    return `0 0 10px rgba(${r}, ${g}, ${b}, 0.6), 0 0 20px rgba(${r}, ${g}, ${b}, 0.4)`;
+                }
+                // Handle hex colors
+                if (color.startsWith('#')) {
+                    let hex = color.replace('#', '');
+                    // Handle 3-character hex codes
+                    if (hex.length === 3) {
+                        hex = hex.split('').map(char => char + char).join('');
+                    }
+                    if (hex.length === 6) {
+                        const r = parseInt(hex.substring(0, 2), 16);
+                        const g = parseInt(hex.substring(2, 4), 16);
+                        const b = parseInt(hex.substring(4, 6), 16);
+                        return `0 0 10px rgba(${r}, ${g}, ${b}, 0.6), 0 0 20px rgba(${r}, ${g}, ${b}, 0.4)`;
+                    }
+                }
+            } catch (e) {
+                console.error('Error parsing color for glow:', color, e);
+            }
+            return 'none';
         };
         
         // Helper function to get status color class
@@ -965,17 +1046,16 @@ async function refreshWarData() {
             
             // Get color for Fair Fight column
             const fairFightColor = getFairFightColor(fairFight);
-            // Get color for Last Action column
-            const lastActionColor = getLastActionColor(lastAction);
-            // Test: Force a color to verify the code is running
-            // const lastActionColor = '#00ff00'; // Uncomment to test if colors work at all
+            const fairFightGlow = getFairFightGlow(fairFightColor);
+            // Get color and glow for Last Action column
+            const lastActionStyle = getLastActionColor(lastAction);
             const profileUrl = `https://www.torn.com/profiles.php?XID=${member.id}`;
             
             html += '<tr style="border-bottom: 1px solid rgba(212, 175, 55, 0.1);">';
             html += `<td style="padding: 12px; color: #f4e4bc; font-size: 1rem; font-weight: 500;"><a href="${profileUrl}" target="_blank" rel="noopener noreferrer" style="color: #f4e4bc; text-decoration: none; cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#d4af37'" onmouseout="this.style.color='#f4e4bc'">${name}</a> <span style="color: #c0c0c0; font-size: 0.85rem;">(${member.id})</span></td>`;
             html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem;">${level}</td>`;
-            html += `<td style="padding: 12px; color: ${lastActionColor}; font-size: 0.95rem; font-weight: 600;">${lastAction}</td>`;
-            html += `<td style="padding: 12px; color: ${fairFightColor}; font-size: 0.95rem; text-align: center; font-weight: 600;">${formatFairFight(fairFight)}</td>`;
+            html += `<td style="padding: 12px; color: ${lastActionStyle.color}; font-size: 0.95rem; font-weight: 600; text-shadow: ${lastActionStyle.glow};">${lastAction}</td>`;
+            html += `<td style="padding: 12px; color: ${fairFightColor}; font-size: 0.95rem; text-align: center; font-weight: 600; text-shadow: ${fairFightGlow};">${formatFairFight(fairFight)}</td>`;
             html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem; text-align: right;">${bsEstimateHuman}</td>`;
             html += `<td style="padding: 12px; font-size: 0.95rem;" class="${statusColorClass}">${status}</td>`;
             html += `<td style="padding: 12px; text-align: center;"><a href="${attackUrl}" target="_blank" rel="noopener noreferrer" style="color: #ff6b6b; font-size: 1.5rem; text-decoration: none; cursor: pointer; display: inline-block; transition: transform 0.2s;" title="Attack ${name}" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">⚔️</a></td>`;

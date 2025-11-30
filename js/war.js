@@ -331,25 +331,23 @@ async function loadWarData() {
         const maxFairFight = fairFightValues.length > 0 ? Math.max(...fairFightValues) : 1;
         const fairFightRange = maxFairFight - minFairFight;
         
-        // Function to get color based on fair_fight value (green for min/0, red for max)
+        // Function to get color based on fair_fight value
+        // 0-2: Green (status-okay), 2-3: Federal orange, >3: Red (status-hospital)
         const getFairFightColor = (value) => {
             if (value === '-' || value === null || value === undefined || typeof value !== 'number') {
                 return '#c0c0c0'; // Default gray for missing values
             }
             
-            if (fairFightRange === 0) {
-                return '#00ff00'; // All same value, return green
+            if (value >= 0 && value <= 2) {
+                return '#00ff88'; // Green - status-okay color
+            } else if (value > 2 && value <= 3) {
+                return '#d4a574'; // Federal orange - matching Last Action Idle color
+            } else if (value > 3) {
+                return '#ff3366'; // Red - status-hospital color
             }
             
-            // Normalize value to 0-1 range (0 = min, 1 = max)
-            const normalized = (value - minFairFight) / fairFightRange;
-            
-            // Interpolate between green (0, 255, 0) and red (255, 0, 0)
-            const red = Math.round(normalized * 255);
-            const green = Math.round((1 - normalized) * 255);
-            const blue = 0;
-            
-            return `rgb(${red}, ${green}, ${blue})`;
+            // Fallback for negative values
+            return '#c0c0c0';
         };
         
         // Create table
@@ -377,19 +375,19 @@ async function loadWarData() {
                 
                 if (actionStr.indexOf('online') !== -1) {
                     return { 
-                        color: '#00ff00', 
-                        glow: '0 0 10px rgba(0, 255, 0, 0.6), 0 0 20px rgba(0, 255, 0, 0.4)' 
-                    }; // Green
+                        color: '#00ff88', 
+                        glow: '0 0 10px rgba(0, 255, 136, 0.6), 0 0 20px rgba(0, 255, 136, 0.4)' 
+                    }; // Green - matching status-okay color
                 } else if (actionStr.indexOf('idle') !== -1) {
                     return { 
-                        color: '#ffa500', 
-                        glow: '0 0 10px rgba(255, 165, 0, 0.6), 0 0 20px rgba(255, 165, 0, 0.4)' 
-                    }; // Orange
+                        color: '#d4a574', 
+                        glow: '0 0 10px rgba(212, 165, 116, 0.6), 0 0 20px rgba(212, 165, 116, 0.4)' 
+                    }; // Orange - matching status-federal color
                 } else if (actionStr.indexOf('offline') !== -1) {
                     return { 
-                        color: '#ff0000', 
-                        glow: '0 0 10px rgba(255, 0, 0, 0.6), 0 0 20px rgba(255, 0, 0, 0.4)' 
-                    }; // Red
+                        color: '#ff3366', 
+                        glow: '0 0 10px rgba(255, 51, 102, 0.6), 0 0 20px rgba(255, 51, 102, 0.4)' 
+                    }; // Red - matching status-hospital color
                 }
                 return { color: '#c0c0c0', glow: 'none' }; // Default gray for unknown status
             } catch (e) {
@@ -907,25 +905,23 @@ async function refreshWarData() {
         const maxFairFight = fairFightValues.length > 0 ? Math.max(...fairFightValues) : 1;
         const fairFightRange = maxFairFight - minFairFight;
         
-        // Function to get color based on fair_fight value (green for min/0, red for max)
+        // Function to get color based on fair_fight value
+        // 0-2: Green (status-okay), 2-3: Federal orange, >3: Red (status-hospital)
         const getFairFightColor = (value) => {
             if (value === '-' || value === null || value === undefined || typeof value !== 'number') {
                 return '#c0c0c0'; // Default gray for missing values
             }
             
-            if (fairFightRange === 0) {
-                return '#00ff00'; // All same value, return green
+            if (value >= 0 && value <= 2) {
+                return '#00ff88'; // Green - status-okay color
+            } else if (value > 2 && value <= 3) {
+                return '#d4a574'; // Federal orange - matching Last Action Idle color
+            } else if (value > 3) {
+                return '#ff3366'; // Red - status-hospital color
             }
             
-            // Normalize value to 0-1 range (0 = min, 1 = max)
-            const normalized = (value - minFairFight) / fairFightRange;
-            
-            // Interpolate between green (0, 255, 0) and red (255, 0, 0)
-            const red = Math.round(normalized * 255);
-            const green = Math.round((1 - normalized) * 255);
-            const blue = 0;
-            
-            return `rgb(${red}, ${green}, ${blue})`;
+            // Fallback for negative values
+            return '#c0c0c0';
         };
         
         // Create table (reuse the same table generation logic from loadWarData)
@@ -953,19 +949,19 @@ async function refreshWarData() {
                 
                 if (actionStr.indexOf('online') !== -1) {
                     return { 
-                        color: '#00ff00', 
-                        glow: '0 0 10px rgba(0, 255, 0, 0.6), 0 0 20px rgba(0, 255, 0, 0.4)' 
-                    }; // Green
+                        color: '#00ff88', 
+                        glow: '0 0 10px rgba(0, 255, 136, 0.6), 0 0 20px rgba(0, 255, 136, 0.4)' 
+                    }; // Green - matching status-okay color
                 } else if (actionStr.indexOf('idle') !== -1) {
                     return { 
-                        color: '#ffa500', 
-                        glow: '0 0 10px rgba(255, 165, 0, 0.6), 0 0 20px rgba(255, 165, 0, 0.4)' 
-                    }; // Orange
+                        color: '#d4a574', 
+                        glow: '0 0 10px rgba(212, 165, 116, 0.6), 0 0 20px rgba(212, 165, 116, 0.4)' 
+                    }; // Orange - matching status-federal color
                 } else if (actionStr.indexOf('offline') !== -1) {
                     return { 
-                        color: '#ff0000', 
-                        glow: '0 0 10px rgba(255, 0, 0, 0.6), 0 0 20px rgba(255, 0, 0, 0.4)' 
-                    }; // Red
+                        color: '#ff3366', 
+                        glow: '0 0 10px rgba(255, 51, 102, 0.6), 0 0 20px rgba(255, 51, 102, 0.4)' 
+                    }; // Red - matching status-hospital color
                 }
                 return { color: '#c0c0c0', glow: 'none' }; // Default gray for unknown status
             } catch (e) {

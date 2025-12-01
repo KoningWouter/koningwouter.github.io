@@ -5,13 +5,6 @@
 async function checkUpcomingWars() {
     console.log('=== checkUpcomingWars() called ===');
     
-    // Check if we have a faction ID
-    if (!State.currentFactionId) {
-        console.log('No faction ID available, cannot check for wars');
-        removeWarButtonHighlight();
-        return;
-    }
-    
     const apiKey = getApiKey();
     if (!apiKey) {
         console.error('API key not configured, cannot check for wars');
@@ -20,7 +13,8 @@ async function checkUpcomingWars() {
     }
     
     try {
-        const warsUrl = `${API_BASE_URL}/faction/${State.currentFactionId}/wars?key=${apiKey}`;
+        // Use the same endpoint as loadWarData for consistency
+        const warsUrl = `${API_BASE_URL}/faction/wars?key=${apiKey}`;
         console.log('Fetching wars data from URL:', warsUrl.replace(apiKey, 'KEY_HIDDEN'));
         
         const warsResponse = await fetch(warsUrl);
@@ -40,27 +34,46 @@ async function checkUpcomingWars() {
             return;
         }
         
-        // Check if there's an upcoming war (array has content)
+        // Check if there's an active (not ended) war
         // The API returns an object with war IDs as keys, or an array
-        let hasUpcomingWar = false;
+        let hasActiveWar = false;
+        let isWarEnded = false;
         
-        if (Array.isArray(warsData)) {
-            hasUpcomingWar = warsData.length > 0;
-        } else if (typeof warsData === 'object' && warsData !== null) {
-            // Check if it's an object with war data
-            // Look for common war-related keys or check if object has any keys
-            const keys = Object.keys(warsData);
-            hasUpcomingWar = keys.length > 0;
+        // Check if war has ended by looking for end time in ranked wars
+        if (warsData && typeof warsData === 'object' && warsData !== null) {
+            if (warsData.wars && warsData.wars.ranked) {
+                const ranked = warsData.wars.ranked;
+                // Check if war has ended (end time is set)
+                if (ranked.end !== undefined && ranked.end !== null && ranked.end !== 0) {
+                    isWarEnded = true;
+                    console.log('War has ended (end time found):', ranked.end);
+                } else if (ranked.factions && Array.isArray(ranked.factions) && ranked.factions.length >= 2) {
+                    // War is active if we have factions but no end time
+                    hasActiveWar = true;
+                    console.log('Active war found (factions present, no end time)');
+                }
+            }
             
-            // Also check if there's a specific "wars" array
-            if (warsData.wars && Array.isArray(warsData.wars)) {
-                hasUpcomingWar = warsData.wars.length > 0;
+            // Fallback: check if there's any war data at all (for other war types)
+            if (!hasActiveWar && !isWarEnded) {
+                if (Array.isArray(warsData)) {
+                    hasActiveWar = warsData.length > 0;
+                } else {
+                    const keys = Object.keys(warsData);
+                    hasActiveWar = keys.length > 0;
+                    
+                    // Also check if there's a specific "wars" array
+                    if (warsData.wars && Array.isArray(warsData.wars)) {
+                        hasActiveWar = warsData.wars.length > 0;
+                    }
+                }
             }
         }
         
-        console.log('Has upcoming war:', hasUpcomingWar);
+        console.log('Has active war:', hasActiveWar, 'War ended:', isWarEnded);
         
-        if (hasUpcomingWar) {
+        // Only highlight if there's an active (not ended) war
+        if (hasActiveWar && !isWarEnded) {
             highlightWarButton();
         } else {
             removeWarButtonHighlight();
@@ -196,6 +209,8 @@ function updateWarScoreDisplay(warsData) {
         let scoreA = null;
         let scoreB = null;
         let startTime = null;
+        let endTime = null;
+        let isWarEnded = false;
         
         // Try to find war data with factions and scores
         if (warsData && warsData.wars) {
@@ -219,6 +234,12 @@ function updateWarScoreDisplay(warsData) {
                     } else {
                         console.warn('No start time found in ranked war data. Available keys:', Object.keys(ranked));
                         console.log('Full ranked object:', ranked);
+                    }
+                    // Check if war has ended
+                    if (ranked.end !== undefined && ranked.end !== null && ranked.end !== 0) {
+                        endTime = ranked.end;
+                        isWarEnded = true;
+                        console.log('War has ended. End time:', endTime);
                     }
                 }
             }
@@ -266,8 +287,24 @@ function updateWarScoreDisplay(warsData) {
             const scoreBStr = scoreB !== null && scoreB !== undefined ? String(scoreB) : '-';
             warScoreTeamBScore.textContent = scoreBStr;
             
-            // Start/update the clock if we have a start time
-            if (startTime && startTime !== 0) {
+            // Handle clock display - if war has ended, show fixed duration, otherwise show live counter
+            if (isWarEnded && startTime && endTime && startTime !== 0 && endTime !== 0) {
+                // War has ended - show fixed duration (end - start)
+                stopWarClock(); // Stop any running clock
+                
+                const startTimeSeconds = startTime > 10000000000 ? Math.floor(startTime / 1000) : startTime;
+                const endTimeSeconds = endTime > 10000000000 ? Math.floor(endTime / 1000) : endTime;
+                const duration = Math.max(0, endTimeSeconds - startTimeSeconds);
+                const formattedDuration = formatElapsedTime(duration);
+                
+                const warClock = document.getElementById('warClock');
+                if (warClock) {
+                    warClock.textContent = `⏱️ ${formattedDuration}`;
+                }
+                
+                console.log('War has ended. Showing fixed duration:', formattedDuration, 'from', startTimeSeconds, 'to', endTimeSeconds);
+            } else if (startTime && startTime !== 0) {
+                // War is active - show live counter
                 // Only restart clock if start time changed or clock isn't running
                 const startTimeSeconds = startTime > 10000000000 ? Math.floor(startTime / 1000) : startTime;
                 console.log('Starting war clock with startTime:', startTime, 'converted to seconds:', startTimeSeconds);

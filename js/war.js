@@ -41,7 +41,7 @@ async function checkUpcomingWars() {
         
         // Check if war has ended by looking for end time in ranked wars
         if (warsData && typeof warsData === 'object' && warsData !== null) {
-            if (warsData.wars && warsData.wars.ranked) {
+            if (warsData.wars && warsData.wars.ranked && warsData.wars.ranked !== null) {
                 const ranked = warsData.wars.ranked;
                 // Check if war has ended (end time is set)
                 if (ranked.end !== undefined && ranked.end !== null && ranked.end !== 0) {
@@ -56,17 +56,18 @@ async function checkUpcomingWars() {
             
             // Fallback: check if there's any war data at all (for other war types)
             if (!hasActiveWar && !isWarEnded) {
-                if (Array.isArray(warsData)) {
-                    hasActiveWar = warsData.length > 0;
-                } else {
-                    const keys = Object.keys(warsData);
-                    hasActiveWar = keys.length > 0;
-                    
-                    // Also check if there's a specific "wars" array
-                    if (warsData.wars && Array.isArray(warsData.wars)) {
-                        hasActiveWar = warsData.wars.length > 0;
-                    }
+                // Check raids
+                if (warsData.wars && warsData.wars.raids && Array.isArray(warsData.wars.raids) && warsData.wars.raids.length > 0) {
+                    hasActiveWar = true;
                 }
+                
+                // Check territory wars
+                if (!hasActiveWar && warsData.wars && warsData.wars.territory && Array.isArray(warsData.wars.territory) && warsData.wars.territory.length > 0) {
+                    hasActiveWar = true;
+                }
+                
+                // Don't use generic key count check as it's not reliable
+                // Only mark as active if we have explicit war data (ranked, raids, or territory)
             }
         }
         
@@ -215,8 +216,8 @@ function updateWarScoreDisplay(warsData) {
         // Try to find war data with factions and scores
         if (warsData && warsData.wars) {
             console.log('warsData.wars structure:', warsData.wars);
-            // Check ranked wars first
-            if (warsData.wars.ranked && warsData.wars.ranked.factions && Array.isArray(warsData.wars.ranked.factions)) {
+            // Check ranked wars first (make sure ranked is not null)
+            if (warsData.wars.ranked && warsData.wars.ranked !== null && warsData.wars.ranked.factions && Array.isArray(warsData.wars.ranked.factions)) {
                 const ranked = warsData.wars.ranked;
                 const factions = ranked.factions;
                 if (factions.length >= 2) {
@@ -384,8 +385,8 @@ async function loadWarData() {
         let opponentFactionName = null;
         
         if (warsData.wars) {
-            // Check ranked wars first
-            if (warsData.wars.ranked && warsData.wars.ranked.factions && Array.isArray(warsData.wars.ranked.factions)) {
+            // Check ranked wars first (make sure ranked is not null)
+            if (warsData.wars.ranked && warsData.wars.ranked !== null && warsData.wars.ranked.factions && Array.isArray(warsData.wars.ranked.factions)) {
                 for (const faction of warsData.wars.ranked.factions) {
                     if (faction.name && faction.name !== 'Embers HQ') {
                         opponentFactionId = faction.id;
@@ -429,7 +430,12 @@ async function loadWarData() {
         }
         
         if (!opponentFactionId) {
-            warDisplay.innerHTML = '<p style="color: #c0c0c0; font-style: italic;">No active war found or opponent faction not identified.</p>';
+            // Check if it's explicitly no war (ranked is null) or just can't find opponent
+            if (warsData.wars && warsData.wars.ranked === null) {
+                warDisplay.innerHTML = '<p style="color: #c0c0c0; font-style: italic;">No active ranked war.</p>';
+            } else {
+                warDisplay.innerHTML = '<p style="color: #c0c0c0; font-style: italic;">No active war found or opponent faction not identified.</p>';
+            }
             return;
         }
         

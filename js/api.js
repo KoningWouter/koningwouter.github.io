@@ -65,9 +65,9 @@ async function fetchUserData(userId, selections = 'basic,profile,bars,travel,fac
     return data;
 }
 
-// Fetch only bars data for quick refresh
+// Fetch only bars data for quick refresh (includes stocks to avoid separate API call)
 async function fetchBarsData(userId) {
-    return await fetchUserData(userId, 'bars,money,travel,battlestats');
+    return await fetchUserData(userId, 'bars,money,travel,battlestats,stocks');
 }
 
 // Fetch status data for quick refresh (includes travel)

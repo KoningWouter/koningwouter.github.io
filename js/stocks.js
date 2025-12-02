@@ -28,25 +28,33 @@ async function updateStocksTotalInMoneyCard() {
         // Ensure we have current stock prices loaded
         await fetchStockNames();
 
-        const stocksUrl = `${API_BASE_URL}/user/${State.currentUserId}?selections=stocks&key=${apiKey}`;
-        console.log('Fetching user stocks for Money card from URL:', stocksUrl.replace(apiKey, 'KEY_HIDDEN'));
+        // Try to use cached bars data first (which includes stocks) to avoid duplicate API call
+        let stocks = {};
+        if (State.cachedBarsData && State.cachedBarsData.stocks) {
+            console.log('Using cached stocks data from bars data fetch');
+            stocks = State.cachedBarsData.stocks;
+        } else {
+            // Fallback to separate API call if cached data not available
+            const stocksUrl = `${API_BASE_URL}/user/${State.currentUserId}?selections=stocks&key=${apiKey}`;
+            console.log('Fetching user stocks for Money card from URL:', stocksUrl.replace(apiKey, 'KEY_HIDDEN'));
 
-        const response = await fetch(stocksUrl);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            const response = await fetch(stocksUrl);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            console.log('User stocks API response status:', response.status);
+            console.log('User stocks API response data:', data);
+
+            if (data.error) {
+                console.error('Error fetching user stocks for Money card:', data.error);
+                stocksTotalElement.textContent = '-';
+                return;
+            }
+
+            stocks = data.stocks || {};
         }
-
-        const data = await response.json();
-        console.log('User stocks API response status:', response.status);
-        console.log('User stocks API response data:', data);
-
-        if (data.error) {
-            console.error('Error fetching user stocks for Money card:', data.error);
-            stocksTotalElement.textContent = '-';
-            return;
-        }
-
-        const stocks = data.stocks || {};
         const stockIds = Object.keys(stocks);
 
         if (stockIds.length === 0) {
@@ -150,30 +158,42 @@ async function loadStocksData() {
         // First, ensure we have stock names loaded
         await fetchStockNames();
         
-        const stocksUrl = `${API_BASE_URL}/user/${State.currentUserId}?selections=stocks&key=${apiKey}`;
-        console.log('Fetching stocks data from URL:', stocksUrl.replace(apiKey, 'KEY_HIDDEN'));
+        // Try to use cached bars data first (which includes stocks) to avoid duplicate API call
+        let stocks = {};
+        let stocksData = null;
         
-        const stocksResponse = await fetch(stocksUrl);
-        
-        if (!stocksResponse.ok) {
-            throw new Error(`HTTP error! status: ${stocksResponse.status}`);
-        }
-        
-        const stocksData = await stocksResponse.json();
-        
-        console.log('Stocks API response status:', stocksResponse.status);
-        console.log('Stocks API response data:', stocksData);
-        
-        if (stocksData.error) {
-            stocksDisplay.innerHTML = `<p style="color: #ff6b6b;">Error: ${stocksData.error.error || JSON.stringify(stocksData.error)}</p>`;
-            return;
+        if (State.cachedBarsData && State.cachedBarsData.stocks) {
+            console.log('Using cached stocks data from bars data fetch');
+            stocksData = { stocks: State.cachedBarsData.stocks };
+            stocks = State.cachedBarsData.stocks;
+        } else {
+            // Fallback to separate API call if cached data not available
+            const stocksUrl = `${API_BASE_URL}/user/${State.currentUserId}?selections=stocks&key=${apiKey}`;
+            console.log('Fetching stocks data from URL:', stocksUrl.replace(apiKey, 'KEY_HIDDEN'));
+            
+            const stocksResponse = await fetch(stocksUrl);
+            
+            if (!stocksResponse.ok) {
+                throw new Error(`HTTP error! status: ${stocksResponse.status}`);
+            }
+            
+            stocksData = await stocksResponse.json();
+            
+            console.log('Stocks API response status:', stocksResponse.status);
+            console.log('Stocks API response data:', stocksData);
+            
+            if (stocksData.error) {
+                stocksDisplay.innerHTML = `<p style="color: #ff6b6b;">Error: ${stocksData.error.error || JSON.stringify(stocksData.error)}</p>`;
+                return;
+            }
+            
+            stocks = stocksData.stocks || {};
         }
         
         // Display stocks in a table
         let html = '';
             
         // Handle the API response structure: { "stocks": { "stockId": {...}, ... } }
-        const stocks = stocksData.stocks || {};
         const stockIds = Object.keys(stocks);
         
         if (stockIds.length === 0) {

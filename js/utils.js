@@ -82,6 +82,11 @@ async function loadAndDisplayUser(userId) {
             }
         }
         
+        // Cache user data for use by stocks functions (if it includes stocks)
+        if (userData.stocks) {
+            State.cachedBarsData = userData;
+        }
+        
         console.log('Calling updateProgressBars...');
         updateProgressBars(userData);
         console.log('Calling updateStatus...');
@@ -481,15 +486,19 @@ function startAutoRefresh() {
         }
 
         try {
-            // Fetch both bars and status data
+            // Fetch both bars and status data (barsData now includes stocks)
             const [barsData, statusData] = await Promise.all([
                 fetchBarsData(State.currentUserId),
                 fetchStatusData(State.currentUserId)
             ]);
+            
+            // Cache bars data (which includes stocks) for use by stocks functions
+            State.cachedBarsData = barsData;
+            
             updateProgressBars(barsData);
             updateStatus(statusData);
             
-            // Also refresh total stocks value in the Money card
+            // Also refresh total stocks value in the Money card (uses cached data)
             try {
                 if (typeof updateStocksTotalInMoneyCard === 'function') {
                     await updateStocksTotalInMoneyCard();

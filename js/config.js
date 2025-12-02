@@ -202,6 +202,7 @@ const State = {
     
     // API state
     userLastFetchTime: {},
+    cachedBarsData: null,
     
     // Stocks state
     stockNamesMap: {},

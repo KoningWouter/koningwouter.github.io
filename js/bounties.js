@@ -4,14 +4,17 @@
 // Load bounties data from API with pagination
 async function loadBountiesData(page = null) {
     console.log('=== loadBountiesData() called ===');
+    console.log('Page parameter:', page);
     
     // Use provided page or current page from state
     if (page !== null) {
         State.bountiesCurrentPage = page;
+        console.log('Set State.bountiesCurrentPage to:', page);
     }
     const currentPage = State.bountiesCurrentPage;
     const limit = State.bountiesLimit;
-    const offset = (currentPage - 1) * limit; // offset should be as large as limit for page 2, 2*limit for page 3, etc.
+    const offset = 100 * currentPage; // offset = 100 * page_number
+    console.log('Current page:', currentPage, 'Offset:', offset);
     
     const bountiesDisplay = document.getElementById('bountiesDisplay');
     if (!bountiesDisplay) {
@@ -56,12 +59,6 @@ async function loadBountiesData(page = null) {
         const bounties = bountiesData.bounties || {};
         const bountyIds = Object.keys(bounties);
         
-        if (bountyIds.length === 0) {
-            html = '<p style="color: #c0c0c0; font-style: italic;">No bounties found</p>';
-            bountiesDisplay.innerHTML = html;
-            return;
-        }
-        
         // Get total count if available (for pagination)
         // If total is not in response, estimate based on current page and results
         let totalBounties = bountiesData.total;
@@ -76,7 +73,45 @@ async function loadBountiesData(page = null) {
             }
         }
         State.bountiesTotal = totalBounties;
-        const totalPages = Math.ceil(totalBounties / limit);
+        const totalPages = 100; // Hardcoded to 100
+        
+        // Function to generate pagination controls HTML (define before using)
+        const generatePaginationHTML = (isTop = false) => {
+            const marginStyle = isTop ? 'margin-bottom: 20px;' : 'margin-top: 20px;';
+            let paginationHTML = `<div style="${marginStyle} display: flex; justify-content: center; align-items: center; gap: 10px; flex-wrap: wrap;">`;
+            
+            // Previous button
+            if (currentPage > 1) {
+                paginationHTML += `<button onclick="loadBountiesData(${currentPage - 1})" style="padding: 8px 16px; background: linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, rgba(212, 175, 55, 0.1) 100%); border: 1px solid rgba(212, 175, 55, 0.4); border-radius: 6px; color: #d4af37; cursor: pointer; font-size: 0.95rem; font-weight: 600; transition: all 0.2s;" onmouseover="this.style.background='linear-gradient(135deg, rgba(212, 175, 55, 0.3) 0%, rgba(212, 175, 55, 0.2) 100%)'" onmouseout="this.style.background='linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, rgba(212, 175, 55, 0.1) 100%)'">Previous</button>`;
+            } else {
+                paginationHTML += `<button disabled style="padding: 8px 16px; background: rgba(192, 192, 192, 0.1); border: 1px solid rgba(192, 192, 192, 0.2); border-radius: 6px; color: #666; cursor: not-allowed; font-size: 0.95rem; font-weight: 600;">Previous</button>`;
+            }
+            
+            // Page input box
+            const inputId = isTop ? 'bountiesPageInputTop' : 'bountiesPageInputBottom';
+            paginationHTML += `<span style="color: #c0c0c0; font-size: 0.95rem; padding: 0 10px; display: flex; align-items: center; gap: 5px;">Page <input type="number" id="${inputId}" value="${currentPage}" min="1" max="${totalPages}" style="width: 60px; padding: 4px 8px; background: rgba(212, 175, 55, 0.1); border: 1px solid rgba(212, 175, 55, 0.4); border-radius: 4px; color: #d4af37; font-size: 0.95rem; text-align: center; font-weight: 600;" onkeyup="if(event.key==='Enter') { event.preventDefault(); event.stopPropagation(); const val = this.value; console.log('Enter pressed, input value:', val); handleBountiesPageInput(this); return false; }" onblur="console.log('Blur event, input value:', this.value); handleBountiesPageInput(this)"> of ${totalPages}</span>`;
+            
+            // Next button
+            if (currentPage < totalPages) {
+                paginationHTML += `<button onclick="loadBountiesData(${currentPage + 1})" style="padding: 8px 16px; background: linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, rgba(212, 175, 55, 0.1) 100%); border: 1px solid rgba(212, 175, 55, 0.4); border-radius: 6px; color: #d4af37; cursor: pointer; font-size: 0.95rem; font-weight: 600; transition: all 0.2s;" onmouseover="this.style.background='linear-gradient(135deg, rgba(212, 175, 55, 0.3) 0%, rgba(212, 175, 55, 0.2) 100%)'" onmouseout="this.style.background='linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, rgba(212, 175, 55, 0.1) 100%)'">Next</button>`;
+            } else {
+                paginationHTML += `<button disabled style="padding: 8px 16px; background: rgba(192, 192, 192, 0.1); border: 1px solid rgba(192, 192, 192, 0.2); border-radius: 6px; color: #666; cursor: not-allowed; font-size: 0.95rem; font-weight: 600;">Next</button>`;
+            }
+            
+            paginationHTML += '</div>';
+            return paginationHTML;
+        };
+        
+        // Add pagination controls at the top (always show, even if no bounties)
+        html += generatePaginationHTML(true);
+        
+        if (bountyIds.length === 0) {
+            html += '<p style="color: #c0c0c0; font-style: italic;">No bounties found</p>';
+            // Add pagination controls at the bottom as well
+            html += generatePaginationHTML();
+            bountiesDisplay.innerHTML = html;
+            return;
+        }
         
         // Convert bounties object to array and sort by reward amount (descending)
         const bountiesArray = bountyIds.map(id => ({
@@ -211,34 +246,7 @@ async function loadBountiesData(page = null) {
             return `rgb(${red}, ${green}, ${blue})`;
         };
         
-        // Function to generate pagination controls HTML
-        const generatePaginationHTML = (isTop = false) => {
-            const marginStyle = isTop ? 'margin-bottom: 20px;' : 'margin-top: 20px;';
-            let paginationHTML = `<div style="${marginStyle} display: flex; justify-content: center; align-items: center; gap: 10px; flex-wrap: wrap;">`;
-            
-            // Previous button
-            if (currentPage > 1) {
-                paginationHTML += `<button onclick="loadBountiesData(${currentPage - 1})" style="padding: 8px 16px; background: linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, rgba(212, 175, 55, 0.1) 100%); border: 1px solid rgba(212, 175, 55, 0.4); border-radius: 6px; color: #d4af37; cursor: pointer; font-size: 0.95rem; font-weight: 600; transition: all 0.2s;" onmouseover="this.style.background='linear-gradient(135deg, rgba(212, 175, 55, 0.3) 0%, rgba(212, 175, 55, 0.2) 100%)'" onmouseout="this.style.background='linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, rgba(212, 175, 55, 0.1) 100%)'">Previous</button>`;
-            } else {
-                paginationHTML += `<button disabled style="padding: 8px 16px; background: rgba(192, 192, 192, 0.1); border: 1px solid rgba(192, 192, 192, 0.2); border-radius: 6px; color: #666; cursor: not-allowed; font-size: 0.95rem; font-weight: 600;">Previous</button>`;
-            }
-            
-            // Page numbers
-            paginationHTML += `<span style="color: #c0c0c0; font-size: 0.95rem; padding: 0 10px;">Page ${currentPage} of ${totalPages}</span>`;
-            
-            // Next button
-            if (currentPage < totalPages) {
-                paginationHTML += `<button onclick="loadBountiesData(${currentPage + 1})" style="padding: 8px 16px; background: linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, rgba(212, 175, 55, 0.1) 100%); border: 1px solid rgba(212, 175, 55, 0.4); border-radius: 6px; color: #d4af37; cursor: pointer; font-size: 0.95rem; font-weight: 600; transition: all 0.2s;" onmouseover="this.style.background='linear-gradient(135deg, rgba(212, 175, 55, 0.3) 0%, rgba(212, 175, 55, 0.2) 100%)'" onmouseout="this.style.background='linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, rgba(212, 175, 55, 0.1) 100%)'">Next</button>`;
-            } else {
-                paginationHTML += `<button disabled style="padding: 8px 16px; background: rgba(192, 192, 192, 0.1); border: 1px solid rgba(192, 192, 192, 0.2); border-radius: 6px; color: #666; cursor: not-allowed; font-size: 0.95rem; font-weight: 600;">Next</button>`;
-            }
-            
-            paginationHTML += '</div>';
-            return paginationHTML;
-        };
-        
-        // Add pagination controls at the top
-        html += generatePaginationHTML(true);
+        // Add pagination controls at the top (already added earlier, skip duplicate)
         
         // Create table
         html += '<table style="width: 100%; border-collapse: collapse;">';
@@ -325,7 +333,54 @@ async function loadBountiesData(page = null) {
     }
 }
 
+// Handle page input navigation
+function handleBountiesPageInput(pageInput) {
+    // Ensure we have the actual input element
+    if (!pageInput) {
+        console.error('Invalid pageInput element');
+        return;
+    }
+    
+    // Use setTimeout to ensure the input value is fully updated
+    setTimeout(() => {
+        // Re-read the value from the DOM to ensure we have the latest
+        const inputElement = document.getElementById(pageInput.id) || pageInput;
+        const rawValue = String(inputElement.value || '').trim();
+        let page = parseInt(rawValue, 10);
+        const totalPages = 100; // Hardcoded to 100
+        
+        console.log('handleBountiesPageInput called');
+        console.log('Input element:', inputElement);
+        console.log('Input element ID:', inputElement.id);
+        console.log('Raw input value:', rawValue);
+        console.log('Input value type:', typeof inputElement.value);
+        console.log('Parsed page:', page);
+        console.log('Current page in state:', State.bountiesCurrentPage);
+        console.log('Total pages:', totalPages);
+        
+        // Validate the page number
+        if (isNaN(page) || page < 1) {
+            console.log('Invalid page, resetting to current page');
+            inputElement.value = State.bountiesCurrentPage;
+            return;
+        }
+        
+        // If page exceeds total pages, cap it
+        if (totalPages > 0 && page > totalPages) {
+            console.log('Page exceeds total pages, setting to max');
+            inputElement.value = totalPages;
+            loadBountiesData(totalPages);
+            return;
+        }
+        
+        // Always navigate to the specified page
+        console.log('Loading page:', page);
+        loadBountiesData(page);
+    }, 0);
+}
+
 // Make loadBountiesData available globally for onclick handlers
 window.loadBountiesData = loadBountiesData;
+window.handleBountiesPageInput = handleBountiesPageInput;
 
 

@@ -321,6 +321,23 @@ function updateBattleStats(data) {
         speedModifierElement.style.whiteSpace = 'pre-line';
     }
     
+    // Calculate and display total battlestats (sum of all four stats)
+    const battlestatsTotalElement = document.getElementById('battlestatsTotal');
+    if (battlestatsTotalElement) {
+        const strengthValue = battlestats.strength?.value || 0;
+        const defenseValue = battlestats.defense?.value || 0;
+        const dexterityValue = battlestats.dexterity?.value || 0;
+        const speedValue = battlestats.speed?.value || 0;
+        
+        const total = strengthValue + defenseValue + dexterityValue + speedValue;
+        
+        if (total > 0) {
+            battlestatsTotalElement.textContent = formatStat(total);
+        } else {
+            battlestatsTotalElement.textContent = '-';
+        }
+    }
+    
     console.log('Battle stats updated:', battlestats);
     console.log('Strength modifiers:', battlestats.strength?.modifiers);
     console.log('Defense modifiers:', battlestats.defense?.modifiers);

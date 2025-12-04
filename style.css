@@ -18,6 +18,9 @@ body {
     position: relative;
     overflow-x: hidden;
     overflow-y: scroll; /* Always show vertical scrollbar */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    touch-action: manipulation; /* Improve touch response */
 }
 
 /* Global scrollbar styling - Webkit browsers (Chrome, Safari, Edge) */
@@ -3319,44 +3322,743 @@ header h1 {
     }
 }
 
+/* Responsive Design - Mobile Optimizations */
 @media (max-width: 768px) {
-    header h1 {
-        font-size: 2.5rem;
-        letter-spacing: 2px;
+    /* Body and container adjustments */
+    body {
+        padding: 10px;
     }
 
+    .container {
+        max-width: 100%;
+    }
+
+    /* Header adjustments */
+    header {
+        padding: 25px 15px;
+        margin-bottom: 20px;
+    }
+
+    header h1 {
+        font-size: 1.8rem;
+        letter-spacing: 1px;
+    }
+
+    .subtitle {
+        font-size: 0.85rem;
+        letter-spacing: 1px;
+    }
+
+    .logo {
+        width: 40%;
+        max-width: 150px;
+    }
+
+    /* Tabs navigation - make scrollable on mobile */
+    .tabs-nav {
+        display: flex;
+        gap: 8px;
+        padding: 8px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        scroll-snap-type: x mandatory;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(212, 175, 55, 0.4) rgba(10, 10, 10, 0.6);
+    }
+
+    .tabs-nav::-webkit-scrollbar {
+        height: 4px;
+    }
+
+    .tabs-nav::-webkit-scrollbar-track {
+        background: rgba(10, 10, 10, 0.6);
+        border-radius: 2px;
+    }
+
+    .tabs-nav::-webkit-scrollbar-thumb {
+        background: rgba(212, 175, 55, 0.4);
+        border-radius: 2px;
+    }
+
+    .tabs-nav::-webkit-scrollbar-thumb:hover {
+        background: rgba(212, 175, 55, 0.6);
+    }
+
+    .tab-button {
+        flex: 0 0 auto;
+        min-width: 110px;
+        padding: 12px 16px;
+        font-size: 0.65rem;
+        gap: 6px;
+        scroll-snap-align: start;
+    }
+
+    .tab-icon {
+        font-size: 1rem;
+    }
+
+    .tab-label {
+        font-size: 0.65rem;
+    }
+
+    /* Content sections */
+    .search-section,
+    .progress-bars-section,
+    .world-map-section,
+    .user-info,
+    .api-endpoints-section,
+    .settings-section {
+        padding: 20px 15px;
+        margin-bottom: 20px;
+        border-radius: 16px;
+    }
+
+    .progress-bars-section h2,
+    .world-map-section h2,
+    .user-info h2,
+    .api-endpoints-section h2,
+    .settings-section h2 {
+        font-size: 1.4rem;
+        letter-spacing: 1.5px;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+    }
+
+    /* Search input adjustments */
     .input-group {
         flex-direction: column;
+        gap: 10px;
+    }
+
+    .search-input {
+        width: 100%;
+        padding: 12px 16px;
+        font-size: 0.9rem;
     }
 
     .search-button {
         width: 100%;
+        padding: 12px 20px;
+        font-size: 0.7rem;
     }
 
+    /* Progress bars grid - single column on mobile */
+    .progress-bars-container {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .progress-bar-card {
+        padding: 16px;
+    }
+
+    .progress-bar-icon {
+        font-size: 1.3rem;
+    }
+
+    .progress-bar-label {
+        font-size: 0.9rem;
+        letter-spacing: 1px;
+    }
+
+    .progress-bar-value {
+        font-size: 0.75rem;
+        padding: 4px 10px;
+    }
+
+    /* Money display adjustments */
+    .money-value-large {
+        font-size: 1.8rem;
+    }
+
+    .money-value-medium {
+        font-size: 1.3rem;
+    }
+
+    /* Travel and stat displays */
+    .travel-value-large,
+    .stat-value-large {
+        font-size: 1.5rem;
+    }
+
+    .travel-value-medium,
+    .stat-value-medium {
+        font-size: 1.1rem;
+    }
+
+    /* Status card */
+    .status-card {
+        padding: 16px;
+    }
+
+    .status-state {
+        font-size: 1.1rem;
+    }
+
+    .countdown-time {
+        font-size: 1.2rem;
+        min-width: 100px;
+    }
+
+    /* Info grid - single column */
+    .info-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .info-item {
+        padding: 12px;
+    }
+
+    /* Settings grid */
+    .settings-data-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+
+    /* FFScouter help image */
+    #ffscouterHelpImage {
+        max-width: 100px !important;
+        cursor: pointer;
+    }
+
+    .settings-data-item p {
+        font-size: 0.8rem;
+    }
+
+    /* World map adjustments */
+    .world-map-container {
+        height: 400px !important;
+        min-height: 400px;
+    }
+
+    /* Map legend and online players - make them smaller on mobile */
+    .map-legend,
+    .online-players-window {
+        min-width: 150px;
+        max-width: 200px;
+        padding: 10px 12px;
+        font-size: 0.8rem;
+        bottom: 5px;
+    }
+
+    .map-legend {
+        right: 5px;
+    }
+
+    .online-players-window {
+        left: 5px;
+        max-height: 150px;
+    }
+
+    .legend-title,
+    .online-players-header {
+        font-size: 0.8rem;
+        letter-spacing: 1px;
+        margin-bottom: 6px;
+        padding-bottom: 4px;
+    }
+
+    .legend-item {
+        gap: 8px;
+        margin-bottom: 6px;
+    }
+
+    .legend-dot {
+        width: 10px;
+        height: 10px;
+    }
+
+    .legend-label {
+        font-size: 0.75rem;
+    }
+
+    .online-players-list {
+        font-size: 0.75rem;
+        max-height: 100px;
+    }
+
+    /* Leaflet map zoom controls - reposition on mobile */
+    .world-map-container .leaflet-control-zoom {
+        margin-top: 10px !important;
+        margin-right: 10px !important;
+    }
+
+    .world-map-container .leaflet-control-zoom a {
+        width: 28px !important;
+        height: 28px !important;
+        line-height: 26px !important;
+        font-size: 16px !important;
+    }
+
+    /* War score cards - stack vertically on mobile - override inline styles */
+    #warScoreCardsContainer > div[style*="display: flex"] {
+        flex-direction: column !important;
+        gap: 10px !important;
+    }
+
+    #warScoreCardTeamA,
+    #warScoreCardTeamB {
+        width: 100% !important;
+        flex: none !important;
+    }
+
+    #warClock {
+        font-size: 1.2rem !important;
+        padding: 8px 16px !important;
+    }
+
+    #warClockContainer {
+        margin-bottom: 10px !important;
+    }
+
+    /* Endpoints grid */
     .endpoints-grid {
         grid-template-columns: 1fr;
+        gap: 15px;
     }
 
-    body {
-        padding: 15px;
+    .endpoint-card {
+        padding: 16px;
     }
 
-    .search-section,
-    .progress-bars-section,
-    .user-info,
-    .api-endpoints-section {
-        padding: 30px 25px;
+    .endpoint-name {
+        font-size: 0.95rem;
+        letter-spacing: 1px;
     }
 
-    .progress-bars-section h2,
-    .user-info h2,
-    .api-endpoints-section h2 {
-        font-size: 2rem;
+    .endpoint-url {
+        font-size: 0.75rem;
+        padding: 6px 10px;
     }
 
+    /* Image overlay */
     .image-overlay-close {
         top: -30px;
         font-size: 2rem;
+    }
+
+    .image-overlay-content img {
+        max-height: 80vh;
+    }
+
+    /* Faction members table */
+    .faction-members-table-wrapper {
+        max-height: 250px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .faction-members-table {
+        min-width: 100%;
+    }
+
+    .faction-members-table th,
+    .faction-members-table td {
+        padding: 8px 10px;
+        font-size: 0.8rem;
+        white-space: nowrap;
+    }
+
+    .faction-members-table th {
+        font-size: 0.75rem;
+        letter-spacing: 0.5px;
+    }
+
+    /* World map controls (faction ID input) - override inline styles */
+    #worldMapTab > div > div[style*="display: flex"] {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 8px !important;
+    }
+
+    #factionIdInput {
+        width: 100% !important;
+        min-width: auto !important;
+        font-size: 0.9rem !important;
+        padding: 10px !important;
+    }
+
+    #loadFactionBtn {
+        width: 100% !important;
+        padding: 12px 20px !important;
+    }
+
+    #worldMapTab label {
+        display: block !important;
+        margin-bottom: 5px !important;
+    }
+
+    /* Refresh indicator */
+    .refresh-indicator {
+        font-size: 0.75rem;
+        margin-bottom: 15px;
+    }
+
+    /* Job card grid adjustments */
+    #jobCard .stat-display-wrapper {
+        gap: 12px;
+    }
+
+    #jobCard > div[style*="margin-top"],
+    #jobCard div[style*="display: grid"] {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        font-size: 0.85rem !important;
+    }
+
+    #jobCard div[style*="display: grid"] {
+        grid-template-columns: auto 1fr !important;
+        gap: 6px 12px !important;
+    }
+
+    #jobName,
+    #jobRating,
+    #jobPosition,
+    #jobDaysInCompany {
+        font-size: 0.85rem !important;
+    }
+
+    #jobRating {
+        font-size: 1rem !important;
+    }
+
+    /* Ensure long content wraps properly */
+    .money-value-large,
+    .money-value-medium,
+    .travel-value-large,
+    .travel-value-medium,
+    .stat-value-large {
+        word-break: break-word;
+        overflow-wrap: break-word;
+    }
+
+    /* Stocks and bounties display */
+    #stocksDisplay,
+    #bountiesDisplay,
+    #warDisplay,
+    #userStatusDisplay {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        font-size: 0.85rem;
+        line-height: 1.6;
+    }
+
+    /* Selector descriptions */
+    .selector-description-item,
+    .endpoint-selector-description {
+        font-size: 0.8rem;
+        padding: 10px;
+    }
+
+    .selector-name,
+    .selector-name-display {
+        font-size: 0.8rem;
+    }
+
+    .selector-desc,
+    .selector-desc-display {
+        font-size: 0.75rem;
+    }
+
+    /* Travel data section */
+    .travel-data-json {
+        font-size: 0.75rem;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Status display */
+    .status-description {
+        font-size: 0.8rem;
+    }
+
+    /* Optimize animations for mobile performance */
+    .star,
+    .comet,
+    .spark {
+        will-change: transform, opacity;
+    }
+
+    /* Reduce animation intensity on mobile for better performance */
+    @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+        }
+    }
+
+    /* Prevent horizontal overflow */
+    .container,
+    .tab-content,
+    .world-map-section,
+    .progress-bars-section {
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+
+    /* Progress bar background */
+    .progress-bar-bg {
+        height: 24px;
+    }
+
+    /* Countdown adjustments */
+    .travel-countdown {
+        flex-direction: column;
+        gap: 10px;
+        padding: 15px;
+    }
+
+    .countdown-icon {
+        font-size: 1.5rem;
+    }
+
+    .countdown-label {
+        font-size: 0.75rem;
+        text-align: center;
+    }
+
+    .countdown-time {
+        width: 100%;
+        text-align: center;
+    }
+
+    /* User status card and other content wrappers */
+    #userStatusCardContent,
+    #stocksCard > div,
+    #bountiesCard > div,
+    #warCard > div {
+        padding: 15px !important;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Ensure all content divs are properly constrained */
+    .world-map-section div[style*="background"],
+    .progress-bars-section div[style*="background"] {
+        max-width: 100%;
+        overflow-x: auto;
+    }
+}
+
+/* Extra small phones (< 480px) */
+@media (max-width: 480px) {
+    body {
+        padding: 8px;
+    }
+
+    header {
+        padding: 20px 12px;
+    }
+
+    header h1 {
+        font-size: 1.5rem;
+    }
+
+    .subtitle {
+        font-size: 0.75rem;
+    }
+
+    .logo {
+        width: 50%;
+    }
+
+    .tabs-nav {
+        gap: 6px;
+        padding: 6px;
+    }
+
+    .tab-button {
+        min-width: 90px;
+        padding: 10px 12px;
+        font-size: 0.6rem;
+        /* Ensure tap targets are at least 44x44px for accessibility */
+        min-height: 44px;
+    }
+
+    .tab-icon {
+        font-size: 0.9rem;
+    }
+
+    .progress-bars-section h2,
+    .world-map-section h2 {
+        font-size: 1.2rem;
+    }
+
+    .progress-bar-card {
+        padding: 14px;
+    }
+
+    .progress-bar-label {
+        font-size: 0.85rem;
+    }
+
+    .money-value-large {
+        font-size: 1.5rem;
+    }
+
+    .travel-value-large,
+    .stat-value-large {
+        font-size: 1.3rem;
+    }
+
+    .world-map-container {
+        height: 300px !important;
+        min-height: 300px;
+    }
+
+    .map-legend,
+    .online-players-window {
+        min-width: 130px;
+        max-width: 160px;
+        padding: 8px 10px;
+        font-size: 0.7rem;
+    }
+
+    .legend-title,
+    .online-players-header {
+        font-size: 0.7rem;
+    }
+
+    .legend-label,
+    .online-players-list {
+        font-size: 0.7rem;
+    }
+
+    /* Better button sizing for small screens */
+    .settings-save-button,
+    .search-button {
+        min-height: 44px;
+        font-size: 0.75rem;
+    }
+
+    /* Ensure input fields are properly sized */
+    .settings-api-key-input {
+        font-size: 0.9rem;
+        padding: 10px 14px;
+    }
+
+    /* Job card adjustments */
+    #jobCard {
+        font-size: 0.85rem;
+    }
+
+    /* Progress bar header - stack vertically on very small screens */
+    .progress-bar-header {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .progress-bar-icon {
+        flex-shrink: 0;
+    }
+
+    .progress-bar-label {
+        flex: 1 1 auto;
+        min-width: 80px;
+    }
+
+    .progress-bar-value {
+        flex-shrink: 0;
+    }
+
+    /* Status header adjustments */
+    .status-header {
+        gap: 10px;
+    }
+
+    .status-icon {
+        flex-shrink: 0;
+    }
+
+    .status-label {
+        font-size: 0.9rem;
+    }
+}
+
+/* Landscape orientation on small devices */
+@media (max-height: 600px) and (orientation: landscape) {
+    body {
+        padding: 10px;
+    }
+
+    header {
+        padding: 15px;
+        margin-bottom: 15px;
+    }
+
+    .logo {
+        width: 20%;
+        max-width: 100px;
+    }
+
+    header h1 {
+        font-size: 1.3rem;
+    }
+
+    .subtitle {
+        font-size: 0.7rem;
+    }
+
+    .tabs-nav {
+        padding: 6px;
+    }
+
+    .tab-button {
+        padding: 8px 12px;
+        font-size: 0.6rem;
+    }
+
+    .world-map-container {
+        height: 350px !important;
+        min-height: 350px;
+    }
+
+    .progress-bars-section,
+    .world-map-section {
+        padding: 15px;
+    }
+
+    .progress-bars-section h2,
+    .world-map-section h2 {
+        font-size: 1.2rem;
+        margin-bottom: 10px;
+    }
+}
+
+/* Prevent text from being too small */
+@media (max-width: 768px) {
+    /* Ensure minimum font sizes for readability */
+    p, span, div, li {
+        min-width: 0; /* Allow text to wrap */
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+    }
+
+    /* Make all interactive elements touch-friendly */
+    button,
+    input,
+    select,
+    textarea,
+    a,
+    .tab-button,
+    .endpoint-card {
+        -webkit-tap-highlight-color: rgba(212, 175, 55, 0.2);
+        touch-action: manipulation;
+    }
+
+    /* Disable hover effects on touch devices */
+    @media (hover: none) {
+        .tab-button:hover,
+        .progress-bar-card:hover,
+        .info-item:hover,
+        .endpoint-card:hover {
+            transform: none;
+        }
     }
 }
 

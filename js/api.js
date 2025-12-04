@@ -75,6 +75,11 @@ async function fetchStatusData(userId) {
     return await fetchUserData(userId, 'basic,travel');
 }
 
+// Fetch combined data for auto-refresh (single query with all needed selections)
+async function fetchRefreshData(userId) {
+    return await fetchUserData(userId, 'basic,bars,money,travel,battlestats,stocks');
+}
+
 // Fetch faction data from API
 async function fetchFactionData(factionId, selections = 'basic,members') {
     // Get API key from localStorage (settings page)

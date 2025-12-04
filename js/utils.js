@@ -8,6 +8,23 @@ async function loadAndDisplayUser(userId) {
     try {
         console.log('About to fetch user data for userId:', userId);
         const userData = await fetchUserData(userId);
+        await loadAndDisplayUserWithData(userId, userData);
+    } catch (error) {
+        console.error('=== ERROR in loadAndDisplayUser() ===');
+        console.error('Error:', error);
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+        showError(error.message || 'Failed to fetch user information for the current user.');
+        stopAutoRefresh();
+        console.log('=== loadAndDisplayUser() ENDED WITH ERROR ===');
+    }
+}
+
+// Process already-fetched user data and initialize UI + auto-refresh
+async function loadAndDisplayUserWithData(userId, userData) {
+    console.log('=== loadAndDisplayUserWithData() called with userId:', userId, '===');
+
+    try {
         console.log('=== USER DATA RECEIVED ===');
         console.log('Full userData object:', userData);
         console.log('userData keys:', Object.keys(userData));
@@ -156,19 +173,19 @@ async function loadAndDisplayUser(userId) {
         if (playerInfoTabButton) {
             playerInfoTabButton.click();
         }
-        console.log('=== loadAndDisplayUser() COMPLETED ===');
+        console.log('=== loadAndDisplayUserWithData() COMPLETED ===');
     } catch (error) {
-        console.error('=== ERROR in loadAndDisplayUser() ===');
+        console.error('=== ERROR in loadAndDisplayUserWithData() ===');
         console.error('Error:', error);
         console.error('Error message:', error.message);
         console.error('Error stack:', error.stack);
-        showError(error.message || 'Failed to fetch user information for the current user.');
+        showError(error.message || 'Failed to process user information.');
         stopAutoRefresh();
-        console.log('=== loadAndDisplayUser() ENDED WITH ERROR ===');
+        console.log('=== loadAndDisplayUserWithData() ENDED WITH ERROR ===');
     }
 }
 
-// Initialize current user based on the Torn API key (uses /user?selections=basic)
+// Initialize current user based on the Torn API key (uses /user?selections=<all needed>)
 async function initializeCurrentUserFromApiKey() {
     console.log('=== initializeCurrentUserFromApiKey() called ===');
 
@@ -180,38 +197,40 @@ async function initializeCurrentUserFromApiKey() {
     }
 
     try {
-        const basicUrl = `${API_BASE_URL}/user/?selections=basic&key=${apiKey}`;
-        console.log('Fetching basic user data from URL:', basicUrl.replace(apiKey, 'KEY_HIDDEN'));
+        // Make a single API call with all required selections to avoid duplicate queries
+        const selections = 'basic,profile,bars,travel,faction,money,battlestats,stocks';
+        const userUrl = `${API_BASE_URL}/user/?selections=${selections}&key=${apiKey}`;
+        console.log('Fetching user data from URL:', userUrl.replace(apiKey, 'KEY_HIDDEN'));
 
-        const response = await fetch(basicUrl);
+        const response = await fetch(userUrl);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        const basicData = await response.json();
-        console.log('Basic user API response:', basicData);
+        const userData = await response.json();
+        console.log('User API response:', userData);
 
-        if (basicData.error) {
-            throw new Error(basicData.error.error || JSON.stringify(basicData.error));
+        if (userData.error) {
+            throw new Error(userData.error.error || JSON.stringify(userData.error));
         }
 
-        // In the basic user response, the correct identifier is profile.id
+        // In the user response, the correct identifier is profile.id
         let playerId = null;
-        if (basicData.profile && typeof basicData.profile === 'object' && basicData.profile.id) {
-            playerId = basicData.profile.id;
+        if (userData.profile && typeof userData.profile === 'object' && userData.profile.id) {
+            playerId = userData.profile.id;
         } else {
             // Fallbacks, just in case, but primary is profile.id
-            playerId = basicData.player_id || basicData.user_id || basicData.id;
+            playerId = userData.player_id || userData.user_id || userData.id;
         }
 
         if (!playerId) {
-            throw new Error('Could not determine profile.id from /user?selections=basic response.');
+            throw new Error('Could not determine profile.id from /user?selections response.');
         }
 
-        console.log('Determined playerId from basic endpoint (using profile.id when available):', playerId);
+        console.log('Determined playerId from user endpoint (using profile.id when available):', playerId);
 
-        // Load full user info and start auto-refresh using this playerId
-        await loadAndDisplayUser(playerId);
+        // Pass the already-fetched userData to avoid a second API call
+        await loadAndDisplayUserWithData(playerId, userData);
     } catch (error) {
         console.error('Error initializing current user from API key:', error);
         showError(error.message || 'Failed to initialize current user from API key.');
@@ -486,17 +505,14 @@ function startAutoRefresh() {
         }
 
         try {
-            // Fetch both bars and status data (barsData now includes stocks)
-            const [barsData, statusData] = await Promise.all([
-                fetchBarsData(State.currentUserId),
-                fetchStatusData(State.currentUserId)
-            ]);
+            // Fetch combined data in a single API call (includes bars, status, stocks, etc.)
+            const refreshData = await fetchRefreshData(State.currentUserId);
             
-            // Cache bars data (which includes stocks) for use by stocks functions
-            State.cachedBarsData = barsData;
+            // Cache the data (which includes stocks) for use by stocks functions
+            State.cachedBarsData = refreshData;
             
-            updateProgressBars(barsData);
-            updateStatus(statusData);
+            updateProgressBars(refreshData);
+            updateStatus(refreshData);
             
             // Also refresh total stocks value in the Money card (uses cached data)
             try {

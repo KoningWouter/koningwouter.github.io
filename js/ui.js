@@ -265,6 +265,44 @@ function updateBattleStats(data) {
         return effects.join('\n');
     };
     
+    // Apply color to modifier element based on sign (+ or -) for each line
+    const applyModifierColor = (element) => {
+        if (!element || !element.textContent) return;
+        
+        const text = element.textContent.trim();
+        if (text === '-') return; // No modifiers, keep default
+        
+        // Split by newlines to handle multiple modifiers
+        const lines = text.split('\n');
+        
+        // Clear existing content
+        element.textContent = '';
+        element.innerHTML = '';
+        
+        // Create colored spans for each line
+        lines.forEach((line, index) => {
+            const span = document.createElement('span');
+            span.textContent = line;
+            
+            if (line.trim().startsWith('+')) {
+                // Positive modifier - green color
+                span.style.color = '#22c55e';
+                span.style.textShadow = '0 0 8px rgba(34, 197, 94, 0.4), 0 1px 4px rgba(0, 0, 0, 0.8)';
+            } else if (line.trim().startsWith('-')) {
+                // Negative modifier - red color
+                span.style.color = '#ff6b6b';
+                span.style.textShadow = '0 0 8px rgba(255, 107, 107, 0.4), 0 1px 4px rgba(0, 0, 0, 0.8)';
+            }
+            
+            element.appendChild(span);
+            
+            // Add line break if not the last line
+            if (index < lines.length - 1) {
+                element.appendChild(document.createElement('br'));
+            }
+        });
+    };
+    
     // Update Strength
     const strengthBaseElement = document.getElementById('strengthBase');
     const strengthModifierElement = document.getElementById('strengthModifier');
@@ -277,6 +315,8 @@ function updateBattleStats(data) {
         strengthModifierElement.textContent = formatModifiers(modifiers);
         // Preserve line breaks
         strengthModifierElement.style.whiteSpace = 'pre-line';
+        // Apply color based on modifier sign
+        applyModifierColor(strengthModifierElement);
     }
     
     // Update Defense
@@ -291,6 +331,8 @@ function updateBattleStats(data) {
         defenseModifierElement.textContent = formatModifiers(modifiers);
         // Preserve line breaks
         defenseModifierElement.style.whiteSpace = 'pre-line';
+        // Apply color based on modifier sign
+        applyModifierColor(defenseModifierElement);
     }
     
     // Update Dexterity
@@ -305,6 +347,8 @@ function updateBattleStats(data) {
         dexterityModifierElement.textContent = formatModifiers(modifiers);
         // Preserve line breaks
         dexterityModifierElement.style.whiteSpace = 'pre-line';
+        // Apply color based on modifier sign
+        applyModifierColor(dexterityModifierElement);
     }
     
     // Update Speed
@@ -319,6 +363,8 @@ function updateBattleStats(data) {
         speedModifierElement.textContent = formatModifiers(modifiers);
         // Preserve line breaks
         speedModifierElement.style.whiteSpace = 'pre-line';
+        // Apply color based on modifier sign
+        applyModifierColor(speedModifierElement);
     }
     
     // Calculate and display total battlestats (sum of all four stats)

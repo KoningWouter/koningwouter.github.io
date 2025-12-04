@@ -200,7 +200,7 @@ async function initializeCurrentUserFromApiKey() {
 
     try {
         // Make a single API call with all required selections to avoid duplicate queries
-        const selections = 'basic,profile,bars,travel,faction,money,battlestats,stocks,workstats';
+        const selections = 'basic,profile,bars,travel,faction,money,battlestats,stocks,workstats,job';
         const userUrl = `${API_BASE_URL}/user/?selections=${selections}&key=${apiKey}`;
         console.log('Fetching user data from URL:', userUrl.replace(apiKey, 'KEY_HIDDEN'));
 

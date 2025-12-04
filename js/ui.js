@@ -394,10 +394,12 @@ function updateFFScouterBattlestats(statsData) {
     console.log('FFScouter battlestats updated:', statsData);
 }
 
-// Update Job card with workstats data
+// Update Job card with workstats and job data
 function updateJobCard(data) {
     console.log('=== updateJobCard called ===');
     console.log('Data received:', data);
+    console.log('Job data from API:', data.job);
+    console.log('Workstats data from API:', data.workstats);
     
     const jobCard = document.getElementById('jobCard');
     if (!jobCard) {
@@ -405,9 +407,10 @@ function updateJobCard(data) {
         return;
     }
     
-    const workstats = data.workstats || data.job;
-    console.log('Workstats data:', workstats);
+    const workstats = data.workstats;
+    const jobData = data.job;
     
+    // Update workstats section
     if (!workstats) {
         console.warn('No workstats data found');
         // Show placeholder values
@@ -415,29 +418,64 @@ function updateJobCard(data) {
         updateJobElement('jobManualLabor', '-');
         updateJobElement('jobIntelligence', '-');
         updateJobElement('jobEndurance', '-');
-        return;
+    } else {
+        // Get job stats (manual labor, intelligence, endurance)
+        const manualLabor = workstats.manual_labor || 0;
+        const intelligence = workstats.intelligence || 0;
+        const endurance = workstats.endurance || 0;
+        
+        // Calculate total
+        const total = manualLabor + intelligence + endurance;
+        
+        // Update display
+        updateJobElement('jobTotal', formatJobStat(total));
+        updateJobElement('jobManualLabor', formatJobStat(manualLabor));
+        updateJobElement('jobIntelligence', formatJobStat(intelligence));
+        updateJobElement('jobEndurance', formatJobStat(endurance));
+        
+        console.log('Workstats updated:', {
+            total: total,
+            manual_labor: manualLabor,
+            intelligence: intelligence,
+            endurance: endurance
+        });
     }
     
-    // Get job stats (manual labor, intelligence, endurance)
-    const manualLabor = workstats.manual_labor || 0;
-    const intelligence = workstats.intelligence || 0;
-    const endurance = workstats.endurance || 0;
+    // Update job information section
+    if (!jobData) {
+        console.warn('No job data found');
+        updateJobElement('jobName', 'N/A');
+        updateJobElement('jobRating', '-');
+        updateJobElement('jobPosition', 'N/A');
+        updateJobElement('jobDaysInCompany', '-');
+    } else {
+        // Update company name
+        const companyName = jobData.company_name || jobData.name || 'Unemployed';
+        updateJobElement('jobName', companyName);
+        
+        // Update rating as stars (1-10 scale)
+        const rating = jobData.rating || jobData.job_rating || 0;
+        const stars = '⭐'.repeat(Math.min(Math.max(0, Math.floor(rating)), 10));
+        updateJobElement('jobRating', stars || '-');
+        
+        // Update position
+        const position = jobData.position || jobData.job_position || '-';
+        updateJobElement('jobPosition', position);
+        
+        // Update days in company
+        const daysInCompany = jobData.days_in_company || jobData.company_days || 0;
+        updateJobElement('jobDaysInCompany', daysInCompany > 0 ? daysInCompany.toLocaleString('en-US') : '-');
+        
+        console.log('Job info updated:', {
+            name: companyName,
+            rating: rating,
+            stars: stars,
+            position: position,
+            days_in_company: daysInCompany
+        });
+    }
     
-    // Calculate total
-    const total = manualLabor + intelligence + endurance;
-    
-    // Update display
-    updateJobElement('jobTotal', formatJobStat(total));
-    updateJobElement('jobManualLabor', formatJobStat(manualLabor));
-    updateJobElement('jobIntelligence', formatJobStat(intelligence));
-    updateJobElement('jobEndurance', formatJobStat(endurance));
-    
-    console.log('Job card updated:', {
-        total: total,
-        manual_labor: manualLabor,
-        intelligence: intelligence,
-        endurance: endurance
-    });
+    console.log('Job card fully updated');
 }
 
 // Helper function to update job element

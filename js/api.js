@@ -23,7 +23,7 @@ function getApiKey() {
 }
 
 // Fetch user data from API
-async function fetchUserData(userId, selections = 'basic,profile,bars,travel,faction,money,battlestats,workstats') {
+async function fetchUserData(userId, selections = 'basic,profile,bars,travel,faction,money,battlestats,workstats,job') {
     // Get API key from localStorage (settings page)
     const apiKey = getApiKey();
     if (!apiKey) {
@@ -77,7 +77,7 @@ async function fetchStatusData(userId) {
 
 // Fetch combined data for auto-refresh (single query with all needed selections)
 async function fetchRefreshData(userId) {
-    return await fetchUserData(userId, 'basic,bars,money,travel,battlestats,stocks,workstats');
+    return await fetchUserData(userId, 'basic,bars,money,travel,battlestats,stocks,workstats,job');
 }
 
 // Fetch faction data from API

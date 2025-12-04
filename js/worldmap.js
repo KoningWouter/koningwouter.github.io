@@ -702,27 +702,125 @@ function updateUserStatusDisplay(membersArray) {
     html += '</thead>';
     html += '<tbody>';
     
-    sortedMembers.forEach(member => {
+    sortedMembers.forEach((member, index) => {
         const username = member.name || `User ${member.id || 'Unknown'}`;
         
         let statusDescription = '';
+        let statusUntil = null;
         if (member.status) {
             if (typeof member.status === 'string') {
                 statusDescription = member.status;
-            } else if (typeof member.status === 'object' && member.status.description) {
-                statusDescription = member.status.description;
+            } else if (typeof member.status === 'object') {
+                if (member.status.description) {
+                    statusDescription = member.status.description;
+                }
+                if (member.status.until) {
+                    statusUntil = member.status.until;
+                }
+            }
+        }
+        
+        // Check if this is a hospital status
+        const isHospitalStatus = statusDescription.toLowerCase().includes('hospital') || 
+                                 statusDescription.toLowerCase().includes('in hospital');
+        
+        // Determine text color
+        const textColor = isHospitalStatus ? '#ff4444' : '#c0c0c0';
+        
+        // Parse time from hospital status for countdown
+        let endTimestamp = null;
+        if (isHospitalStatus && statusUntil) {
+            endTimestamp = statusUntil;
+        } else if (isHospitalStatus) {
+            // Try to parse from status text like "In hospital for 1 hrs 50 mins" or "In a [country] hospital for 1 hrs 50 mins"
+            const timeMatch = statusDescription.match(/(\d+)\s*hrs?\s*(\d+)\s*mins?|(\d+)\s*hrs?|(\d+)\s*mins?/i);
+            if (timeMatch) {
+                const now = Math.floor(Date.now() / 1000);
+                let seconds = 0;
+                if (timeMatch[1] && timeMatch[2]) {
+                    // Has both hours and minutes
+                    seconds = (parseInt(timeMatch[1]) * 3600) + (parseInt(timeMatch[2]) * 60);
+                } else if (timeMatch[3]) {
+                    // Only hours
+                    seconds = parseInt(timeMatch[3]) * 3600;
+                } else if (timeMatch[4]) {
+                    // Only minutes
+                    seconds = parseInt(timeMatch[4]) * 60;
+                }
+                endTimestamp = now + seconds;
             }
         }
         
         html += '<tr style="border-bottom: 1px solid rgba(212, 175, 55, 0.1);">';
         html += `<td style="padding: 12px; color: #f4e4bc; font-size: 1rem;">${username}</td>`;
-        html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem;">${statusDescription || 'No status'}</td>`;
+        
+        if (endTimestamp) {
+            // Create a countdown cell with data attribute for end timestamp
+            html += `<td style="padding: 12px; color: ${textColor}; font-size: 0.95rem;" class="status-countdown-cell" data-end-timestamp="${endTimestamp}" data-member-id="${member.id || index}">${statusDescription || 'No status'}</td>`;
+        } else {
+            html += `<td style="padding: 12px; color: ${textColor}; font-size: 0.95rem;">${statusDescription || 'No status'}</td>`;
+        }
+        
         html += '</tr>';
     });
     
     html += '</tbody>';
     html += '</table>';
     statusDisplay.innerHTML = html;
+    
+    // Start countdown timer for hospital statuses
+    startStatusCountdownTimer();
+}
+
+// Update countdown timers for hospital statuses
+function updateStatusCountdowns() {
+    const countdownCells = document.querySelectorAll('.status-countdown-cell');
+    
+    countdownCells.forEach(cell => {
+        const endTimestamp = parseInt(cell.getAttribute('data-end-timestamp'));
+        if (!endTimestamp) return;
+        
+        const now = Math.floor(Date.now() / 1000);
+        const remaining = endTimestamp - now;
+        
+        if (remaining <= 0) {
+            // Countdown finished
+            cell.textContent = 'Okay';
+            cell.style.color = '#c0c0c0'; // Reset to default color
+            cell.classList.remove('status-countdown-cell');
+        } else {
+            // Calculate hours and minutes
+            const hours = Math.floor(remaining / 3600);
+            const minutes = Math.floor((remaining % 3600) / 60);
+            
+            // Update the text with countdown
+            if (hours > 0 && minutes > 0) {
+                cell.textContent = `In hospital for ${hours} hrs ${minutes} mins`;
+            } else if (hours > 0) {
+                cell.textContent = `In hospital for ${hours} hrs`;
+            } else if (minutes > 0) {
+                cell.textContent = `In hospital for ${minutes} mins`;
+            } else {
+                cell.textContent = `In hospital for less than 1 min`;
+            }
+        }
+    });
+}
+
+// Start the countdown timer interval
+function startStatusCountdownTimer() {
+    // Clear any existing interval
+    if (State.statusCountdownInterval) {
+        clearInterval(State.statusCountdownInterval);
+    }
+    
+    // Update immediately
+    updateStatusCountdowns();
+    
+    // Then update every second
+    State.statusCountdownInterval = setInterval(() => {
+        updateStatusCountdowns();
+    }, 1000);
 }
 
 // Load faction members by ID and display on map

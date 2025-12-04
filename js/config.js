@@ -225,7 +225,10 @@ const State = {
     warMapUpdateInterval: null,
     warOpponentFactionId: null,
     warClockInterval: null,
-    warStartTime: null
+    warStartTime: null,
+    
+    // Status countdown state
+    statusCountdownInterval: null
 };
 
 const MAX_MAP_INIT_RETRIES = 10;

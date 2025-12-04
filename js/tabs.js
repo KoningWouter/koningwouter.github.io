@@ -17,6 +17,11 @@ function setupTabs() {
             // Stop world map updates when switching away from world map tab
             if (targetTab !== 'world-map') {
                 stopWorldMapUpdates();
+                // Stop status countdown timer
+                if (State.statusCountdownInterval) {
+                    clearInterval(State.statusCountdownInterval);
+                    State.statusCountdownInterval = null;
+                }
             }
             
             // Stop stock price updates when switching away from stocks tab

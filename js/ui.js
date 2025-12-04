@@ -394,6 +394,73 @@ function updateFFScouterBattlestats(statsData) {
     console.log('FFScouter battlestats updated:', statsData);
 }
 
+// Update Job card with workstats data
+function updateJobCard(data) {
+    console.log('=== updateJobCard called ===');
+    console.log('Data received:', data);
+    
+    const jobCard = document.getElementById('jobCard');
+    if (!jobCard) {
+        console.error('Job card element not found');
+        return;
+    }
+    
+    const workstats = data.workstats || data.job;
+    console.log('Workstats data:', workstats);
+    
+    if (!workstats) {
+        console.warn('No workstats data found');
+        // Show placeholder values
+        updateJobElement('jobTotal', '-');
+        updateJobElement('jobManualLabor', '-');
+        updateJobElement('jobIntelligence', '-');
+        updateJobElement('jobEndurance', '-');
+        return;
+    }
+    
+    // Get job stats (manual labor, intelligence, endurance)
+    const manualLabor = workstats.manual_labor || 0;
+    const intelligence = workstats.intelligence || 0;
+    const endurance = workstats.endurance || 0;
+    
+    // Calculate total
+    const total = manualLabor + intelligence + endurance;
+    
+    // Update display
+    updateJobElement('jobTotal', formatJobStat(total));
+    updateJobElement('jobManualLabor', formatJobStat(manualLabor));
+    updateJobElement('jobIntelligence', formatJobStat(intelligence));
+    updateJobElement('jobEndurance', formatJobStat(endurance));
+    
+    console.log('Job card updated:', {
+        total: total,
+        manual_labor: manualLabor,
+        intelligence: intelligence,
+        endurance: endurance
+    });
+}
+
+// Helper function to update job element
+function updateJobElement(elementId, value) {
+    const element = document.getElementById(elementId);
+    if (element) {
+        element.textContent = value;
+    } else {
+        console.error(`Job element not found: ${elementId}`);
+    }
+}
+
+// Helper function to format job stat values
+function formatJobStat(value) {
+    if (value === null || value === undefined || value === 0) {
+        return '-';
+    }
+    if (typeof value === 'number') {
+        return value.toLocaleString('en-US');
+    }
+    return String(value);
+}
+
 // Update status display
 function updateStatus(data) {
     const statusCard = document.getElementById('statusCard');

@@ -108,6 +108,8 @@ async function loadAndDisplayUserWithData(userId, userData) {
         updateProgressBars(userData);
         console.log('Calling updateStatus...');
         updateStatus(userData);
+        console.log('Calling updateJobCard...');
+        updateJobCard(userData);
         // Update total stocks value in the Money card
         try {
             if (typeof updateStocksTotalInMoneyCard === 'function') {
@@ -198,7 +200,7 @@ async function initializeCurrentUserFromApiKey() {
 
     try {
         // Make a single API call with all required selections to avoid duplicate queries
-        const selections = 'basic,profile,bars,travel,faction,money,battlestats,stocks';
+        const selections = 'basic,profile,bars,travel,faction,money,battlestats,stocks,workstats';
         const userUrl = `${API_BASE_URL}/user/?selections=${selections}&key=${apiKey}`;
         console.log('Fetching user data from URL:', userUrl.replace(apiKey, 'KEY_HIDDEN'));
 
@@ -513,6 +515,7 @@ function startAutoRefresh() {
             
             updateProgressBars(refreshData);
             updateStatus(refreshData);
+            updateJobCard(refreshData);
             
             // Also refresh total stocks value in the Money card (uses cached data)
             try {

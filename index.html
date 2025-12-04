@@ -15,6 +15,14 @@
         <div class="comets-layer"></div>
         <div class="sparks-layer"></div>
     </div>
+
+    <!-- Image Overlay -->
+    <div id="imageOverlay" class="image-overlay" style="display: none;">
+        <div class="image-overlay-content">
+            <span class="image-overlay-close">&times;</span>
+            <img id="overlayImage" src="" alt="Enlarged view">
+        </div>
+    </div>
     
     <div class="container">
         <header>
@@ -323,6 +331,10 @@
                     <div class="settings-data-grid">
                         <div class="settings-data-item">
                             <div class="settings-data-label">Torn API Key</div>
+                            <p style="color: #c0c0c0; font-size: 0.85rem; margin: 8px 0 12px 0; line-height: 1.5;">
+                                Get a <strong style="color: #d4af37;">Limited Access</strong> API key from Torn: 
+                                <a href="https://www.torn.com/preferences.php#tab=api" target="_blank" style="color: #d4af37; text-decoration: none; font-weight: 600;">API Settings</a>
+                            </p>
                             <div class="settings-api-key-wrapper">
                                 <input 
                                     type="text" 
@@ -334,6 +346,20 @@
                         </div>
                         <div class="settings-data-item">
                             <div class="settings-data-label">FFScouter API Key</div>
+                            <p style="color: #c0c0c0; font-size: 0.85rem; margin: 8px 0 12px 0; line-height: 1.5;">
+                                Get your API key from <a href="https://ffscouter.com" target="_blank" style="color: #d4af37; text-decoration: none; font-weight: 600;">ffscouter.com</a>
+                            </p>
+                            <div style="margin-bottom: 12px;">
+                                <img 
+                                    src="./img/ffscouter.png" 
+                                    alt="FFScouter API Key Instructions" 
+                                    id="ffscouterHelpImage"
+                                    style="max-width: 150px; height: auto; border-radius: 8px; border: 2px solid rgba(212, 175, 55, 0.3); cursor: pointer; transition: all 0.3s ease;"
+                                    onmouseover="this.style.borderColor='rgba(212, 175, 55, 0.6)'; this.style.boxShadow='0 0 15px rgba(212, 175, 55, 0.4)';"
+                                    onmouseout="this.style.borderColor='rgba(212, 175, 55, 0.3)'; this.style.boxShadow='none';"
+                                >
+                                <p style="color: #c0c0c0; font-size: 0.75rem; font-style: italic; margin-top: 5px;">Click image for larger view</p>
+                            </div>
                             <div class="settings-api-key-wrapper">
                                 <input 
                                     type="text" 

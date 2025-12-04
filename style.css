@@ -3246,6 +3246,79 @@ header h1 {
     color: #f4e4bc;
 }
 
+/* Image Overlay */
+.image-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.3s ease;
+}
+
+.image-overlay-content {
+    position: relative;
+    max-width: 90%;
+    max-height: 90%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.image-overlay-content img {
+    max-width: 100%;
+    max-height: 85vh;
+    border-radius: 12px;
+    border: 3px solid rgba(212, 175, 55, 0.6);
+    box-shadow: 
+        0 20px 60px rgba(0, 0, 0, 0.8),
+        0 0 40px rgba(212, 175, 55, 0.4);
+    animation: scaleIn 0.3s ease;
+}
+
+.image-overlay-close {
+    position: absolute;
+    top: -40px;
+    right: 0;
+    color: #d4af37;
+    font-size: 3rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-shadow: 0 0 20px rgba(212, 175, 55, 0.8);
+}
+
+.image-overlay-close:hover {
+    color: #f4e4bc;
+    transform: scale(1.2);
+    text-shadow: 0 0 30px rgba(244, 228, 188, 1);
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes scaleIn {
+    from {
+        transform: scale(0.8);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
 @media (max-width: 768px) {
     header h1 {
         font-size: 2.5rem;
@@ -3278,6 +3351,11 @@ header h1 {
     .progress-bars-section h2,
     .user-info h2,
     .api-endpoints-section h2 {
+        font-size: 2rem;
+    }
+
+    .image-overlay-close {
+        top: -30px;
         font-size: 2rem;
     }
 }

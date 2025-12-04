@@ -704,6 +704,8 @@ function updateUserStatusDisplay(membersArray) {
     
     sortedMembers.forEach((member, index) => {
         const username = member.name || `User ${member.id || 'Unknown'}`;
+        const userId = member.id || 'Unknown';
+        const profileUrl = `https://www.torn.com/profiles.php?XID=${userId}`;
         
         let statusDescription = '';
         let statusUntil = null;
@@ -752,7 +754,7 @@ function updateUserStatusDisplay(membersArray) {
         }
         
         html += '<tr style="border-bottom: 1px solid rgba(212, 175, 55, 0.1);">';
-        html += `<td style="padding: 12px; color: #f4e4bc; font-size: 1rem;">${username}</td>`;
+        html += `<td style="padding: 12px; color: #f4e4bc; font-size: 1rem;"><a href="${profileUrl}" target="_blank" rel="noopener noreferrer" style="color: #f4e4bc; text-decoration: none; cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#d4af37'" onmouseout="this.style.color='#f4e4bc'">${username}</a></td>`;
         
         if (endTimestamp) {
             // Create a countdown cell with data attribute for end timestamp

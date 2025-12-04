@@ -385,48 +385,8 @@ async function loadUserStatus() {
             membersArray = Object.values(membersData);
         }
         
-        if (membersArray.length === 0) {
-            statusDisplay.innerHTML = '<p style="color: #c0c0c0; font-style: italic;">No members found</p>';
-        } else {
-            // Sort members by name
-            const sortedMembers = membersArray.sort((a, b) => {
-                const nameA = (a.name || '').toLowerCase();
-                const nameB = (b.name || '').toLowerCase();
-                return nameA.localeCompare(nameB);
-            });
-            
-            // Create table
-            let html = '<table style="width: 100%; border-collapse: collapse;">';
-            html += '<thead>';
-            html += '<tr style="border-bottom: 2px solid rgba(212, 175, 55, 0.3);">';
-            html += '<th style="padding: 12px; text-align: left; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Username</th>';
-            html += '<th style="padding: 12px; text-align: left; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Travel Status</th>';
-            html += '</tr>';
-            html += '</thead>';
-            html += '<tbody>';
-            
-            sortedMembers.forEach(member => {
-                const username = member.name || `User ${member.id || 'Unknown'}`;
-                
-                let statusDescription = '';
-                if (member.status) {
-                    if (typeof member.status === 'string') {
-                        statusDescription = member.status;
-                    } else if (typeof member.status === 'object' && member.status.description) {
-                        statusDescription = member.status.description;
-                    }
-                }
-                
-                html += '<tr style="border-bottom: 1px solid rgba(212, 175, 55, 0.1);">';
-                html += `<td style="padding: 12px; color: #f4e4bc; font-size: 1rem;">${username}</td>`;
-                html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem;">${statusDescription || 'No status'}</td>`;
-                html += '</tr>';
-            });
-            
-            html += '</tbody>';
-            html += '</table>';
-            statusDisplay.innerHTML = html;
-        }
+        // Update user status display table
+        updateUserStatusDisplay(membersArray);
         
         // Update online players in Torn window
         updateOnlinePlayersInTorn(membersArray);
@@ -712,6 +672,59 @@ function createMarkersFromMembers(membersArray) {
     console.log(`Created ${State.factionMarkers.length} individual markers and ${usersInTorn > 0 ? '1' : '0'} count marker`);
 }
 
+// Update the user status display table with member data
+function updateUserStatusDisplay(membersArray) {
+    const statusDisplay = document.getElementById('userStatusDisplay');
+    if (!statusDisplay) {
+        console.error('User status display element not found in DOM');
+        return;
+    }
+    
+    if (!membersArray || membersArray.length === 0) {
+        statusDisplay.innerHTML = '<p style="color: #c0c0c0; font-style: italic;">No members found</p>';
+        return;
+    }
+    
+    // Sort members by name
+    const sortedMembers = membersArray.sort((a, b) => {
+        const nameA = (a.name || '').toLowerCase();
+        const nameB = (b.name || '').toLowerCase();
+        return nameA.localeCompare(nameB);
+    });
+    
+    // Create table
+    let html = '<table style="width: 100%; border-collapse: collapse;">';
+    html += '<thead>';
+    html += '<tr style="border-bottom: 2px solid rgba(212, 175, 55, 0.3);">';
+    html += '<th style="padding: 12px; text-align: left; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Username</th>';
+    html += '<th style="padding: 12px; text-align: left; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Travel Status</th>';
+    html += '</tr>';
+    html += '</thead>';
+    html += '<tbody>';
+    
+    sortedMembers.forEach(member => {
+        const username = member.name || `User ${member.id || 'Unknown'}`;
+        
+        let statusDescription = '';
+        if (member.status) {
+            if (typeof member.status === 'string') {
+                statusDescription = member.status;
+            } else if (typeof member.status === 'object' && member.status.description) {
+                statusDescription = member.status.description;
+            }
+        }
+        
+        html += '<tr style="border-bottom: 1px solid rgba(212, 175, 55, 0.1);">';
+        html += `<td style="padding: 12px; color: #f4e4bc; font-size: 1rem;">${username}</td>`;
+        html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem;">${statusDescription || 'No status'}</td>`;
+        html += '</tr>';
+    });
+    
+    html += '</tbody>';
+    html += '</table>';
+    statusDisplay.innerHTML = html;
+}
+
 // Load faction members by ID and display on map
 async function loadFactionMembersById(factionId) {
     console.log('=== loadFactionMembersById() called ===');
@@ -765,6 +778,9 @@ async function loadFactionMembersById(factionId) {
         
         // Update online players in Torn window
         updateOnlinePlayersInTorn(membersArray);
+        
+        // Update user status display table at the bottom
+        updateUserStatusDisplay(membersArray);
         
         console.log(`Loaded ${membersArray.length} members from faction ${factionId}`);
     } catch (error) {

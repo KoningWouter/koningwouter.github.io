@@ -21,16 +21,18 @@ The targets are displayed in a responsive, styled table with the following colum
   - 👤 **Profile Icon** (gold) - Opens player's Torn profile
   - ⚔️ **Attack Icon** (red) - Opens attack page for this player
 
-**Sorting:** The table is automatically sorted by Fair Fight in ascending order (lowest values at the top) to help you find the easiest targets first.
+**Filtering:** Targets are filtered **server-side by the API** using `minff=2.00` and `maxff=3.00` parameters to show only players with fair fight values between 2.00 and 3.00.
+
+**Sorting:** The targets are automatically sorted by Fair Fight in ascending order (lowest values at the top) to help you find the easiest targets first.
 
 ### 3. **Pagination**
 - **Pagination controls displayed at both TOP and BOTTOM** of the table for convenience
 - **Previous Button**: Navigate to previous page (disabled on first page)
 - **Page Input Field**: Type any page number and press Enter or blur to jump directly to that page
-- **Next Button**: Navigate to next page (disabled when fewer than 50 items returned)
-- Pagination uses the `offset` parameter for API calls (0, 50, 100, 150, etc.)
-- Page size: **50 items per page** (set via `limit=50` parameter)
-- "Has more" is determined by checking if the API returned a full page (50 items)
+- **Next Button**: Navigate to next page (disabled when API returns fewer items than the page size)
+- Pagination uses the `offset` parameter for API calls
+- Page size: Determined by the API's default limit (typically 20 items per page)
+- "Has more" is determined by checking if the API returned a full page
 - Both top and bottom pagination controls are fully synchronized
 
 ### 4. **Interactive Features**
@@ -52,8 +54,8 @@ The targets are displayed in a responsive, styled table with the following colum
 
 ### Files Created
 1. **`js/targets.js`** - Main targets module with:
-   - `fetchTargets(offset)` - Fetches targets from API
-   - `displayTargets(data)` - Renders targets table with inline pagination controls
+   - `fetchTargets(offset)` - Fetches targets from API with minff/maxff filtering
+   - `displayTargets(data)` - Renders table with inline pagination controls (sorting by fair fight)
    - `generateTargetsPaginationHTML()` - Generates pagination HTML (inline function)
    - `updatePaginationControls()` - Updates pagination UI (legacy, kept for compatibility)
    - `goToNextPage()` / `goToPreviousPage()` - Navigation functions
@@ -86,13 +88,16 @@ The targets are displayed in a responsive, styled table with the following colum
 ### Endpoint
 **FFScouter API** (same as used in the War panel)
 ```
-GET https://ffscouter.com/api/v1/get-targets?key={ffscouterApiKey}&offset={offset}&limit=50
+GET https://ffscouter.com/api/v1/get-targets?key={ffscouterApiKey}&offset={offset}&minff=2.00&maxff=3.00
 ```
 
 **Parameters:**
 - `key` - Your FFScouter API key
-- `offset` - Pagination offset (0, 50, 100, 150, etc.)
-- `limit` - Set to 50 to retrieve 50 targets per page
+- `offset` - Pagination offset (increments based on API's default limit)
+- `minff` - Minimum fair fight value (2.00)
+- `maxff` - Maximum fair fight value (3.00)
+
+**Filtering:** The API filters targets server-side using the `minff` and `maxff` parameters to return only players with fair fight values between 2.00 and 3.00.
 
 **Note:** This uses your **FFScouter API key**, not your Torn API key.
 
@@ -102,7 +107,7 @@ The API returns an object containing parameters and a targets array:
 ```json
 {
   "parameters": {
-    "limit": 50,
+    "limit": 20,
     "preset": null,
     "key": "UMwAl1idzIBEtUnO",
     "generated_at": 1764922910
@@ -136,11 +141,11 @@ The API returns an object containing parameters and a targets array:
 
 **Response Structure:**
 - `parameters` - Object containing request metadata
-  - `limit` - Number of results per page (set to 50)
-  - `preset` - Preset filter (null when no preset is used)
+  - `limit` - Number of results per page (API's default, typically 20)
+  - `preset` - Preset filter used (null when no preset is specified)
   - `key` - API key used (obscured)
   - `generated_at` - Unix timestamp when response was generated
-- `targets` - Array of target objects
+- `targets` - Array of target objects (pre-filtered by API using minff/maxff parameters)
 
 **Each target contains:**
 - `player_id` - Player's Torn ID
@@ -159,10 +164,10 @@ The module maintains its own state in `TargetsState`:
 ```javascript
 {
   currentPage: 1,
-  itemsPerPage: 50,  // Matches the limit parameter in API call
-  offset: 0,         // 0, 50, 100, 150, etc.
+  itemsPerPage: 20,  // Default (API's typical limit), updated from API response parameters
+  offset: 0,         // Increments based on itemsPerPage (0, 20, 40, 60...)
   totalItems: 0,
-  hasMore: false     // True if we received 50 items (full page)
+  hasMore: false     // True if we received a full page of items
 }
 ```
 
@@ -268,8 +273,10 @@ Consider adding:
 - [ ] Search/filter functionality
 - [x] Sort by Fair Fight (lowest first) - **IMPLEMENTED**
 - [x] Direct page navigation via input field - **IMPLEMENTED**
+- [x] API-side fair fight filtering (minff=2.00, maxff=3.00) - **IMPLEMENTED**
+- [ ] User-configurable fair fight range (add min/max inputs in UI to adjust minff/maxff)
 - [ ] Toggle sort direction or sort by other columns (name, level, battle stats)
-- [ ] Adjustable page size (25/50/100 items)
+- [ ] Adjustable page size (if API supports limit parameter)
 - [ ] Export to CSV
 - [ ] Refresh button for manual updates
 - [ ] Auto-refresh interval
@@ -312,15 +319,18 @@ Consider adding:
 - [ ] Last action timestamps convert to relative time correctly
 - [ ] **Pagination controls appear at both top and bottom of table** ✅
 - [ ] Previous button disabled on page 1 (both top and bottom)
-- [ ] Next button enabled when 50 items returned (full page)
-- [ ] Next button disabled when fewer than 50 items returned (last page)
+- [ ] Next button enabled when full page of items returned
+- [ ] Next button disabled when partial page returned (last page)
 - [ ] **Page input field allows typing custom page number** ✅
 - [ ] **Pressing Enter in page input navigates to that page** ✅
 - [ ] **Blurring page input navigates to that page** ✅
 - [ ] Invalid page numbers reset to current page
 - [ ] Both top and bottom pagination controls work identically
 - [ ] Both page inputs stay synchronized
-- [ ] Offset increments by 50 (0 → 50 → 100 → 150)
+- [ ] Offset increments correctly based on page size
+- [ ] **Targets are filtered by API (minff=2.00, maxff=3.00)** ✅
+- [ ] All displayed targets have fair fight between 2.00 and 3.00
+- [ ] Filtering works correctly across pagination
 - [ ] Mobile layout works properly (horizontal scroll)
 - [ ] Error messages display correctly
 - [ ] Loading state shows while fetching

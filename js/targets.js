@@ -4,7 +4,7 @@
 // Targets state
 const TargetsState = {
     currentPage: 1,
-    itemsPerPage: 50, // Default, will be updated from API response
+    itemsPerPage: 20, // Default, will be updated from API response
     offset: 0,
     totalItems: 0,
     hasMore: false
@@ -23,10 +23,11 @@ async function fetchTargets(offset = 0) {
     try {
         console.log(`Fetching targets with offset: ${offset}`);
         
-        // Use FFScouter API endpoint with limit=50
-        const url = `https://ffscouter.com/api/v1/get-targets?key=${ffscouterApiKey}&offset=${offset}&limit=50`;
+        // Use FFScouter API endpoint with minff and maxff filtering
+        const url = `https://ffscouter.com/api/v1/get-targets?key=${ffscouterApiKey}&offset=${offset}&minff=2.00&maxff=3.00`;
         
-        console.log('Fetching targets from FFScouter API with limit=50...');
+        console.log('Fetching targets from FFScouter API with minff=2.00&maxff=3.00...');
+        console.log('Full URL (key hidden):', url.replace(ffscouterApiKey, 'KEY_HIDDEN'));
         
         const response = await fetch(url);
 
@@ -36,6 +37,15 @@ async function fetchTargets(offset = 0) {
 
         const data = await response.json();
         console.log('Targets data received from FFScouter:', data);
+        console.log('Number of targets received:', data?.targets?.length);
+        
+        // Debug: Log fair fight values
+        if (data?.targets && Array.isArray(data.targets)) {
+            const fairFights = data.targets.map(t => t.fair_fight).sort((a, b) => a - b);
+            console.log('Fair fight values in response:', fairFights);
+            console.log('Min fair fight:', Math.min(...fairFights));
+            console.log('Max fair fight:', Math.max(...fairFights));
+        }
         
         // Check for API errors
         if (data.error) {
@@ -105,6 +115,7 @@ function displayTargets(data) {
     console.log('Has more pages?', TargetsState.hasMore, '(received', targets.length, 'items, limit is', actualLimit, ')');
     
     // Sort targets by fair fight (ascending - lowest first)
+    // API handles filtering with minff/maxff parameters
     targets.sort((a, b) => {
         const ffA = a.fair_fight || 0;
         const ffB = b.fair_fight || 0;
@@ -112,6 +123,10 @@ function displayTargets(data) {
     });
     
     console.log('Targets sorted by fair fight (ascending)');
+    
+    // Debug: Log fair fight values after sorting
+    const sortedFF = targets.map(t => ({ name: t.name, ff: t.fair_fight })).slice(0, 10);
+    console.log('First 10 targets after sorting:', sortedFF);
     
     // Function to generate pagination controls HTML (matching bounties style)
     const generateTargetsPaginationHTML = (isTop = false) => {
@@ -162,7 +177,7 @@ function displayTargets(data) {
             <tbody>
     `;
 
-    // Add rows for each target
+    // Add rows for each target (API handles filtering)
     targets.forEach(target => {
         const playerId = target.player_id || '-';
         const name = target.name || 'Unknown';

@@ -1,5 +1,5 @@
 // Tabs Module - Tab management functions
-// Depends on: config.js, worldmap.js, stocks.js, bounties.js
+// Depends on: config.js, worldmap.js, stocks.js, targets.js, bounties.js
 
 // Setup tab functionality
 function setupTabs() {
@@ -108,6 +108,18 @@ function setupTabs() {
                     loadStocksData();
                 } else {
                     console.error('Stocks tab element not found');
+                }
+            } else if (targetTab === 'targets') {
+                const targetsTab = document.getElementById('targetsTab');
+                if (targetsTab) {
+                    targetsTab.classList.add('active');
+                    console.log('Targets tab activated');
+                    // Load targets data when tab is activated
+                    if (window.TargetsModule && window.TargetsModule.onActivated) {
+                        window.TargetsModule.onActivated();
+                    }
+                } else {
+                    console.error('Targets tab element not found');
                 }
             } else if (targetTab === 'bounties') {
                 const bountiesTab = document.getElementById('bountiesTab');

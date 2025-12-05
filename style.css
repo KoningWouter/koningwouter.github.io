@@ -3843,6 +3843,34 @@ header h1 {
         max-width: 100%;
         overflow-x: auto;
     }
+
+    /* Pagination controls on mobile */
+    .pagination-controls {
+        flex-direction: row;
+        gap: 10px;
+    }
+
+    .pagination-btn {
+        padding: 8px 16px;
+        font-size: 0.75rem;
+        min-height: 44px;
+    }
+
+    #targetsPageInfo {
+        font-size: 0.85rem;
+        margin: 0 10px;
+    }
+
+    /* Make action icons touch-friendly on mobile */
+    .faction-members-table td a[title] {
+        font-size: 1.4rem !important;
+        padding: 5px;
+        min-width: 44px;
+        min-height: 44px;
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+    }
 }
 
 /* Extra small phones (< 480px) */
@@ -3978,6 +4006,28 @@ header h1 {
     .status-label {
         font-size: 0.9rem;
     }
+
+    /* Pagination on very small screens */
+    .pagination-controls {
+        gap: 8px;
+    }
+
+    .pagination-btn {
+        padding: 8px 12px;
+        font-size: 0.7rem;
+        margin: 0 3px;
+    }
+
+    #targetsPageInfo {
+        font-size: 0.75rem;
+        margin: 0 8px;
+    }
+
+    /* Ensure action icons remain touch-friendly on very small screens */
+    .faction-members-table td a[title] {
+        font-size: 1.3rem !important;
+        padding: 4px;
+    }
 }
 
 /* Landscape orientation on small devices */
@@ -4060,6 +4110,84 @@ header h1 {
             transform: none;
         }
     }
+}
+
+/* Targets Table Action Icons */
+.faction-members-table td a[title] {
+    transition: transform 0.2s ease, filter 0.2s ease;
+    cursor: pointer;
+    display: inline-block;
+}
+
+.faction-members-table td a[title]:hover {
+    transform: scale(1.3);
+    filter: drop-shadow(0 0 8px currentColor);
+}
+
+.faction-members-table td a[title="Attack Player"] {
+    color: #dc143c;
+}
+
+.faction-members-table td a[title="Attack Player"]:hover {
+    filter: drop-shadow(0 0 10px rgba(220, 20, 60, 0.9)) drop-shadow(0 0 20px rgba(220, 20, 60, 0.5));
+}
+
+.faction-members-table td a[title="View Profile"] {
+    color: #d4af37;
+}
+
+.faction-members-table td a[title="View Profile"]:hover {
+    filter: drop-shadow(0 0 10px rgba(212, 175, 55, 0.9)) drop-shadow(0 0 20px rgba(212, 175, 55, 0.5));
+}
+
+/* Disable transform on touch devices for better performance */
+@media (hover: none) {
+    .faction-members-table td a[title]:hover {
+        transform: none;
+    }
+}
+
+/* Pagination Controls */
+.pagination-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+}
+
+.pagination-btn {
+    padding: 10px 20px;
+    margin: 0 5px;
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, rgba(212, 175, 55, 0.1) 100%);
+    border: 1px solid rgba(212, 175, 55, 0.4);
+    border-radius: 8px;
+    color: #f4e4bc;
+    font-family: 'Cinzel', serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+    min-height: 44px;
+}
+
+.pagination-btn:hover:not(:disabled) {
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.3) 0%, rgba(212, 175, 55, 0.2) 100%) !important;
+    border-color: rgba(212, 175, 55, 0.6) !important;
+    box-shadow: 0 0 15px rgba(212, 175, 55, 0.4);
+    transform: translateY(-2px);
+}
+
+.pagination-btn:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+}
+
+.pagination-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 @keyframes pulse {

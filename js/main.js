@@ -1,5 +1,5 @@
 // Main Module - Main initialization and event handlers
-// Depends on: config.js, api.js, ui.js, utils.js, tabs.js, stocks.js, bounties.js, worldmap.js
+// Depends on: config.js, api.js, ui.js, utils.js, tabs.js, stocks.js, targets.js, bounties.js, worldmap.js
 
 // Initialize the page
 document.addEventListener('DOMContentLoaded', () => {
@@ -12,6 +12,11 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Initialize world map immediately
     initializeFactionMap();
+    
+    // Initialize targets module
+    if (window.TargetsModule && window.TargetsModule.initialize) {
+        window.TargetsModule.initialize();
+    }
     
     // Initialize current user based on API key (no manual search needed)
     initializeCurrentUserFromApiKey();

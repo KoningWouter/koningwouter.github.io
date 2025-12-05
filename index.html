@@ -47,8 +47,12 @@
                     <span class="tab-icon">🗺️</span>
                     <span class="tab-label">World Map</span>
                 </button>
-                <button class="tab-button" data-tab="bounties">
+                <button class="tab-button" data-tab="targets">
                     <span class="tab-icon">🎯</span>
+                    <span class="tab-label">Targets</span>
+                </button>
+                <button class="tab-button" data-tab="bounties">
+                    <span class="tab-icon">💰</span>
                     <span class="tab-label">Bounties</span>
                 </button>
                 <button class="tab-button" data-tab="war">
@@ -447,6 +451,32 @@
             </div>
         </div>
 
+        <!-- Targets Tab Content -->
+        <div id="targetsTab" class="tab-content">
+            <div class="world-map-section">
+                <h2>Targets</h2>
+                <div id="targetsCard" class="world-map-section">
+                    <div style="background: rgba(0, 0, 0, 0.4); padding: 20px; border-radius: 12px; border: 1px solid rgba(212, 175, 55, 0.2);">
+                        <div id="targetsDisplay" style="color: #c0c0c0; font-family: 'Cormorant Garamond', serif; font-size: 1rem; line-height: 1.8;">
+                            Loading targets data...
+                        </div>
+                    </div>
+                    <!-- Pagination Controls -->
+                    <div id="targetsPagination" class="pagination-controls" style="display: none; margin-top: 20px; text-align: center;">
+                        <button id="targetsPrevBtn" class="pagination-btn" style="padding: 10px 20px; margin: 0 5px; background: linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, rgba(212, 175, 55, 0.1) 100%); border: 1px solid rgba(212, 175, 55, 0.4); border-radius: 8px; color: #f4e4bc; font-family: 'Cinzel', serif; cursor: pointer; transition: all 0.3s ease;">
+                            ← Previous
+                        </button>
+                        <span id="targetsPageInfo" style="color: #d4af37; font-family: 'Cinzel', serif; margin: 0 15px; font-size: 0.95rem;">
+                            Page <span id="targetsCurrentPage">1</span>
+                        </span>
+                        <button id="targetsNextBtn" class="pagination-btn" style="padding: 10px 20px; margin: 0 5px; background: linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, rgba(212, 175, 55, 0.1) 100%); border: 1px solid rgba(212, 175, 55, 0.4); border-radius: 8px; color: #f4e4bc; font-family: 'Cinzel', serif; cursor: pointer; transition: all 0.3s ease;">
+                            Next →
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Bounties Tab Content -->
         <div id="bountiesTab" class="tab-content">
             <div class="world-map-section">
@@ -531,6 +561,7 @@
     <script src="js/ui.js"></script>
     <script src="js/utils.js"></script>
     <script src="js/stocks.js"></script>
+    <script src="js/targets.js"></script>
     <script src="js/bounties.js"></script>
     <script src="js/war.js"></script>
     <script src="js/worldmap.js"></script>

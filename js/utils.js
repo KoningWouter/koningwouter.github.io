@@ -1,6 +1,15 @@
 // Utils Module - Utility functions (search, animations, etc.)
 // Depends on: config.js, api.js, ui.js
 
+// Escape HTML to prevent XSS and rendering issues
+function escapeHtml(text) {
+    if (text === null || text === undefined) return '';
+    
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 // Core loader: fetch user data for a given userId and initialize UI + auto-refresh
 async function loadAndDisplayUser(userId) {
     console.log('=== loadAndDisplayUser() called with userId:', userId, '===');

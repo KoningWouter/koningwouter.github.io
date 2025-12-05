@@ -209,6 +209,10 @@ async function loadStocksData() {
                 if (State.stockNamesMap[id]) {
                     stockData.name = State.stockNamesMap[id];
                 }
+                // Add benefit data from our mapping if available (user stocks API doesn't include full benefit info)
+                if (State.stockBenefitsMap[id]) {
+                    stockData.benefit = State.stockBenefitsMap[id];
+                }
                 return stockData;
             });
             
@@ -256,6 +260,9 @@ async function loadStocksData() {
             // Add "Ready" column header
             html += '<th style="padding: 12px; text-align: center; vertical-align: top; color: #d4af37; font-weight: 600; font-size: 1.1rem; width: 80px;">Ready</th>';
             
+            // Add "Benefit" column header
+            html += '<th style="padding: 12px; text-align: left; vertical-align: top; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Benefit</th>';
+            
             // Create header row
             finalKeys.forEach(key => {
                 let headerLabel;
@@ -293,18 +300,53 @@ async function loadStocksData() {
                     html += '<td style="padding: 12px; text-align: center; vertical-align: top;"></td>';
                 }
                 
-                // Add "Ready" column cell - check if benefit or dividend has a value
-                const hasBenefit = stock.benefit !== undefined && stock.benefit !== null && 
-                    (typeof stock.benefit === 'object' ? Object.keys(stock.benefit).length > 0 : stock.benefit !== '');
-                const hasDividend = stock.dividend !== undefined && stock.dividend !== null && 
-                    (typeof stock.dividend === 'object' ? Object.keys(stock.dividend).length > 0 : stock.dividend !== '');
-                const isReady = hasBenefit || hasDividend;
+                // Add "Ready" column cell - check if total shares >= benefit.requirement
+                let isReady = false;
+                
+                // Get total shares
+                let totalShares = 0;
+                if (stock.total_shares !== undefined && stock.total_shares !== null) {
+                    totalShares = Number(stock.total_shares) || 0;
+                } else if (stock.transactions) {
+                    // Fallback: sum shares from transactions if total_shares is not present
+                    if (Array.isArray(stock.transactions)) {
+                        stock.transactions.forEach(tx => {
+                            if (tx && tx.shares !== undefined && tx.shares !== null) {
+                                totalShares += Number(tx.shares) || 0;
+                            }
+                        });
+                    } else if (typeof stock.transactions === 'object') {
+                        Object.values(stock.transactions).forEach(tx => {
+                            if (tx && tx.shares !== undefined && tx.shares !== null) {
+                                totalShares += Number(tx.shares) || 0;
+                            }
+                        });
+                    }
+                }
+                
+                // Check if benefit requirement is met
+                if (stock.benefit && stock.benefit.requirement !== undefined && stock.benefit.requirement !== null) {
+                    const requirement = Number(stock.benefit.requirement) || 0;
+                    isReady = totalShares >= requirement;
+                } else {
+                    // Fallback: check if dividend has a value (for stocks without benefit requirement)
+                    const hasDividend = stock.dividend !== undefined && stock.dividend !== null && 
+                        (typeof stock.dividend === 'object' ? Object.keys(stock.dividend).length > 0 : stock.dividend !== '');
+                    isReady = hasDividend;
+                }
                 
                 const readyIcon = isReady 
                     ? '<span style="color: #4ade80; font-size: 1.2rem;" title="Active">✓</span>' 
                     : '<span style="color: #ff6b6b; font-size: 1.2rem;" title="Inactive">✗</span>';
                 
                 html += `<td style="padding: 12px; text-align: center; vertical-align: top;">${readyIcon}</td>`;
+                
+                // Add "Benefit" column cell - display benefit.description
+                let benefitDescription = '-';
+                if (stock.benefit && stock.benefit.description) {
+                    benefitDescription = String(stock.benefit.description);
+                }
+                html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem; text-align: left; vertical-align: top;">${benefitDescription}</td>`;
                 
                 finalKeys.forEach(key => {
                     // Special handling for Price column

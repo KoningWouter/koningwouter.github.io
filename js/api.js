@@ -160,7 +160,7 @@ async function fetchStockNames() {
             return;
         }
         
-        // Populate stockNamesMap, stockNamesArray, and stockPricesMap
+        // Populate stockNamesMap, stockNamesArray, stockPricesMap, and stockBenefitsMap
         const stocks = stocksData.stocks || {};
         State.stockNamesArray = [];
         Object.keys(stocks).forEach(stockId => {
@@ -175,6 +175,10 @@ async function fetchStockNames() {
             // Store current price if available
             if (stock.current_price !== undefined) {
                 State.stockPricesMap[stockId] = stock.current_price;
+            }
+            // Store benefit data if available
+            if (stock.benefit) {
+                State.stockBenefitsMap[stockId] = stock.benefit;
             }
         });
         

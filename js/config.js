@@ -208,6 +208,7 @@ const State = {
     stockNamesMap: {},
     stockNamesArray: [],
     stockPricesMap: {},
+    stockBenefitsMap: {},
     stockPriceUpdateInterval: null,
     
     // Bounties pagination state

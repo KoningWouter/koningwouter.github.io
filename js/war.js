@@ -189,7 +189,7 @@ function stopWarClock() {
 }
 
 // Update war score display
-function updateWarScoreDisplay(warsData) {
+async function updateWarScoreDisplay(warsData) {
     const warScoreTeamAName = document.getElementById('warScoreTeamAName');
     const warScoreTeamAScore = document.getElementById('warScoreTeamAScore');
     const warScoreTeamBName = document.getElementById('warScoreTeamBName');
@@ -213,6 +213,36 @@ function updateWarScoreDisplay(warsData) {
         let endTime = null;
         let isWarEnded = false;
         
+        // Get user's faction ID and name to identify teams correctly
+        const userFactionId = State.currentFactionId;
+        let userFactionName = null;
+        
+        // Try to fetch user's faction name if we have the ID
+        if (userFactionId) {
+            try {
+                const factionData = await fetchFactionData(userFactionId, 'basic');
+                if (factionData && factionData.name) {
+                    userFactionName = factionData.name;
+                }
+            } catch (error) {
+                console.warn('Could not fetch user faction name for score display:', error);
+            }
+        }
+        
+        // Helper function to check if a faction is the user's faction
+        const isUserFaction = (faction) => {
+            if (!faction) return false;
+            // Compare by ID first (most reliable)
+            if (userFactionId && faction.id && Number(faction.id) === Number(userFactionId)) {
+                return true;
+            }
+            // Compare by name as fallback
+            if (userFactionName && faction.name && String(faction.name).toLowerCase() === String(userFactionName).toLowerCase()) {
+                return true;
+            }
+            return false;
+        };
+        
         // Try to find war data with factions and scores
         if (warsData && warsData.wars) {
             console.log('warsData.wars structure:', warsData.wars);
@@ -221,10 +251,36 @@ function updateWarScoreDisplay(warsData) {
                 const ranked = warsData.wars.ranked;
                 const factions = ranked.factions;
                 if (factions.length >= 2) {
-                    teamA = factions[0].name || 'Team A';
-                    teamB = factions[1].name || 'Team B';
-                    scoreA = factions[0].score !== undefined ? factions[0].score : null;
-                    scoreB = factions[1].score !== undefined ? factions[1].score : null;
+                    // Identify user's team and opponent team
+                    let userTeam = null;
+                    let opponentTeam = null;
+                    let userScore = null;
+                    let opponentScore = null;
+                    
+                    for (const faction of factions) {
+                        if (isUserFaction(faction)) {
+                            userTeam = faction.name || 'Your Team';
+                            userScore = faction.score !== undefined ? faction.score : null;
+                        } else {
+                            opponentTeam = faction.name || 'Opponent Team';
+                            opponentScore = faction.score !== undefined ? faction.score : null;
+                        }
+                    }
+                    
+                    // If we couldn't identify teams, fall back to array order
+                    if (!userTeam || !opponentTeam) {
+                        userTeam = factions[0].name || 'Team A';
+                        opponentTeam = factions[1].name || 'Team B';
+                        userScore = factions[0].score !== undefined ? factions[0].score : null;
+                        opponentScore = factions[1].score !== undefined ? factions[1].score : null;
+                    }
+                    
+                    // Always show user's team as Team A (left) and opponent as Team B (right)
+                    teamA = userTeam;
+                    teamB = opponentTeam;
+                    scoreA = userScore;
+                    scoreB = opponentScore;
+                    
                     // Get start time from ranked war - check multiple possible locations
                     if (ranked.start !== undefined && ranked.start !== null && ranked.start !== 0) {
                         startTime = ranked.start;
@@ -249,10 +305,35 @@ function updateWarScoreDisplay(warsData) {
             if (!teamA && warsData.wars.raids && Array.isArray(warsData.wars.raids) && warsData.wars.raids.length > 0) {
                 const raid = warsData.wars.raids[0];
                 if (raid.factions && Array.isArray(raid.factions) && raid.factions.length >= 2) {
-                    teamA = raid.factions[0].name || 'Team A';
-                    teamB = raid.factions[1].name || 'Team B';
-                    scoreA = raid.factions[0].score !== undefined ? raid.factions[0].score : null;
-                    scoreB = raid.factions[1].score !== undefined ? raid.factions[1].score : null;
+                    // Identify user's team and opponent team
+                    let userTeam = null;
+                    let opponentTeam = null;
+                    let userScore = null;
+                    let opponentScore = null;
+                    
+                    for (const faction of raid.factions) {
+                        if (isUserFaction(faction)) {
+                            userTeam = faction.name || 'Your Team';
+                            userScore = faction.score !== undefined ? faction.score : null;
+                        } else {
+                            opponentTeam = faction.name || 'Opponent Team';
+                            opponentScore = faction.score !== undefined ? faction.score : null;
+                        }
+                    }
+                    
+                    // If we couldn't identify teams, fall back to array order
+                    if (!userTeam || !opponentTeam) {
+                        userTeam = raid.factions[0].name || 'Team A';
+                        opponentTeam = raid.factions[1].name || 'Team B';
+                        userScore = raid.factions[0].score !== undefined ? raid.factions[0].score : null;
+                        opponentScore = raid.factions[1].score !== undefined ? raid.factions[1].score : null;
+                    }
+                    
+                    teamA = userTeam;
+                    teamB = opponentTeam;
+                    scoreA = userScore;
+                    scoreB = opponentScore;
+                    
                     // Get start time from raid if available
                     if (raid.start !== undefined && raid.start !== null) {
                         startTime = raid.start;
@@ -264,10 +345,35 @@ function updateWarScoreDisplay(warsData) {
             if (!teamA && warsData.wars.territory && Array.isArray(warsData.wars.territory) && warsData.wars.territory.length > 0) {
                 const territoryWar = warsData.wars.territory[0];
                 if (territoryWar.factions && Array.isArray(territoryWar.factions) && territoryWar.factions.length >= 2) {
-                    teamA = territoryWar.factions[0].name || 'Team A';
-                    teamB = territoryWar.factions[1].name || 'Team B';
-                    scoreA = territoryWar.factions[0].score !== undefined ? territoryWar.factions[0].score : null;
-                    scoreB = territoryWar.factions[1].score !== undefined ? territoryWar.factions[1].score : null;
+                    // Identify user's team and opponent team
+                    let userTeam = null;
+                    let opponentTeam = null;
+                    let userScore = null;
+                    let opponentScore = null;
+                    
+                    for (const faction of territoryWar.factions) {
+                        if (isUserFaction(faction)) {
+                            userTeam = faction.name || 'Your Team';
+                            userScore = faction.score !== undefined ? faction.score : null;
+                        } else {
+                            opponentTeam = faction.name || 'Opponent Team';
+                            opponentScore = faction.score !== undefined ? faction.score : null;
+                        }
+                    }
+                    
+                    // If we couldn't identify teams, fall back to array order
+                    if (!userTeam || !opponentTeam) {
+                        userTeam = territoryWar.factions[0].name || 'Team A';
+                        opponentTeam = territoryWar.factions[1].name || 'Team B';
+                        userScore = territoryWar.factions[0].score !== undefined ? territoryWar.factions[0].score : null;
+                        opponentScore = territoryWar.factions[1].score !== undefined ? territoryWar.factions[1].score : null;
+                    }
+                    
+                    teamA = userTeam;
+                    teamB = opponentTeam;
+                    scoreA = userScore;
+                    scoreB = opponentScore;
+                    
                     // Get start time from territory war if available
                     if (territoryWar.start !== undefined && territoryWar.start !== null) {
                         startTime = territoryWar.start;
@@ -377,18 +483,51 @@ async function loadWarData() {
         }
         
         // Update war score display
-        updateWarScoreDisplay(warsData);
+        await updateWarScoreDisplay(warsData);
         
-        // Find the opponent faction - it's the faction with name other than "Embers HQ"
+        // Get user's faction ID and name to identify the opposing team
+        const userFactionId = State.currentFactionId;
+        let userFactionName = null;
+        
+        // Try to fetch user's faction name if we have the ID
+        if (userFactionId) {
+            try {
+                const factionData = await fetchFactionData(userFactionId, 'basic');
+                if (factionData && factionData.name) {
+                    userFactionName = factionData.name;
+                }
+            } catch (error) {
+                console.warn('Could not fetch user faction name:', error);
+            }
+        }
+        
+        console.log('User faction ID:', userFactionId);
+        console.log('User faction name:', userFactionName);
+        
+        // Find the opponent faction - it's the faction that is NOT the user's faction
         // Structure: warsData.wars.ranked.factions (or warsData.wars.raids or warsData.wars.territory)
         let opponentFactionId = null;
         let opponentFactionName = null;
+        
+        // Helper function to check if a faction is the user's faction
+        const isUserFaction = (faction) => {
+            if (!faction) return false;
+            // Compare by ID first (most reliable)
+            if (userFactionId && faction.id && Number(faction.id) === Number(userFactionId)) {
+                return true;
+            }
+            // Compare by name as fallback
+            if (userFactionName && faction.name && String(faction.name).toLowerCase() === String(userFactionName).toLowerCase()) {
+                return true;
+            }
+            return false;
+        };
         
         if (warsData.wars) {
             // Check ranked wars first (make sure ranked is not null)
             if (warsData.wars.ranked && warsData.wars.ranked !== null && warsData.wars.ranked.factions && Array.isArray(warsData.wars.ranked.factions)) {
                 for (const faction of warsData.wars.ranked.factions) {
-                    if (faction.name && faction.name !== 'Embers HQ') {
+                    if (!isUserFaction(faction)) {
                         opponentFactionId = faction.id;
                         opponentFactionName = faction.name;
                         break;
@@ -401,7 +540,7 @@ async function loadWarData() {
                 for (const raid of warsData.wars.raids) {
                     if (raid.factions && Array.isArray(raid.factions)) {
                         for (const faction of raid.factions) {
-                            if (faction.name && faction.name !== 'Embers HQ') {
+                            if (!isUserFaction(faction)) {
                                 opponentFactionId = faction.id;
                                 opponentFactionName = faction.name;
                                 break;
@@ -417,7 +556,7 @@ async function loadWarData() {
                 for (const territoryWar of warsData.wars.territory) {
                     if (territoryWar.factions && Array.isArray(territoryWar.factions)) {
                         for (const faction of territoryWar.factions) {
-                            if (faction.name && faction.name !== 'Embers HQ') {
+                            if (!isUserFaction(faction)) {
                                 opponentFactionId = faction.id;
                                 opponentFactionName = faction.name;
                                 break;
@@ -1340,7 +1479,7 @@ async function refreshWarScores() {
         if (warsResponse.ok) {
             const warsData = await warsResponse.json();
             if (!warsData.error) {
-                updateWarScoreDisplay(warsData);
+                await updateWarScoreDisplay(warsData);
                 console.log('War scores refreshed');
             }
         }

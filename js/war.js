@@ -840,7 +840,23 @@ async function loadWarData() {
         membersArray.forEach(member => {
             const name = member.name || `User ${member.id}`;
             const level = member.level !== undefined ? member.level : '-';
-            const status = member.status ? (member.status.state || member.status.description || '-') : '-';
+            
+            // Determine status - prioritize description for hospital (contains time left)
+            let status = '-';
+            if (member.status) {
+                const statusState = member.status.state || '';
+                const statusDescription = member.status.description || '';
+                const statusStateLower = String(statusState).toLowerCase();
+                const statusDescLower = String(statusDescription).toLowerCase();
+                
+                // If in hospital, use description (contains time left), otherwise use state or description
+                if (statusStateLower.includes('hospital') || statusDescLower.includes('hospital')) {
+                    status = statusDescription || statusState || '-';
+                } else {
+                    status = statusState || statusDescription || '-';
+                }
+            }
+            
             const lastAction = member.last_action ? (member.last_action.status || member.last_action.relative || '-') : '-';
             const attackUrl = `https://www.torn.com/loader.php?sid=attack&user2ID=${member.id}`;
             
@@ -874,7 +890,11 @@ async function loadWarData() {
             html += `<td style="padding: 12px; color: ${lastActionStyle.color}; font-size: 0.95rem; font-weight: 600; text-shadow: ${lastActionStyle.glow};">${lastAction}</td>`;
             html += `<td style="padding: 12px; color: ${fairFightColor}; font-size: 0.95rem; text-align: center; font-weight: 600; text-shadow: ${fairFightGlow};">${formatFairFight(fairFight)}</td>`;
             html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem; text-align: right;">${bsEstimateHuman}</td>`;
-            html += `<td style="padding: 12px; font-size: 0.95rem;" class="${statusColorClass}">${status}</td>`;
+            // For hospital status, ensure text is red
+            const statusStyle = statusColorClass === 'status-hospital' 
+                ? 'padding: 12px; font-size: 0.95rem; color: #ff3366 !important;' 
+                : 'padding: 12px; font-size: 0.95rem;';
+            html += `<td style="${statusStyle}" class="${statusColorClass}">${status}</td>`;
             html += `<td style="padding: 12px; text-align: center;"><a href="${attackUrl}" target="_blank" rel="noopener noreferrer" style="color: #ff6b6b; font-size: 1.5rem; text-decoration: none; cursor: pointer; display: inline-block; transition: transform 0.2s;" title="Attack ${name}" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">⚔️</a></td>`;
             html += '</tr>';
         });
@@ -1417,7 +1437,23 @@ async function refreshWarData() {
         membersArray.forEach(member => {
             const name = member.name || `User ${member.id}`;
             const level = member.level !== undefined ? member.level : '-';
-            const status = member.status ? (member.status.state || member.status.description || '-') : '-';
+            
+            // Determine status - prioritize description for hospital (contains time left)
+            let status = '-';
+            if (member.status) {
+                const statusState = member.status.state || '';
+                const statusDescription = member.status.description || '';
+                const statusStateLower = String(statusState).toLowerCase();
+                const statusDescLower = String(statusDescription).toLowerCase();
+                
+                // If in hospital, use description (contains time left), otherwise use state or description
+                if (statusStateLower.includes('hospital') || statusDescLower.includes('hospital')) {
+                    status = statusDescription || statusState || '-';
+                } else {
+                    status = statusState || statusDescription || '-';
+                }
+            }
+            
             const lastAction = member.last_action ? (member.last_action.status || member.last_action.relative || '-') : '-';
             const attackUrl = `https://www.torn.com/loader.php?sid=attack&user2ID=${member.id}`;
             
@@ -1448,7 +1484,11 @@ async function refreshWarData() {
             html += `<td style="padding: 12px; color: ${lastActionStyle.color}; font-size: 0.95rem; font-weight: 600; text-shadow: ${lastActionStyle.glow};">${lastAction}</td>`;
             html += `<td style="padding: 12px; color: ${fairFightColor}; font-size: 0.95rem; text-align: center; font-weight: 600; text-shadow: ${fairFightGlow};">${formatFairFight(fairFight)}</td>`;
             html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem; text-align: right;">${bsEstimateHuman}</td>`;
-            html += `<td style="padding: 12px; font-size: 0.95rem;" class="${statusColorClass}">${status}</td>`;
+            // For hospital status, ensure text is red
+            const statusStyle = statusColorClass === 'status-hospital' 
+                ? 'padding: 12px; font-size: 0.95rem; color: #ff3366 !important;' 
+                : 'padding: 12px; font-size: 0.95rem;';
+            html += `<td style="${statusStyle}" class="${statusColorClass}">${status}</td>`;
             html += `<td style="padding: 12px; text-align: center;"><a href="${attackUrl}" target="_blank" rel="noopener noreferrer" style="color: #ff6b6b; font-size: 1.5rem; text-decoration: none; cursor: pointer; display: inline-block; transition: transform 0.2s;" title="Attack ${name}" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">⚔️</a></td>`;
             html += '</tr>';
         });

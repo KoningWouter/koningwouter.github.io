@@ -471,7 +471,7 @@ async function fetchReviveskillForUsers(userIds) {
     // Fetch personalstats for users we don't have data for
     const fetchPromises = usersToFetch.map(async (userId) => {
         try {
-            const url = `${API_BASE_URL}/user/${userId}?selections=personalstats&key=${apiKey}`;
+            const url = `${API_BASE_URL}/user/${userId}/personalstats?stat=reviveskill&key=${apiKey}`;
             const response = await fetch(url);
             
             if (!response.ok) {
@@ -486,9 +486,25 @@ async function fetchReviveskillForUsers(userIds) {
                 return { userId, canRevive: false };
             }
             
-            // Check if reviveskill exists and is greater than 0
-            const reviveskill = data.personalstats?.reviveskill || 0;
-            const canRevive = reviveskill > 0;
+            // Check if personalstats is an array and find the object with name "reviveskill"
+            const personalstats = data.personalstats || [];
+            let reviveskillValue = 0;
+            
+            if (Array.isArray(personalstats)) {
+                const reviveskillStat = personalstats.find(stat => stat.name === 'reviveskill');
+                if (reviveskillStat && reviveskillStat.value !== undefined) {
+                    reviveskillValue = reviveskillStat.value || 0;
+                }
+            }
+            
+            const canRevive = reviveskillValue > 0;
+            
+            console.log(`User ${userId} reviveskill check:`, {
+                personalstatsLength: Array.isArray(personalstats) ? personalstats.length : 0,
+                reviveskillValue: reviveskillValue,
+                canRevive: canRevive,
+                personalstats: personalstats
+            });
             
             return { userId: String(userId), canRevive };
         } catch (error) {

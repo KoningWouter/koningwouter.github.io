@@ -227,6 +227,7 @@ const State = {
     warOpponentFactionId: null,
     warClockInterval: null,
     warStartTime: null,
+    reviveskillMap: {}, // Cache for reviveskill data (user ID -> canRevive boolean)
     
     // Status countdown state
     statusCountdownInterval: null

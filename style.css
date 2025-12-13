@@ -3738,6 +3738,7 @@ header h1 {
     #stocksDisplay,
     #bountiesDisplay,
     #warDisplay,
+    #ourTeamDisplay,
     #userStatusDisplay {
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
@@ -3835,6 +3836,18 @@ header h1 {
         padding: 15px !important;
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
+    }
+
+    /* War card - stack team cards vertically on mobile */
+    #warCard > div[style*="display: flex"] {
+        flex-direction: column !important;
+        gap: 15px !important;
+    }
+
+    #ourTeamCard,
+    #enemyTeamCard {
+        width: 100% !important;
+        flex: none !important;
     }
 
     /* Ensure all content divs are properly constrained */

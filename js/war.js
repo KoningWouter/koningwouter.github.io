@@ -441,6 +441,404 @@ async function updateWarScoreDisplay(warsData) {
     }
 }
 
+// Fetch reviveskill for multiple users in parallel (only for users not already cached)
+async function fetchReviveskillForUsers(userIds) {
+    const apiKey = getApiKey();
+    if (!apiKey) {
+        console.error('API key not configured for reviveskill fetch');
+        return State.reviveskillMap || {};
+    }
+    
+    // Initialize reviveskillMap in State if it doesn't exist
+    if (!State.reviveskillMap) {
+        State.reviveskillMap = {};
+    }
+    
+    // Filter out users we already have data for
+    const usersToFetch = userIds.filter(userId => {
+        const userIdStr = String(userId);
+        return State.reviveskillMap[userIdStr] === undefined;
+    });
+    
+    // If we have all users cached, return the cached data
+    if (usersToFetch.length === 0) {
+        console.log('All reviveskill data already cached, using cached data');
+        return State.reviveskillMap;
+    }
+    
+    console.log(`Fetching reviveskill for ${usersToFetch.length} new users (${userIds.length - usersToFetch.length} already cached)`);
+    
+    // Fetch personalstats for users we don't have data for
+    const fetchPromises = usersToFetch.map(async (userId) => {
+        try {
+            const url = `${API_BASE_URL}/user/${userId}?selections=personalstats&key=${apiKey}`;
+            const response = await fetch(url);
+            
+            if (!response.ok) {
+                console.warn(`Failed to fetch personalstats for user ${userId}: ${response.status}`);
+                return { userId, canRevive: false };
+            }
+            
+            const data = await response.json();
+            
+            if (data.error) {
+                console.warn(`Error fetching personalstats for user ${userId}:`, data.error);
+                return { userId, canRevive: false };
+            }
+            
+            // Check if reviveskill exists and is greater than 0
+            const reviveskill = data.personalstats?.reviveskill || 0;
+            const canRevive = reviveskill > 0;
+            
+            return { userId: String(userId), canRevive };
+        } catch (error) {
+            console.error(`Error fetching reviveskill for user ${userId}:`, error);
+            return { userId: String(userId), canRevive: false };
+        }
+    });
+    
+    const results = await Promise.all(fetchPromises);
+    
+    // Store the fetched data in State cache
+    results.forEach(({ userId, canRevive }) => {
+        State.reviveskillMap[userId] = canRevive;
+    });
+    
+    console.log('Reviveskill map updated:', State.reviveskillMap);
+    return State.reviveskillMap;
+}
+
+// Load and display our team members
+async function loadOurTeamMembers() {
+    console.log('=== loadOurTeamMembers() called ===');
+    
+    const ourTeamDisplay = document.getElementById('ourTeamDisplay');
+    if (!ourTeamDisplay) {
+        console.error('Our team display element not found in DOM');
+        return;
+    }
+    
+    const apiKey = getApiKey();
+    if (!apiKey) {
+        console.error('API key not configured');
+        ourTeamDisplay.innerHTML = '<p style="color: #ff6b6b;">API key not configured. Please enter your API key in the Settings tab.</p>';
+        return;
+    }
+    
+    try {
+        // Fetch our faction name from /user/ endpoint and members
+        const userFactionUrl = `${API_BASE_URL}/user/?selections=faction&key=${apiKey}`;
+        const membersUrl = `${API_BASE_URL}/faction/members?key=${apiKey}`;
+        
+        // Fetch both in parallel
+        const [userFactionResponse, membersResponse] = await Promise.all([
+            fetch(userFactionUrl),
+            fetch(membersUrl)
+        ]);
+        
+        if (!membersResponse.ok) {
+            throw new Error(`HTTP error! status: ${membersResponse.status}`);
+        }
+        
+        const membersData = await membersResponse.json();
+        
+        console.log('Our team members API response status:', membersResponse.status);
+        console.log('Our team members API response data:', membersData);
+        
+        if (membersData.error) {
+            ourTeamDisplay.innerHTML = `<p style="color: #ff6b6b;">Error fetching team members: ${membersData.error.error || JSON.stringify(membersData.error)}</p>`;
+            return;
+        }
+        
+        // Update faction name if available from /user/ endpoint
+        if (userFactionResponse.ok) {
+            const userFactionData = await userFactionResponse.json();
+            console.log('User faction data:', userFactionData);
+            if (userFactionData && !userFactionData.error && userFactionData.faction && userFactionData.faction.name) {
+                const ourTeamNameElement = document.getElementById('ourTeamName');
+                if (ourTeamNameElement) {
+                    ourTeamNameElement.textContent = userFactionData.faction.name;
+                    console.log('Updated our team name to:', userFactionData.faction.name);
+                }
+            } else {
+                console.warn('Could not find faction.name in userFactionData:', userFactionData);
+            }
+        }
+        
+        // Display members in a table
+        const members = membersData.members || {};
+        const memberIds = Object.keys(members);
+        
+        if (memberIds.length === 0) {
+            ourTeamDisplay.innerHTML = '<p style="color: #c0c0c0; font-style: italic;">No members found in faction.</p>';
+            return;
+        }
+        
+        // Convert members object to array
+        let membersArray = memberIds.map(id => ({
+            id: id,
+            ...members[id]
+        }));
+        
+        // Collect all member IDs for FFScouter API call
+        const memberIdsForFFScouter = membersArray
+            .map(member => member.id)
+            .filter(id => id && id !== 'Unknown');
+        
+        // Fetch reviveskill for all members
+        const reviveskillMap = await fetchReviveskillForUsers(memberIdsForFFScouter);
+        
+        // Fetch battlestats from FFScouter API if we have member IDs and API key
+        let battlestatsMap = {};
+        if (memberIdsForFFScouter.length > 0) {
+            const ffscouterApiKey = localStorage.getItem('ffscouter_api_key');
+            if (ffscouterApiKey) {
+                try {
+                    const targetsParam = memberIdsForFFScouter.join(',');
+                    const ffscouterUrl = `https://ffscouter.com/api/v1/get-stats?key=${ffscouterApiKey}&targets=${targetsParam}`;
+                    console.log('Fetching battlestats from FFScouter API for our team members...');
+                    
+                    const statsResponse = await fetch(ffscouterUrl);
+                    
+                    if (statsResponse.ok) {
+                        const statsData = await statsResponse.json();
+                        console.log('FFScouter API response:', statsData);
+                        
+                        // Map the response data by player ID
+                        if (Array.isArray(statsData)) {
+                            statsData.forEach(stat => {
+                                if (stat.player_id) {
+                                    const userId = String(stat.player_id);
+                                    battlestatsMap[userId] = stat;
+                                }
+                            });
+                        } else if (typeof statsData === 'object') {
+                            Object.keys(statsData).forEach(userId => {
+                                battlestatsMap[userId] = statsData[userId];
+                            });
+                        }
+                    } else {
+                        console.warn('FFScouter API request failed:', statsResponse.status);
+                    }
+                } catch (error) {
+                    console.error('Error fetching battlestats from FFScouter:', error);
+                }
+            } else {
+                console.log('FFScouter API key not configured, skipping battlestats fetch');
+            }
+        }
+        
+        // Sort members by fair_fight value (ascending - lowest to highest)
+        membersArray.sort((a, b) => {
+            const statsA = battlestatsMap[String(a.id)] || {};
+            const statsB = battlestatsMap[String(b.id)] || {};
+            const fairFightA = statsA.fair_fight;
+            const fairFightB = statsB.fair_fight;
+            
+            // Handle missing values - put them at the top (they are weaker)
+            const aIsMissing = fairFightA === undefined || fairFightA === null;
+            const bIsMissing = fairFightB === undefined || fairFightB === null;
+            
+            if (aIsMissing && bIsMissing) {
+                return 0; // Both missing, keep order
+            }
+            if (aIsMissing) {
+                return -1; // Move A to top
+            }
+            if (bIsMissing) {
+                return 1; // Move B to top
+            }
+            
+            // Sort ascending (lowest to highest)
+            return fairFightA - fairFightB;
+        });
+        
+        // Function to get color based on fair_fight value
+        const getFairFightColor = (value) => {
+            if (value === '-' || value === null || value === undefined || typeof value !== 'number') {
+                return '#c0c0c0'; // Default gray for missing values
+            }
+            
+            if (value >= 0 && value <= 2) {
+                return '#00ff88'; // Green - status-okay color
+            } else if (value > 2 && value <= 3) {
+                return '#d4a574'; // Federal orange - matching Last Action Idle color
+            } else if (value > 3) {
+                return '#ff3366'; // Red - status-hospital color
+            }
+            
+            return '#c0c0c0';
+        };
+        
+        // Create table (without Attack column)
+        let html = '<table style="width: 100%; border-collapse: collapse;">';
+        html += '<thead>';
+        html += '<tr style="border-bottom: 2px solid rgba(212, 175, 55, 0.3);">';
+        html += '<th style="padding: 12px; text-align: left; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Name</th>';
+        html += '<th style="padding: 12px; text-align: left; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Level</th>';
+        html += '<th style="padding: 12px; text-align: left; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Last Action</th>';
+        html += '<th style="padding: 12px; text-align: center; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Fair Fight</th>';
+        html += '<th style="padding: 12px; text-align: right; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Battle Stats</th>';
+        html += '<th style="padding: 12px; text-align: left; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Status</th>';
+        html += '</tr>';
+        html += '</thead>';
+        html += '<tbody>';
+        
+        // Helper function to get last action color and glow
+        const getLastActionColor = (lastAction) => {
+            try {
+                if (!lastAction || lastAction === '-' || lastAction === null || lastAction === undefined) {
+                    return { color: '#c0c0c0', glow: 'none' }; // Default gray
+                }
+                const actionStr = String(lastAction).toLowerCase().trim();
+                
+                if (actionStr.indexOf('online') !== -1) {
+                    return { 
+                        color: '#00ff88', 
+                        glow: '0 0 10px rgba(0, 255, 136, 0.6), 0 0 20px rgba(0, 255, 136, 0.4)' 
+                    }; // Green - matching status-okay color
+                } else if (actionStr.indexOf('idle') !== -1) {
+                    return { 
+                        color: '#d4a574', 
+                        glow: '0 0 10px rgba(212, 165, 116, 0.6), 0 0 20px rgba(212, 165, 116, 0.4)' 
+                    }; // Orange - matching status-federal color
+                } else if (actionStr.indexOf('offline') !== -1) {
+                    return { 
+                        color: '#ff3366', 
+                        glow: '0 0 10px rgba(255, 51, 102, 0.6), 0 0 20px rgba(255, 51, 102, 0.4)' 
+                    }; // Red - matching status-hospital color
+                }
+                return { color: '#c0c0c0', glow: 'none' }; // Default gray for unknown status
+            } catch (e) {
+                console.error('Error in getLastActionColor:', e, 'lastAction:', lastAction);
+                return { color: '#c0c0c0', glow: 'none' };
+            }
+        };
+        
+        // Helper function to get fair fight glow based on color
+        const getFairFightGlow = (color) => {
+            if (!color || color === '#c0c0c0') return 'none';
+            try {
+                // Extract RGB values from color string
+                const rgbMatch = color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+                if (rgbMatch) {
+                    const r = parseInt(rgbMatch[1]);
+                    const g = parseInt(rgbMatch[2]);
+                    const b = parseInt(rgbMatch[3]);
+                    return `0 0 10px rgba(${r}, ${g}, ${b}, 0.6), 0 0 20px rgba(${r}, ${g}, ${b}, 0.4)`;
+                }
+                // Handle hex colors
+                if (color.startsWith('#')) {
+                    let hex = color.replace('#', '');
+                    // Handle 3-character hex codes
+                    if (hex.length === 3) {
+                        hex = hex.split('').map(char => char + char).join('');
+                    }
+                    if (hex.length === 6) {
+                        const r = parseInt(hex.substring(0, 2), 16);
+                        const g = parseInt(hex.substring(2, 4), 16);
+                        const b = parseInt(hex.substring(4, 6), 16);
+                        return `0 0 10px rgba(${r}, ${g}, ${b}, 0.6), 0 0 20px rgba(${r}, ${g}, ${b}, 0.4)`;
+                    }
+                }
+            } catch (e) {
+                console.error('Error parsing color for glow:', color, e);
+            }
+            return 'none';
+        };
+        
+        // Helper function to get status color class
+        const getStatusColorClass = (status) => {
+            if (!status || status === '-') return '';
+            const statusLower = String(status).toLowerCase();
+            if (statusLower === 'okay') {
+                return 'status-okay';
+            } else if (statusLower === 'hospital' || statusLower.includes('hospital')) {
+                return 'status-hospital';
+            } else if (statusLower === 'traveling' || statusLower.includes('traveling') || 
+                       statusLower === 'abroad' || statusLower.includes('abroad')) {
+                return 'status-travelling';
+            } else if (statusLower === 'federal' || statusLower.includes('federal')) {
+                return 'status-federal';
+            }
+            return '';
+        };
+        
+        membersArray.forEach(member => {
+            const name = member.name || `User ${member.id}`;
+            const level = member.level !== undefined ? member.level : '-';
+            
+            // Determine status - prioritize description for hospital (contains time left)
+            let status = '-';
+            if (member.status) {
+                const statusState = member.status.state || '';
+                const statusDescription = member.status.description || '';
+                const statusStateLower = String(statusState).toLowerCase();
+                const statusDescLower = String(statusDescription).toLowerCase();
+                
+                // If in hospital, use description (contains time left), otherwise use state or description
+                if (statusStateLower.includes('hospital') || statusDescLower.includes('hospital')) {
+                    status = statusDescription || statusState || '-';
+                } else {
+                    status = statusState || statusDescription || '-';
+                }
+            }
+            
+            const lastAction = member.last_action ? (member.last_action.status || member.last_action.relative || '-') : '-';
+            
+            // Get fair_fight and bs_estimate_human from FFScouter data
+            const stats = battlestatsMap[String(member.id)] || {};
+            const fairFight = stats.fair_fight !== undefined && stats.fair_fight !== null ? stats.fair_fight : '-';
+            const bsEstimateHuman = stats.bs_estimate_human !== undefined && stats.bs_estimate_human !== null ? stats.bs_estimate_human : '-';
+            
+            // Format fair_fight value
+            const formatFairFight = (value) => {
+                if (value === '-' || value === null || value === undefined) return '-';
+                if (typeof value === 'number') {
+                    return value.toFixed(2);
+                }
+                return String(value);
+            };
+            
+            // Get status color class
+            const statusColorClass = getStatusColorClass(status);
+            
+            // Get color for Fair Fight column
+            const fairFightColor = getFairFightColor(fairFight);
+            const fairFightGlow = getFairFightGlow(fairFightColor);
+            // Get color and glow for Last Action column
+            const lastActionStyle = getLastActionColor(lastAction);
+            const profileUrl = `https://www.torn.com/profiles.php?XID=${member.id}`;
+            
+            // Check if user can revive
+            const canRevive = reviveskillMap[String(member.id)] || false;
+            const reviveIcon = canRevive ? ' <span style="color: #00ff88; font-size: 1.1rem;" title="Can revive">⚕️</span>' : '';
+            
+            html += '<tr style="border-bottom: 1px solid rgba(212, 175, 55, 0.1);">';
+            html += `<td style="padding: 12px; color: #f4e4bc; font-size: 1rem; font-weight: 500;"><a href="${profileUrl}" target="_blank" rel="noopener noreferrer" style="color: #f4e4bc; text-decoration: none; cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#d4af37'" onmouseout="this.style.color='#f4e4bc'">${name}</a>${reviveIcon} <span style="color: #c0c0c0; font-size: 0.85rem;">(${member.id})</span></td>`;
+            html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem;">${level}</td>`;
+            html += `<td style="padding: 12px; color: ${lastActionStyle.color}; font-size: 0.95rem; font-weight: 600; text-shadow: ${lastActionStyle.glow};">${lastAction}</td>`;
+            html += `<td style="padding: 12px; color: ${fairFightColor}; font-size: 0.95rem; text-align: center; font-weight: 600; text-shadow: ${fairFightGlow};">${formatFairFight(fairFight)}</td>`;
+            html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem; text-align: right;">${bsEstimateHuman}</td>`;
+            // For hospital status, ensure text is red
+            const statusStyle = statusColorClass === 'status-hospital' 
+                ? 'padding: 12px; font-size: 0.95rem; color: #ff3366 !important;' 
+                : 'padding: 12px; font-size: 0.95rem;';
+            html += `<td style="${statusStyle}" class="${statusColorClass}">${status}</td>`;
+            html += '</tr>';
+        });
+        
+        html += '</tbody>';
+        html += '</table>';
+        
+        ourTeamDisplay.innerHTML = html;
+        console.log('Our team data loaded and displayed successfully');
+    } catch (error) {
+        console.error('Error loading our team data:', error);
+        ourTeamDisplay.innerHTML = `<p style="color: #ff6b6b;">Error loading team data: ${error.message}</p>`;
+    }
+}
+
 // Load war data and display opponent faction members
 async function loadWarData() {
     console.log('=== loadWarData() called ===');
@@ -484,6 +882,9 @@ async function loadWarData() {
         
         // Update war score display
         await updateWarScoreDisplay(warsData);
+        
+        // Load and display our team members
+        await loadOurTeamMembers();
         
         // Get user's faction ID and name to identify the opposing team
         const userFactionId = State.currentFactionId;
@@ -581,6 +982,16 @@ async function loadWarData() {
         console.log('Opponent faction ID:', opponentFactionId);
         console.log('Opponent faction name:', opponentFactionName);
         
+        // Update faction names in the UI
+        const ourTeamNameElement = document.getElementById('ourTeamName');
+        const enemyTeamNameElement = document.getElementById('enemyTeamName');
+        if (ourTeamNameElement && userFactionName) {
+            ourTeamNameElement.textContent = userFactionName;
+        }
+        if (enemyTeamNameElement && opponentFactionName) {
+            enemyTeamNameElement.textContent = opponentFactionName;
+        }
+        
         // Store opponent faction ID for map updates
         State.warOpponentFactionId = opponentFactionId;
         
@@ -638,6 +1049,9 @@ async function loadWarData() {
         const memberIdsForFFScouter = membersArray
             .map(member => member.id)
             .filter(id => id && id !== 'Unknown');
+        
+        // Fetch reviveskill for all enemy members
+        const reviveskillMap = await fetchReviveskillForUsers(memberIdsForFFScouter);
         
         // Fetch battlestats from FFScouter API if we have member IDs and API key
         let battlestatsMap = {};
@@ -884,8 +1298,12 @@ async function loadWarData() {
             const lastActionStyle = getLastActionColor(lastAction);
             const profileUrl = `https://www.torn.com/profiles.php?XID=${member.id}`;
             
+            // Check if user can revive
+            const canRevive = reviveskillMap[String(member.id)] || false;
+            const reviveIcon = canRevive ? ' <span style="color: #00ff88; font-size: 1.1rem;" title="Can revive">⚕️</span>' : '';
+            
             html += '<tr style="border-bottom: 1px solid rgba(212, 175, 55, 0.1);">';
-            html += `<td style="padding: 12px; color: #f4e4bc; font-size: 1rem; font-weight: 500;"><a href="${profileUrl}" target="_blank" rel="noopener noreferrer" style="color: #f4e4bc; text-decoration: none; cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#d4af37'" onmouseout="this.style.color='#f4e4bc'">${name}</a> <span style="color: #c0c0c0; font-size: 0.85rem;">(${member.id})</span></td>`;
+            html += `<td style="padding: 12px; color: #f4e4bc; font-size: 1rem; font-weight: 500;"><a href="${profileUrl}" target="_blank" rel="noopener noreferrer" style="color: #f4e4bc; text-decoration: none; cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#d4af37'" onmouseout="this.style.color='#f4e4bc'">${name}</a>${reviveIcon} <span style="color: #c0c0c0; font-size: 0.85rem;">(${member.id})</span></td>`;
             html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem;">${level}</td>`;
             html += `<td style="padding: 12px; color: ${lastActionStyle.color}; font-size: 0.95rem; font-weight: 600; text-shadow: ${lastActionStyle.glow};">${lastAction}</td>`;
             html += `<td style="padding: 12px; color: ${fairFightColor}; font-size: 0.95rem; text-align: center; font-weight: 600; text-shadow: ${fairFightGlow};">${formatFairFight(fairFight)}</td>`;
@@ -1248,6 +1666,9 @@ async function refreshWarData() {
             .map(member => member.id)
             .filter(id => id && id !== 'Unknown');
         
+        // Fetch reviveskill for all enemy members
+        const reviveskillMap = await fetchReviveskillForUsers(memberIdsForFFScouter);
+        
         // Fetch battlestats from FFScouter API if we have member IDs and API key
         let battlestatsMap = {};
         if (memberIdsForFFScouter.length > 0) {
@@ -1478,8 +1899,12 @@ async function refreshWarData() {
             const lastActionStyle = getLastActionColor(lastAction);
             const profileUrl = `https://www.torn.com/profiles.php?XID=${member.id}`;
             
+            // Check if user can revive
+            const canRevive = reviveskillMap[String(member.id)] || false;
+            const reviveIcon = canRevive ? ' <span style="color: #00ff88; font-size: 1.1rem;" title="Can revive">⚕️</span>' : '';
+            
             html += '<tr style="border-bottom: 1px solid rgba(212, 175, 55, 0.1);">';
-            html += `<td style="padding: 12px; color: #f4e4bc; font-size: 1rem; font-weight: 500;"><a href="${profileUrl}" target="_blank" rel="noopener noreferrer" style="color: #f4e4bc; text-decoration: none; cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#d4af37'" onmouseout="this.style.color='#f4e4bc'">${name}</a> <span style="color: #c0c0c0; font-size: 0.85rem;">(${member.id})</span></td>`;
+            html += `<td style="padding: 12px; color: #f4e4bc; font-size: 1rem; font-weight: 500;"><a href="${profileUrl}" target="_blank" rel="noopener noreferrer" style="color: #f4e4bc; text-decoration: none; cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#d4af37'" onmouseout="this.style.color='#f4e4bc'">${name}</a>${reviveIcon} <span style="color: #c0c0c0; font-size: 0.85rem;">(${member.id})</span></td>`;
             html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem;">${level}</td>`;
             html += `<td style="padding: 12px; color: ${lastActionStyle.color}; font-size: 0.95rem; font-weight: 600; text-shadow: ${lastActionStyle.glow};">${lastAction}</td>`;
             html += `<td style="padding: 12px; color: ${fairFightColor}; font-size: 0.95rem; text-align: center; font-weight: 600; text-shadow: ${fairFightGlow};">${formatFairFight(fairFight)}</td>`;

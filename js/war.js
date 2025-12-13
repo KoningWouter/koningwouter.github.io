@@ -784,18 +784,29 @@ async function loadOurTeamMembers() {
             const name = member.name || `User ${member.id}`;
             const level = member.level !== undefined ? member.level : '-';
             
-            // Determine status - prioritize description for hospital (contains time left)
+            // Determine status - prioritize description for hospital (contains time left), abroad (contains location), and traveling (contains destination)
             let status = '-';
+            let statusState = '-';
             if (member.status) {
-                const statusState = member.status.state || '';
+                statusState = member.status.state || '';
                 const statusDescription = member.status.description || '';
                 const statusStateLower = String(statusState).toLowerCase();
                 const statusDescLower = String(statusDescription).toLowerCase();
                 
-                // If in hospital, use description (contains time left), otherwise use state or description
+                // If in hospital, use description (contains time left)
                 if (statusStateLower.includes('hospital') || statusDescLower.includes('hospital')) {
                     status = statusDescription || statusState || '-';
-                } else {
+                } 
+                // If abroad, use description (contains location)
+                else if (statusStateLower === 'abroad' || statusStateLower.includes('abroad')) {
+                    status = statusDescription || statusState || '-';
+                }
+                // If traveling, use description (contains destination)
+                else if (statusStateLower === 'traveling' || statusStateLower.includes('traveling')) {
+                    status = statusDescription || statusState || '-';
+                }
+                // Otherwise use state or description
+                else {
                     status = statusState || statusDescription || '-';
                 }
             }
@@ -816,8 +827,8 @@ async function loadOurTeamMembers() {
                 return String(value);
             };
             
-            // Get status color class
-            const statusColorClass = getStatusColorClass(status);
+            // Get status color class - use state for color determination, not the displayed status
+            const statusColorClass = getStatusColorClass(statusState || status);
             
             // Get color for Fair Fight column
             const fairFightColor = getFairFightColor(fairFight);
@@ -1271,18 +1282,29 @@ async function loadWarData() {
             const name = member.name || `User ${member.id}`;
             const level = member.level !== undefined ? member.level : '-';
             
-            // Determine status - prioritize description for hospital (contains time left)
+            // Determine status - prioritize description for hospital (contains time left), abroad (contains location), and traveling (contains destination)
             let status = '-';
+            let statusState = '-';
             if (member.status) {
-                const statusState = member.status.state || '';
+                statusState = member.status.state || '';
                 const statusDescription = member.status.description || '';
                 const statusStateLower = String(statusState).toLowerCase();
                 const statusDescLower = String(statusDescription).toLowerCase();
                 
-                // If in hospital, use description (contains time left), otherwise use state or description
+                // If in hospital, use description (contains time left)
                 if (statusStateLower.includes('hospital') || statusDescLower.includes('hospital')) {
                     status = statusDescription || statusState || '-';
-                } else {
+                } 
+                // If abroad, use description (contains location)
+                else if (statusStateLower === 'abroad' || statusStateLower.includes('abroad')) {
+                    status = statusDescription || statusState || '-';
+                }
+                // If traveling, use description (contains destination)
+                else if (statusStateLower === 'traveling' || statusStateLower.includes('traveling')) {
+                    status = statusDescription || statusState || '-';
+                }
+                // Otherwise use state or description
+                else {
                     status = statusState || statusDescription || '-';
                 }
             }
@@ -1304,8 +1326,8 @@ async function loadWarData() {
                 return String(value);
             };
             
-            // Get status color class
-            const statusColorClass = getStatusColorClass(status);
+            // Get status color class - use state for color determination, not the displayed status
+            const statusColorClass = getStatusColorClass(statusState || status);
             
             // Get color for Fair Fight column
             const fairFightColor = getFairFightColor(fairFight);
@@ -1875,18 +1897,29 @@ async function refreshWarData() {
             const name = member.name || `User ${member.id}`;
             const level = member.level !== undefined ? member.level : '-';
             
-            // Determine status - prioritize description for hospital (contains time left)
+            // Determine status - prioritize description for hospital (contains time left), abroad (contains location), and traveling (contains destination)
             let status = '-';
+            let statusState = '-';
             if (member.status) {
-                const statusState = member.status.state || '';
+                statusState = member.status.state || '';
                 const statusDescription = member.status.description || '';
                 const statusStateLower = String(statusState).toLowerCase();
                 const statusDescLower = String(statusDescription).toLowerCase();
                 
-                // If in hospital, use description (contains time left), otherwise use state or description
+                // If in hospital, use description (contains time left)
                 if (statusStateLower.includes('hospital') || statusDescLower.includes('hospital')) {
                     status = statusDescription || statusState || '-';
-                } else {
+                } 
+                // If abroad, use description (contains location)
+                else if (statusStateLower === 'abroad' || statusStateLower.includes('abroad')) {
+                    status = statusDescription || statusState || '-';
+                }
+                // If traveling, use description (contains destination)
+                else if (statusStateLower === 'traveling' || statusStateLower.includes('traveling')) {
+                    status = statusDescription || statusState || '-';
+                }
+                // Otherwise use state or description
+                else {
                     status = statusState || statusDescription || '-';
                 }
             }
@@ -1906,7 +1939,8 @@ async function refreshWarData() {
                 return String(value);
             };
             
-            const statusColorClass = getStatusColorClass(status);
+            // Get status color class - use state for color determination, not the displayed status
+            const statusColorClass = getStatusColorClass(statusState || status);
             
             // Get color for Fair Fight column
             const fairFightColor = getFairFightColor(fairFight);

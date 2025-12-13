@@ -674,12 +674,12 @@ async function loadOurTeamMembers() {
         let html = '<table style="width: 100%; border-collapse: collapse;">';
         html += '<thead>';
         html += '<tr style="border-bottom: 2px solid rgba(212, 175, 55, 0.3);">';
-        html += '<th style="padding: 12px; text-align: left; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Name</th>';
-        html += '<th style="padding: 12px; text-align: left; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Level</th>';
-        html += '<th style="padding: 12px; text-align: left; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Last Action</th>';
-        html += '<th style="padding: 12px; text-align: center; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Fair Fight</th>';
-        html += '<th style="padding: 12px; text-align: right; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Battle Stats</th>';
-        html += '<th style="padding: 12px; text-align: left; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Status</th>';
+        html += '<th style="padding: 8px; text-align: left; color: #d4af37; font-weight: 600; font-size: 0.9rem;">Name</th>';
+        html += '<th style="padding: 8px; text-align: left; color: #d4af37; font-weight: 600; font-size: 0.9rem;">Level</th>';
+        html += '<th style="padding: 8px; text-align: left; color: #d4af37; font-weight: 600; font-size: 0.9rem;">Last Action</th>';
+        html += '<th style="padding: 8px; text-align: center; color: #d4af37; font-weight: 600; font-size: 0.9rem;">Fair Fight</th>';
+        html += '<th style="padding: 8px; text-align: right; color: #d4af37; font-weight: 600; font-size: 0.9rem;">Battle Stats</th>';
+        html += '<th style="padding: 8px; text-align: left; color: #d4af37; font-weight: 600; font-size: 0.9rem;">Status</th>';
         html += '</tr>';
         html += '</thead>';
         html += '<tbody>';
@@ -812,18 +812,18 @@ async function loadOurTeamMembers() {
             
             // Check if user can revive
             const canRevive = reviveskillMap[String(member.id)] || false;
-            const reviveIcon = canRevive ? ' <span style="color: #00ff88; font-size: 1.1rem;" title="Can revive">⚕️</span>' : '';
+            const reviveIcon = canRevive ? ' <span style="color: #00ff88; font-size: 0.9rem;" title="Can revive">⚕️</span>' : '';
             
             html += '<tr style="border-bottom: 1px solid rgba(212, 175, 55, 0.1);">';
-            html += `<td style="padding: 12px; color: #f4e4bc; font-size: 1rem; font-weight: 500;"><a href="${profileUrl}" target="_blank" rel="noopener noreferrer" style="color: #f4e4bc; text-decoration: none; cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#d4af37'" onmouseout="this.style.color='#f4e4bc'">${name}</a>${reviveIcon} <span style="color: #c0c0c0; font-size: 0.85rem;">(${member.id})</span></td>`;
-            html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem;">${level}</td>`;
-            html += `<td style="padding: 12px; color: ${lastActionStyle.color}; font-size: 0.95rem; font-weight: 600; text-shadow: ${lastActionStyle.glow};">${lastAction}</td>`;
-            html += `<td style="padding: 12px; color: ${fairFightColor}; font-size: 0.95rem; text-align: center; font-weight: 600; text-shadow: ${fairFightGlow};">${formatFairFight(fairFight)}</td>`;
-            html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem; text-align: right;">${bsEstimateHuman}</td>`;
+            html += `<td style="padding: 8px; color: #f4e4bc; font-size: 0.85rem; font-weight: 500;"><a href="${profileUrl}" target="_blank" rel="noopener noreferrer" style="color: #f4e4bc; text-decoration: none; cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#d4af37'" onmouseout="this.style.color='#f4e4bc'">${name}</a>${reviveIcon} <span style="color: #c0c0c0; font-size: 0.75rem;">(${member.id})</span></td>`;
+            html += `<td style="padding: 8px; color: #c0c0c0; font-size: 0.8rem;">${level}</td>`;
+            html += `<td style="padding: 8px; color: ${lastActionStyle.color}; font-size: 0.8rem; font-weight: 600; text-shadow: ${lastActionStyle.glow};">${lastAction}</td>`;
+            html += `<td style="padding: 8px; color: ${fairFightColor}; font-size: 0.8rem; text-align: center; font-weight: 600; text-shadow: ${fairFightGlow};">${formatFairFight(fairFight)}</td>`;
+            html += `<td style="padding: 8px; color: #c0c0c0; font-size: 0.8rem; text-align: right;">${bsEstimateHuman}</td>`;
             // For hospital status, ensure text is red
             const statusStyle = statusColorClass === 'status-hospital' 
-                ? 'padding: 12px; font-size: 0.95rem; color: #ff3366 !important;' 
-                : 'padding: 12px; font-size: 0.95rem;';
+                ? 'padding: 8px; font-size: 0.8rem; color: #ff3366 !important;' 
+                : 'padding: 8px; font-size: 0.8rem;';
             html += `<td style="${statusStyle}" class="${statusColorClass}">${status}</td>`;
             html += '</tr>';
         });
@@ -1160,13 +1160,13 @@ async function loadWarData() {
         let html = '<table style="width: 100%; border-collapse: collapse;">';
         html += '<thead>';
         html += '<tr style="border-bottom: 2px solid rgba(212, 175, 55, 0.3);">';
-        html += '<th style="padding: 12px; text-align: left; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Name</th>';
-        html += '<th style="padding: 12px; text-align: left; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Level</th>';
-        html += '<th style="padding: 12px; text-align: left; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Last Action</th>';
-        html += '<th style="padding: 12px; text-align: center; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Fair Fight</th>';
-        html += '<th style="padding: 12px; text-align: right; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Battle Stats</th>';
-        html += '<th style="padding: 12px; text-align: left; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Status</th>';
-        html += '<th style="padding: 12px; text-align: center; color: #d4af37; font-weight: 600; font-size: 1.1rem;">Attack</th>';
+        html += '<th style="padding: 8px; text-align: left; color: #d4af37; font-weight: 600; font-size: 0.9rem;">Name</th>';
+        html += '<th style="padding: 8px; text-align: left; color: #d4af37; font-weight: 600; font-size: 0.9rem;">Level</th>';
+        html += '<th style="padding: 8px; text-align: left; color: #d4af37; font-weight: 600; font-size: 0.9rem;">Last Action</th>';
+        html += '<th style="padding: 8px; text-align: center; color: #d4af37; font-weight: 600; font-size: 0.9rem;">Fair Fight</th>';
+        html += '<th style="padding: 8px; text-align: right; color: #d4af37; font-weight: 600; font-size: 0.9rem;">Battle Stats</th>';
+        html += '<th style="padding: 8px; text-align: left; color: #d4af37; font-weight: 600; font-size: 0.9rem;">Status</th>';
+        html += '<th style="padding: 8px; text-align: center; color: #d4af37; font-weight: 600; font-size: 0.9rem;">Attack</th>';
         html += '</tr>';
         html += '</thead>';
         html += '<tbody>';
@@ -1300,20 +1300,20 @@ async function loadWarData() {
             
             // Check if user can revive
             const canRevive = reviveskillMap[String(member.id)] || false;
-            const reviveIcon = canRevive ? ' <span style="color: #00ff88; font-size: 1.1rem;" title="Can revive">⚕️</span>' : '';
+            const reviveIcon = canRevive ? ' <span style="color: #00ff88; font-size: 0.9rem;" title="Can revive">⚕️</span>' : '';
             
             html += '<tr style="border-bottom: 1px solid rgba(212, 175, 55, 0.1);">';
-            html += `<td style="padding: 12px; color: #f4e4bc; font-size: 1rem; font-weight: 500;"><a href="${profileUrl}" target="_blank" rel="noopener noreferrer" style="color: #f4e4bc; text-decoration: none; cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#d4af37'" onmouseout="this.style.color='#f4e4bc'">${name}</a>${reviveIcon} <span style="color: #c0c0c0; font-size: 0.85rem;">(${member.id})</span></td>`;
-            html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem;">${level}</td>`;
-            html += `<td style="padding: 12px; color: ${lastActionStyle.color}; font-size: 0.95rem; font-weight: 600; text-shadow: ${lastActionStyle.glow};">${lastAction}</td>`;
-            html += `<td style="padding: 12px; color: ${fairFightColor}; font-size: 0.95rem; text-align: center; font-weight: 600; text-shadow: ${fairFightGlow};">${formatFairFight(fairFight)}</td>`;
-            html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem; text-align: right;">${bsEstimateHuman}</td>`;
+            html += `<td style="padding: 8px; color: #f4e4bc; font-size: 0.85rem; font-weight: 500;"><a href="${profileUrl}" target="_blank" rel="noopener noreferrer" style="color: #f4e4bc; text-decoration: none; cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#d4af37'" onmouseout="this.style.color='#f4e4bc'">${name}</a>${reviveIcon} <span style="color: #c0c0c0; font-size: 0.75rem;">(${member.id})</span></td>`;
+            html += `<td style="padding: 8px; color: #c0c0c0; font-size: 0.8rem;">${level}</td>`;
+            html += `<td style="padding: 8px; color: ${lastActionStyle.color}; font-size: 0.8rem; font-weight: 600; text-shadow: ${lastActionStyle.glow};">${lastAction}</td>`;
+            html += `<td style="padding: 8px; color: ${fairFightColor}; font-size: 0.8rem; text-align: center; font-weight: 600; text-shadow: ${fairFightGlow};">${formatFairFight(fairFight)}</td>`;
+            html += `<td style="padding: 8px; color: #c0c0c0; font-size: 0.8rem; text-align: right;">${bsEstimateHuman}</td>`;
             // For hospital status, ensure text is red
             const statusStyle = statusColorClass === 'status-hospital' 
-                ? 'padding: 12px; font-size: 0.95rem; color: #ff3366 !important;' 
-                : 'padding: 12px; font-size: 0.95rem;';
+                ? 'padding: 8px; font-size: 0.8rem; color: #ff3366 !important;' 
+                : 'padding: 8px; font-size: 0.8rem;';
             html += `<td style="${statusStyle}" class="${statusColorClass}">${status}</td>`;
-            html += `<td style="padding: 12px; text-align: center;"><a href="${attackUrl}" target="_blank" rel="noopener noreferrer" style="color: #ff6b6b; font-size: 1.5rem; text-decoration: none; cursor: pointer; display: inline-block; transition: transform 0.2s;" title="Attack ${name}" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">⚔️</a></td>`;
+            html += `<td style="padding: 8px; text-align: center;"><a href="${attackUrl}" target="_blank" rel="noopener noreferrer" style="color: #ff6b6b; font-size: 1.2rem; text-decoration: none; cursor: pointer; display: inline-block; transition: transform 0.2s;" title="Attack ${name}" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">⚔️</a></td>`;
             html += '</tr>';
         });
         
@@ -1901,20 +1901,20 @@ async function refreshWarData() {
             
             // Check if user can revive
             const canRevive = reviveskillMap[String(member.id)] || false;
-            const reviveIcon = canRevive ? ' <span style="color: #00ff88; font-size: 1.1rem;" title="Can revive">⚕️</span>' : '';
+            const reviveIcon = canRevive ? ' <span style="color: #00ff88; font-size: 0.9rem;" title="Can revive">⚕️</span>' : '';
             
             html += '<tr style="border-bottom: 1px solid rgba(212, 175, 55, 0.1);">';
-            html += `<td style="padding: 12px; color: #f4e4bc; font-size: 1rem; font-weight: 500;"><a href="${profileUrl}" target="_blank" rel="noopener noreferrer" style="color: #f4e4bc; text-decoration: none; cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#d4af37'" onmouseout="this.style.color='#f4e4bc'">${name}</a>${reviveIcon} <span style="color: #c0c0c0; font-size: 0.85rem;">(${member.id})</span></td>`;
-            html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem;">${level}</td>`;
-            html += `<td style="padding: 12px; color: ${lastActionStyle.color}; font-size: 0.95rem; font-weight: 600; text-shadow: ${lastActionStyle.glow};">${lastAction}</td>`;
-            html += `<td style="padding: 12px; color: ${fairFightColor}; font-size: 0.95rem; text-align: center; font-weight: 600; text-shadow: ${fairFightGlow};">${formatFairFight(fairFight)}</td>`;
-            html += `<td style="padding: 12px; color: #c0c0c0; font-size: 0.95rem; text-align: right;">${bsEstimateHuman}</td>`;
+            html += `<td style="padding: 8px; color: #f4e4bc; font-size: 0.85rem; font-weight: 500;"><a href="${profileUrl}" target="_blank" rel="noopener noreferrer" style="color: #f4e4bc; text-decoration: none; cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#d4af37'" onmouseout="this.style.color='#f4e4bc'">${name}</a>${reviveIcon} <span style="color: #c0c0c0; font-size: 0.75rem;">(${member.id})</span></td>`;
+            html += `<td style="padding: 8px; color: #c0c0c0; font-size: 0.8rem;">${level}</td>`;
+            html += `<td style="padding: 8px; color: ${lastActionStyle.color}; font-size: 0.8rem; font-weight: 600; text-shadow: ${lastActionStyle.glow};">${lastAction}</td>`;
+            html += `<td style="padding: 8px; color: ${fairFightColor}; font-size: 0.8rem; text-align: center; font-weight: 600; text-shadow: ${fairFightGlow};">${formatFairFight(fairFight)}</td>`;
+            html += `<td style="padding: 8px; color: #c0c0c0; font-size: 0.8rem; text-align: right;">${bsEstimateHuman}</td>`;
             // For hospital status, ensure text is red
             const statusStyle = statusColorClass === 'status-hospital' 
-                ? 'padding: 12px; font-size: 0.95rem; color: #ff3366 !important;' 
-                : 'padding: 12px; font-size: 0.95rem;';
+                ? 'padding: 8px; font-size: 0.8rem; color: #ff3366 !important;' 
+                : 'padding: 8px; font-size: 0.8rem;';
             html += `<td style="${statusStyle}" class="${statusColorClass}">${status}</td>`;
-            html += `<td style="padding: 12px; text-align: center;"><a href="${attackUrl}" target="_blank" rel="noopener noreferrer" style="color: #ff6b6b; font-size: 1.5rem; text-decoration: none; cursor: pointer; display: inline-block; transition: transform 0.2s;" title="Attack ${name}" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">⚔️</a></td>`;
+            html += `<td style="padding: 8px; text-align: center;"><a href="${attackUrl}" target="_blank" rel="noopener noreferrer" style="color: #ff6b6b; font-size: 1.2rem; text-decoration: none; cursor: pointer; display: inline-block; transition: transform 0.2s;" title="Attack ${name}" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">⚔️</a></td>`;
             html += '</tr>';
         });
         

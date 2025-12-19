@@ -724,8 +724,8 @@ function updateProgressBar(type, current, maximum) {
     bar.classList.add('updating');
     setTimeout(() => bar.classList.remove('updating'), 500);
 
-    // Update width - for nerve bar, set immediately without any transition or animation
-    if (type === 'nerve') {
+    // Update width - for nerve and happy bars, set immediately without any transition or animation
+    if (type === 'nerve' || type === 'happy') {
         // Completely disable transition and animation for instant, static update
         bar.style.transition = 'none';
         bar.style.animation = 'none';

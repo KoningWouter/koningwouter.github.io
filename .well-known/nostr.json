@@ -1,0 +1,20 @@
+{
+  "names": {
+    "lucifer": "6debe8d7ea401978d30b0994bfde0eb43a433f02b6937b7daec7381e54cb16eb",
+    "luna": "4d800688ad1617b3b02e4603dba07cec03fbccfbac09d7b1898a83aa4c47b89b"
+  },
+  "relays": {
+    "6debe8d7ea401978d30b0994bfde0eb43a433f02b6937b7daec7381e54cb16eb": [
+      "wss://relay.damus.io",
+      "wss://nos.lol",
+      "wss://relay.primal.net",
+      "wss://relay.snort.social"
+    ],
+    "4d800688ad1617b3b02e4603dba07cec03fbccfbac09d7b1898a83aa4c47b89b": [
+      "wss://relay.damus.io",
+      "wss://nos.lol",
+      "wss://relay.primal.net",
+      "wss://relay.snort.social"
+    ]
+  }
+}
